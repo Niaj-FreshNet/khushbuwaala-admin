@@ -6,8 +6,15 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+
+  /* English default with Noto Serif Bengali as fallback for Bangla text */
+  --font-sans: var(--font-inter), var(--font-noto-serif-bengali), system-ui, sans-serif;
+
+  /* Dedicated Bengali Serif Class */
+  --font-bangla: var(--font-noto-serif-bengali), var(--font-inter), serif;
+
   --font-mono: var(--font-geist-mono);
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -119,6 +126,34 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Universal placeholder font size across the entire website */
+  input::placeholder,
+  textarea::placeholder {
+    font-size: 12px;
+    line-height: 1rem;
+  }
+
+  /* Universal, clean 1px focus state across all text inputs */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+  textarea,
+  select {
+    outline: none !important;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):focus,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):focus-visible,
+  textarea:focus,
+  textarea:focus-visible,
+  select:focus,
+  select:focus-visible {
+    outline: none !important;
+    border-color: #10b981 !important;
+    /* Elegant Emerald Green */
+    box-shadow: 0 0 0 1px #10b981 !important;
+    /* Crisp 1px thin stroke */
   }
 }
 
@@ -605,11 +640,11 @@
 
 /* Enhanced focus styles for accessibility */
 .focus-ring {
-  @apply focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 focus:ring-offset-white;
+  @apply focus:outline-hidden focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 focus:ring-offset-0;
 }
 
 .focus-ring-inset {
-  @apply focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-inset;
+  @apply focus:outline-hidden focus:ring-1 focus:ring-emerald-500 focus:ring-inset focus:border-emerald-500;
 }
 
 /* Mobile-specific enhancements */
@@ -630,11 +665,12 @@
     touch-action: manipulation;
   }
 
-  /* Prevent zoom on inputs */
+  /* Slightly reduced font size for compact, clean inputs */
   input,
   select,
   textarea {
-    font-size: 16px;
+    font-size: 13px;
+    /* 👈 Changed from 16px */
   }
 
   /* Smooth scrolling */
@@ -660,8 +696,13 @@
 }
 
 @keyframes skel-shimmer {
-  0% { transform: translateX(-120%); }
-  100% { transform: translateX(220%); }
+  0% {
+    transform: translateX(-120%);
+  }
+
+  100% {
+    transform: translateX(220%);
+  }
 }
 
 /* Modern "alive" skeleton shimmer overlay */
@@ -675,12 +716,10 @@
   position: absolute;
   inset: 0;
   transform: translateX(-120%);
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.55),
-    transparent
-  );
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.55),
+      transparent);
   animation: skel-shimmer var(--skel-speed, 1400ms) ease-in-out infinite;
   animation-delay: var(--skel-delay, 0ms);
 }
@@ -693,8 +732,13 @@
 }
 
 @keyframes skeleton-shimmer {
-  0% { transform: translateX(-120%) skewX(-12deg); }
-  100% { transform: translateX(220%) skewX(-12deg); }
+  0% {
+    transform: translateX(-120%) skewX(-12deg);
+  }
+
+  100% {
+    transform: translateX(220%) skewX(-12deg);
+  }
 }
 
 .skeleton-shimmer::after {
@@ -702,30 +746,50 @@
   position: absolute;
   inset: 0;
   transform: translateX(-120%) skewX(-12deg);
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255,255,255,0.45),
-    transparent
-  );
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.45),
+      transparent);
   animation: skeleton-shimmer 1.6s infinite;
   opacity: 0.9;
 }
 
 @keyframes soft-float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-6px); }
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-6px);
+  }
 }
 
 @keyframes loadingbar {
-  0% { transform: translateX(-120%); }
-  100% { transform: translateX(220%); }
+  0% {
+    transform: translateX(-120%);
+  }
+
+  100% {
+    transform: translateX(220%);
+  }
 }
 
 @keyframes kwshine {
-  0% { transform: translateX(-30%) rotate(12deg); opacity: 0.2; }
-  50% { opacity: 0.7; }
-  100% { transform: translateX(30%) rotate(12deg); opacity: 0.2; }
+  0% {
+    transform: translateX(-30%) rotate(12deg);
+    opacity: 0.2;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
+
+  100% {
+    transform: translateX(30%) rotate(12deg);
+    opacity: 0.2;
+  }
 }
 
 @layer utilities {
@@ -737,6 +801,7 @@
     0% {
       transform: translateX(-120%) skewX(-12deg);
     }
+
     100% {
       transform: translateX(120%) skewX(-12deg);
     }

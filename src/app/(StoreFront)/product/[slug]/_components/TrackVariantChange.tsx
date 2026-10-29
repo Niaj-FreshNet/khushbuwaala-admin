@@ -62,7 +62,7 @@ export default function TrackVariantChange({
           {
             item_id: itemId,
             item_name: product.name,
-            item_brand: product.brand || "KhushbuWaala",
+            item_brand: product.brand || "Khushbuwaala",
             item_category: category || "Shop",
             item_variant: itemVariant,
             price,

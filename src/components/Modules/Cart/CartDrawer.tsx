@@ -1,45 +1,85 @@
-"use client"
+"use client";
 
-import { useRouter } from "next/navigation"
-import { ShoppingCart, Trash2, Plus, Minus } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Badge } from "@/components/ui/badge"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { Separator } from "@/components/ui/separator"
-import Image from "next/image"
-import { useCart } from "@/redux/store/hooks/useCart"
-import { useEffect, useRef, useState } from "react"
-import { kwPushBeginCheckout } from "@/lib/Analytics/kwEcom"
-import Link from "next/link"
-
-
-// Use real cart from store
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
+import {
+  ShoppingBag,
+  Trash2,
+  Plus,
+  Minus,
+  ArrowRight,
+  ShieldCheck,
+  Truck,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
+import { useCart } from "@/redux/store/hooks/useCart";
+import { kwPushBeginCheckout } from "@/lib/Analytics/kwEcom";
 
 interface CartDrawerProps {
-  visible: boolean
-  onClose: () => void
+  visible: boolean;
+  onClose: () => void;
 }
 
-export default function CartDrawer({ visible, onClose }: CartDrawerProps) {
-  const router = useRouter()
-  const { cartItems, updateQuantity, removeFromCart, calculateSubtotal } = useCart() || {
-    cartItems: [],
-    updateQuantity: () => { },
-    removeFromCart: () => { },
-    calculateSubtotal: () => 0,
-  }
-  // console.log(cartItems)
+const FREE_SHIPPING_THRESHOLD = 1000;
 
-  const totalItems = Array.isArray(cartItems)
-    ? cartItems.reduce((sum: number, item: any) => sum + (item?.quantity || 0), 0)
-    : 0
+export default function CartDrawer({ visible, onClose }: CartDrawerProps) {
+  const router = useRouter();
+  const { cartItems, updateQuantity, removeFromCart, calculateSubtotal } =
+    useCart() || {
+      cartItems: [],
+      updateQuantity: () => { },
+      removeFromCart: () => { },
+      calculateSubtotal: () => 0,
+    };
+
+  const totalItems = useMemo(() => {
+    return Array.isArray(cartItems)
+      ? cartItems.reduce(
+        (sum: number, item: any) => sum + (Number(item?.quantity) || 0),
+        0
+      )
+      : 0;
+  }, [cartItems]);
+
+  const subtotal = useMemo(() => {
+    return Number(calculateSubtotal() || 0);
+  }, [calculateSubtotal]);
+
+  const freeShippingProgress = Math.min(
+    100,
+    Math.round((subtotal / FREE_SHIPPING_THRESHOLD) * 100)
+  );
+  const remainingForFreeShipping = Math.max(
+    0,
+    FREE_SHIPPING_THRESHOLD - subtotal
+  );
+
+  const formatBDT = (amount: number) =>
+    new Intl.NumberFormat("en-BD", {
+      style: "currency",
+      currency: "BDT",
+      maximumFractionDigits: 0,
+    })
+      .format(Math.max(0, Math.round(Number(amount || 0))))
+      .replace("BDT", "৳")
+      .trim();
 
   const subtotalRef = useRef<HTMLDivElement | null>(null);
   const checkoutBtnRef = useRef<HTMLButtonElement | null>(null);
-
   const [checkoutNudge, setCheckoutNudge] = useState(false);
 
+  // Red curved arrow & traveling spark animation for clear direction
   const drawCheckoutGuide = () => {
     if (typeof window === "undefined") return;
 
@@ -47,36 +87,30 @@ export default function CartDrawer({ visible, onClose }: CartDrawerProps) {
     const toEl = checkoutBtnRef.current;
     if (!fromEl || !toEl) return;
 
-    const from = fromEl.getBoundingClientRect();
     const to = toEl.getBoundingClientRect();
 
-    // ✅ START POINT: from top-right of the drawer (more noticeable)
     const x0 = Math.min(window.innerWidth - 20, to.left - 20);
-    const y0 = Math.max(30, to.top - 120); // above checkout, inside top area
+    const y0 = Math.max(30, to.top - 120);
 
-    // end near checkout center
     const x1 = to.left + to.width * 0.5;
     const y1 = to.top + to.height * 0.5;
 
     const dx = x1 - x0;
     const dy = y1 - y0;
 
-    // curve (subtle premium)
     const curveUp = Math.min(200, Math.max(90, Math.abs(dy) * 0.45));
     const cx = x0 + dx * 0.35;
     const cy = y0 + dy * 0.35 - curveUp;
 
-    // SVG overlay
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("width", "100%");
     svg.setAttribute("height", "100%");
     svg.style.position = "fixed";
     svg.style.left = "0";
     svg.style.top = "0";
-    svg.style.zIndex = "99999"; // above drawer content
+    svg.style.zIndex = "99999";
     svg.style.pointerEvents = "none";
 
-    // marker arrow
     const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
     const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
     marker.setAttribute("id", "kw-checkout-arrow");
@@ -85,14 +119,14 @@ export default function CartDrawer({ visible, onClose }: CartDrawerProps) {
     marker.setAttribute("refX", "10");
     marker.setAttribute("refY", "4");
     marker.setAttribute("orient", "auto");
+
     const arrowPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
     arrowPath.setAttribute("d", "M0,0 L12,4 L0,8 Z");
-    arrowPath.setAttribute("fill", "rgba(37,99,235,0.95)");
+    // Red arrowhead (Tailwind red-600)
+    arrowPath.setAttribute("fill", "rgba(220, 38, 38, 0.95)");
     marker.appendChild(arrowPath);
     defs.appendChild(marker);
-    svg.appendChild(defs);
 
-    // ✅ Gradient for stroke (matches checkout button red→pink)
     const grad = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
     grad.setAttribute("id", "kw-checkout-grad");
     grad.setAttribute("x1", "0%");
@@ -100,20 +134,21 @@ export default function CartDrawer({ visible, onClose }: CartDrawerProps) {
     grad.setAttribute("x2", "100%");
     grad.setAttribute("y2", "0%");
 
+    // Gradient transition: Red-500 -> Red-600
     const stop1 = document.createElementNS("http://www.w3.org/2000/svg", "stop");
     stop1.setAttribute("offset", "0%");
-    stop1.setAttribute("stop-color", "rgba(239,68,68,0.95)"); // red-500
+    stop1.setAttribute("stop-color", "rgba(239, 68, 68, 0.95)");
+
     const stop2 = document.createElementNS("http://www.w3.org/2000/svg", "stop");
     stop2.setAttribute("offset", "100%");
-    stop2.setAttribute("stop-color", "rgba(236,72,153,0.95)"); // pink-500
+    stop2.setAttribute("stop-color", "rgba(220, 38, 38, 0.95)");
     grad.appendChild(stop1);
     grad.appendChild(stop2);
     defs.appendChild(grad);
+    svg.appendChild(defs);
 
-    // Path string
     const d = `M ${x0} ${y0} Q ${cx} ${cy} ${x1} ${y1}`;
 
-    // ✅ 1) Glow stroke behind (thicker + blur-ish via opacity)
     const glowPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
     glowPath.setAttribute("d", d);
     glowPath.setAttribute("fill", "none");
@@ -124,7 +159,6 @@ export default function CartDrawer({ visible, onClose }: CartDrawerProps) {
     glowPath.setAttribute("opacity", "0.22");
     svg.appendChild(glowPath);
 
-    // ✅ 2) Main stroke (bold & crisp)
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
     path.setAttribute("d", d);
     path.setAttribute("fill", "none");
@@ -135,15 +169,15 @@ export default function CartDrawer({ visible, onClose }: CartDrawerProps) {
     path.setAttribute("marker-end", "url(#kw-checkout-arrow)");
     svg.appendChild(path);
 
-    // moving spark dot
+    // Traveling spark dot & outer halo in red
     const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    dot.setAttribute("r", "7");
-    dot.setAttribute("fill", "rgba(236,72,153,0.98)");
+    dot.setAttribute("r", "6");
+    dot.setAttribute("fill", "rgba(220, 38, 38, 0.98)");
     dot.setAttribute("opacity", "0.95");
 
     const dotGlow = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    dotGlow.setAttribute("r", "14");
-    dotGlow.setAttribute("fill", "rgba(239,68,68,0.22)");
+    dotGlow.setAttribute("r", "12");
+    dotGlow.setAttribute("fill", "rgba(239, 68, 68, 0.3)");
 
     svg.appendChild(dotGlow);
     svg.appendChild(dot);
@@ -158,7 +192,6 @@ export default function CartDrawer({ visible, onClose }: CartDrawerProps) {
     const totalLen = path.getTotalLength();
     path.style.strokeDasharray = `${totalLen}`;
     path.style.strokeDashoffset = `${totalLen}`;
-
     glowPath.style.strokeDasharray = `${totalLen}`;
     glowPath.style.strokeDashoffset = `${totalLen}`;
 
@@ -167,26 +200,21 @@ export default function CartDrawer({ visible, onClose }: CartDrawerProps) {
       { duration: 520, easing: "ease-out", fill: "forwards" }
     );
 
-    const strokeAnim = path.animate(
+    path.animate(
       [{ strokeDashoffset: totalLen }, { strokeDashoffset: 0 }],
       { duration: 520, easing: "ease-out", fill: "forwards" }
     );
 
-    // dot travel
     const start = performance.now();
     const travelMs = 900;
-
     let raf = 0;
+
     const tick = (now: number) => {
       const t = Math.min(1, (now - start) / travelMs);
-
-      // ✅ p exists ONLY here
       const p = path.getPointAtLength(totalLen * t);
 
       dot.setAttribute("cx", String(p.x));
       dot.setAttribute("cy", String(p.y));
-
-      // ✅ if you added dotGlow
       dotGlow.setAttribute("cx", String(p.x));
       dotGlow.setAttribute("cy", String(p.y));
 
@@ -195,50 +223,42 @@ export default function CartDrawer({ visible, onClose }: CartDrawerProps) {
 
     raf = requestAnimationFrame(tick);
 
-    // spotlight checkout button (WAAPI)
-    const ringAnim = toEl.animate(
+    // Button pulse ring animation using red hue to catch user's eye
+    toEl.animate(
       [
-        { boxShadow: "0 0 0 0 rgba(239,68,68,0)", transform: "scale(1)" },
-        { boxShadow: "0 0 0 8px rgba(239,68,68,0.18)", transform: "scale(1.03)" },
-        { boxShadow: "0 0 0 0 rgba(239,68,68,0)", transform: "scale(1)" },
+        { boxShadow: "0 0 0 0 rgba(220,38,38,0)", transform: "scale(1)" },
+        { boxShadow: "0 0 0 8px rgba(220,38,38,0.22)", transform: "scale(1.02)" },
+        { boxShadow: "0 0 0 0 rgba(220,38,38,0)", transform: "scale(1)" },
       ],
       { duration: 900, easing: "cubic-bezier(.2,.8,.2,1)" }
     );
 
-    // cleanup
     const cleanup = () => {
       cancelAnimationFrame(raf);
-      try { svg.remove(); } catch { }
+      try {
+        svg.remove();
+      } catch { }
     };
 
     const kill = window.setTimeout(cleanup, 1600);
 
-    // if user clicks quickly
-    toEl.addEventListener("click", () => {
-      window.clearTimeout(kill);
-      cleanup();
-    }, { once: true });
-
-    // safety if animation finishes earlier
-    strokeAnim.onfinish = () => {
-      // keep it for a bit then remove via timeout
-    };
-
-    ringAnim.onfinish = () => {
-      // no-op
-    };
+    toEl.addEventListener(
+      "click",
+      () => {
+        window.clearTimeout(kill);
+        cleanup();
+      },
+      { once: true }
+    );
   };
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const runGuide = () => {
-      // run only if drawer is currently open
       if (!visible) return;
-
       setCheckoutNudge(true);
 
-      // ensure DOM + refs ready
       window.setTimeout(() => {
         drawCheckoutGuide();
       }, 120);
@@ -246,10 +266,8 @@ export default function CartDrawer({ visible, onClose }: CartDrawerProps) {
       window.setTimeout(() => setCheckoutNudge(false), 1200);
     };
 
-    // ✅ run when opened by navbar click OR add-to-cart auto open
     window.addEventListener("kw:cart-opened", runGuide);
 
-    // ✅ also run when visible becomes true (first time / refresh)
     if (visible) {
       window.setTimeout(runGuide, 50);
     }
@@ -259,32 +277,33 @@ export default function CartDrawer({ visible, onClose }: CartDrawerProps) {
     };
   }, [visible]);
 
-  const redirectToCart = () => {
-    router.push("/cart")
-    onClose()
-  }
-
   const handleCheckout = () => {
-    // build items from drawer cartItems
-    const items = (cartItems || []).map((item: any) => ({
-      item_id: String(item?.product?.id || item?.product?.slug || ""),
-      item_name: String(item?.product?.name || ""),
-      item_brand: String(item?.product?.brand || "KhushbuWaala"),
-      item_category: String(item?.product?.categoryId || ""),
-      item_variant: String(item?.selectedSize || ""),
-      price: Number(item?.selectedPrice || 0),
-      quantity: Number(item?.quantity || 1),
-    })).filter((i: any) => i.item_id)
+    const items = (cartItems || [])
+      .map((item: any) => ({
+        item_id: String(item?.product?.id || item?.product?.slug || ""),
+        item_name: String(item?.product?.name || ""),
+        item_brand: String(item?.product?.brand || "Khushbuwaala"),
+        item_category: String(item?.product?.categoryId || ""),
+        item_variant: String(item?.selectedSize || ""),
+        price: Number(item?.selectedPrice || 0),
+        quantity: Number(item?.quantity || 1),
+      }))
+      .filter((i: any) => i.item_id);
 
     kwPushBeginCheckout({
       currency: "BDT",
-      value: Number(calculateSubtotal() || 0),
+      value: subtotal,
       items,
-    })
+    });
 
-    router.push("/checkout")
-    onClose()
-  }
+    onClose();
+    router.push("/checkout");
+  };
+
+  const redirectToCart = () => {
+    onClose();
+    router.push("/cart");
+  };
 
   return (
     <Sheet
@@ -295,100 +314,173 @@ export default function CartDrawer({ visible, onClose }: CartDrawerProps) {
     >
       <SheetContent
         side="right"
-        className="w-[320px] md:w-[550px] flex flex-col p-0 bg-gradient-to-b from-white to-gray-50"
+        className="w-[88vw] max-w-[420px] sm:w-[420px] sm:max-w-[430px] flex flex-col p-0 bg-[#FBFBFA] border-l border-gray-200"
       >
-        <SheetHeader className="px-6 py-4 border-b bg-gradient-to-r from-red-50 to-pink-50">
-          <SheetTitle className="flex items-center gap-3 text-xl">
-            <div className="p-2 bg-red-100 rounded-full">
-              <ShoppingCart className="h-6 w-6 text-red-600" />
-            </div>
-            <div className="flex flex-col items-start">
-              <span>Shopping Cart</span>
-              {totalItems > 0 && (
-                <span className="text-sm font-normal text-gray-600">
+        {/* Header */}
+        <SheetHeader className="px-4 py-3 border-b border-gray-200 bg-white">
+          <SheetTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-emerald-50 text-green-700 rounded-lg">
+                <ShoppingBag className="h-4.5 w-4.5" />
+              </div>
+              <div className="text-left">
+                <h3 className="text-sm sm:text-base font-bold text-gray-900 leading-tight">
+                  Shopping Cart
+                </h3>
+                <p className="text-[11px] font-normal text-gray-500">
                   {totalItems} {totalItems === 1 ? "item" : "items"}
-                </span>
-              )}
+                </p>
+              </div>
             </div>
+
             {totalItems > 0 && (
-              <Badge variant="secondary" className="ml-auto bg-red-100 text-red-700">
-                {totalItems}
+              <Badge
+                variant="secondary"
+                className="bg-emerald-50 text-emerald-800 border border-emerald-100 font-bold px-2 py-0.5 text-xs"
+              >
+                {formatBDT(subtotal)}
               </Badge>
             )}
           </SheetTitle>
+
+          {/* Dynamic Free Shipping Bar */}
+          {totalItems > 0 && (
+            <div className="mt-2.5 pt-2.5 border-t border-gray-100">
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="font-semibold text-gray-700 flex items-center gap-1 text-[11px]">
+                  <Truck className="h-3 w-3 text-green-600" />
+                  {remainingForFreeShipping === 0 ? (
+                    <span className="text-emerald-700 font-bold">
+                      🎉 Free Delivery Unlocked!
+                    </span>
+                  ) : (
+                    <span>
+                      Add <strong>{formatBDT(remainingForFreeShipping)}</strong> for{" "}
+                      <span className="text-emerald-700 font-bold">FREE Delivery</span>
+                    </span>
+                  )}
+                </span>
+                <span className="font-bold text-[10px] text-gray-500">
+                  {freeShippingProgress}%
+                </span>
+              </div>
+              <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-green-600 rounded-full transition-all duration-300"
+                  style={{ width: `${freeShippingProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
         </SheetHeader>
 
-        <div className="flex flex-col h-full">
-          <ScrollArea className="flex-1 px-6 py-4 overflow-auto">
+        {/* Scrollable Items with Compact Height */}
+        <div className="flex-1 flex flex-col min-h-0">
+          <ScrollArea className="flex-1 px-3 sm:px-4 py-2.5 overflow-y-auto">
             {totalItems > 0 ? (
-              <div className="space-y-4">
-                {cartItems.map((item: any, index: number) => {
+              <div className="space-y-2 pb-1">
+                {cartItems.map((item: any, idx: number) => {
+                  const product = item?.product || {};
+                  const size = item?.selectedSize || "";
+                  const itemPrice = Number(item?.selectedPrice || 0);
+                  const linePrice = itemPrice * Number(item?.quantity || 1);
+
                   return (
                     <div
-                      key={`${item.product?.id}-${item.selectedSize}-${index}`}
-                      className="group p-4 border border-gray-200 rounded-xl hover:border-red-200 hover:shadow-md transition-all duration-300 bg-white"
+                      key={`${product?.id}-${size}-${idx}`}
+                      className="group bg-white px-2.5 py-1.5 rounded-xl border border-gray-200 shadow-xs hover:border-gray-300 transition-all flex gap-3 items-center"
                     >
-                      <div className="flex items-start gap-4">
-                        {/* Enhanced Product Image */}
-                        <div className="relative w-20 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 group-hover:shadow-lg transition-shadow duration-300">
-                          <Image
-                            src={item.product?.primaryImage || "/placeholder.svg?height=96&width=80"}
-                            alt={item.product?.name}
-                            fill
-                            sizes="80px"
-                            className="object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      {/* Compact Image */}
+                      <div className="relative w-16 h-20 rounded-lg overflow-hidden bg-gray-50 border border-gray-100 shrink-0">
+                        <Image
+                          src={
+                            product?.primaryImage ||
+                            "/placeholder.svg?height=64&width=56"
+                          }
+                          alt={product?.name || "Product"}
+                          fill
+                          sizes="56px"
+                          className="object-cover"
+                        />
+                      </div>
+
+                      {/* Content Area - tight gap, zero excessive padding */}
+                      <div className="flex-1 min-w-0 flex flex-col justify-center">
+                        <div className="flex justify-between items-center gap-1.5">
+                          <h4 className="text-xs font-bold text-gray-900 truncate leading-snug">
+                            {product?.name}
+                          </h4>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              removeFromCart(
+                                product?.id,
+                                size,
+                                product?.name,
+                                item?.cartItemId
+                              )
+                            }
+                            className="text-gray-400 hover:text-rose-500 transition-colors p-0.5 shrink-0"
+                            aria-label="Remove item"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
                         </div>
 
-                        {/* Enhanced Product Details */}
-                        <div className="flex-1 space-y-2">
-                          <h4 className="font-semibold text-sm leading-tight text-gray-900 group-hover:text-red-600 transition-colors duration-300">
-                            {item.product?.name}
-                          </h4>
-                          <div className="flex items-center gap-4 text-xs text-gray-500">
-                            <div className="flex items-center gap-1">
-                              <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
-                              <span>Size: {item.selectedSize}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-6 w-6 p-0 rounded-full hover:bg-red-50 hover:border-red-200 bg-transparent"
-                                onClick={() => updateQuantity(item.product?.id, item.selectedSize, Math.max(1, item.quantity - 1), item.product?.name, item.cartItemId)}
-                                disabled={item.quantity <= 1}
-                                aria-label="Decrease quantity"
-                              >
-                                <Minus className="h-3 w-3" />
-                              </Button>
-                              <span className="font-medium text-gray-900 min-w-[20px] text-center">{item.quantity}</span>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-6 w-6 p-0 rounded-full hover:bg-red-50 hover:border-red-200 bg-transparent"
-                                onClick={() => updateQuantity(item.product?.id, item.selectedSize, item.quantity + 1, item.product?.name, item.cartItemId)}
-                                aria-label="Increase quantity"
-                              >
-                                <Plus className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <p className="font-bold text-red-600">
-                              {/* ৳{((item?.selectedPrice || 0) * (item?.quantity || 1)).toFixed(2)} BDT */}
-                              ৳{((item.selectedPrice || 0) * (item?.quantity || 1)).toFixed(2)} BDT
-                            </p>
+                        <p className="text-[11px] text-gray-500 leading-tight mt-0.5">
+                          Size:{" "}
+                          <span className="font-medium text-gray-700">
+                            {size}
+                          </span>
+                        </p>
+
+                        <div className="flex items-center justify-between mt-2">
+                          <div className="flex items-center border border-gray-200 rounded-md bg-gray-50">
                             <Button
+                              type="button"
                               variant="ghost"
                               size="sm"
-                              className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full p-2"
-                              onClick={() => removeFromCart(item.product?.id, item.selectedSize, item.product?.name, item.cartItemId)}
-                              aria-label="Remove from cart"
+                              className="h-6.5! min-h-0! py-0  w-6 p-0 hover:bg-gray-100 text-gray-600 rounded-none rounded-l-md"
+                              onClick={() =>
+                                updateQuantity(
+                                  product?.id,
+                                  size,
+                                  Math.max(1, (item.quantity || 1) - 1),
+                                  product?.name,
+                                  item.cartItemId
+                                )
+                              }
+                              disabled={(item?.quantity || 1) <= 1}
+                              aria-label="Decrease quantity"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Minus className="h-2.5 w-2.5" />
+                            </Button>
+                            <span className="text-[11px] font-semibold text-gray-900 w-6 text-center">
+                              {item.quantity}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-6.5! min-h-0! py-0  w-6 p-0 hover:bg-gray-100 text-gray-600 rounded-none rounded-r-md"
+                              onClick={() =>
+                                updateQuantity(
+                                  product?.id,
+                                  size,
+                                  (item.quantity || 1) + 1,
+                                  product?.name,
+                                  item.cartItemId
+                                )
+                              }
+                              aria-label="Increase quantity"
+                            >
+                              <Plus className="h-2.5 w-2.5" />
                             </Button>
                           </div>
+
+                          <span className="text-xs font-bold text-gray-900">
+                            {formatBDT(linePrice)}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -396,74 +488,96 @@ export default function CartDrawer({ visible, onClose }: CartDrawerProps) {
                 })}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center text-center py-16">
-                <div className="relative mb-6">
-                  <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
-                    <ShoppingCart className="h-12 w-12 text-gray-400" />
-                  </div>
-                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                    <span className="text-red-600 text-xs font-bold">0</span>
-                  </div>
+              <div className="flex flex-col items-center justify-center text-center py-16 px-4">
+                <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mb-3">
+                  <ShoppingBag className="h-8 w-8 text-emerald-600" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Your cart is empty</h3>
-                <p className="text-sm text-gray-500 mb-6 max-w-sm">
-                  Discover our amazing collection of premium perfumes and add some to your cart.
+                <h3 className="text-base font-bold text-gray-900 mb-1">
+                  Your cart is empty
+                </h3>
+                <p className="text-xs text-gray-500 mb-5 max-w-xs">
+                  Discover our pure perfume oils and find your personal signature blend.
                 </p>
-                <Link href='/shop'>
-                  <Button
-                    onClick={onClose}
-                    className="bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white px-8 py-2 rounded-full transition-all duration-300 transform hover:scale-105 cursor-pointer"
-                  >
-                    Start Shopping
-                  </Button>
-                </Link>
+                <Button
+                  onClick={onClose}
+                  asChild
+                  className="bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold px-5 h-9 text-xs"
+                >
+                  <Link href="/shop">Start Shopping</Link>
+                </Button>
               </div>
             )}
           </ScrollArea>
 
-          {/* Enhanced Cart Footer */}
+          {/* Drawer Footer */}
           {totalItems > 0 && (
-            <div className="border-t bg-white p-6 space-y-4 flex-shrink-0">
-              <Separator />
-
-              {/* Subtotal with enhanced styling */}
-              <div ref={subtotalRef} className="flex justify-between items-center p-4 bg-gradient-to-r from-red-50 to-pink-50 rounded-xl">
-                <div className="flex flex-col">
-                  <span className="text-sm text-gray-600">Subtotal</span>
-                  <span className="text-xs text-gray-500">{totalItems} {totalItems === 1 ? "item" : "items"}</span>
+            <div className="border-t border-gray-200 bg-white p-3.5 space-y-2.5">
+              <div
+                ref={subtotalRef}
+                className="space-y-1 text-xs"
+              >
+                <div className="flex justify-between text-gray-600">
+                  <span>Subtotal</span>
+                  <span className="font-semibold text-gray-900">
+                    {formatBDT(subtotal)}
+                  </span>
                 </div>
-                <div className="text-right">
-                  <span className="text-2xl font-bold text-red-600">৳{calculateSubtotal().toFixed(2)}</span>
-                  <span className="text-sm text-gray-600 block">BDT</span>
+                <div className="flex justify-between text-gray-600">
+                  <span>Shipping</span>
+                  <span className="font-semibold text-gray-900">
+                    {subtotal >= FREE_SHIPPING_THRESHOLD ? (
+                      <span className="text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded text-[10px]">
+                        FREE
+                      </span>
+                    ) : (
+                      "Calculated at checkout"
+                    )}
+                  </span>
+                </div>
+                <Separator className="my-1" />
+                <div className="flex justify-between items-baseline pt-0.5">
+                  <span className="text-xs font-bold text-gray-900">
+                    Estimated Total
+                  </span>
+                  <span className="text-base font-black text-gray-900">
+                    {formatBDT(subtotal)}
+                  </span>
                 </div>
               </div>
 
-              {/* Enhanced Action Buttons */}
-              <div className="space-y-3">
+              {/* Action Buttons */}
+              <div className="space-y-1.5 pt-0.5">
+                <Button
+                  ref={checkoutBtnRef}
+                  onClick={handleCheckout}
+                  className="w-full h-11 text-xs sm:text-sm font-extrabold tracking-wider rounded-xl bg-green-600 hover:bg-green-700 text-white shadow-md shadow-green-600/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <span>Proceed to Checkout</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+
                 <Button
                   variant="outline"
-                  className="w-full h-12 border-2 border-red-200 hover:border-red-300 hover:bg-red-50 text-red-600 font-semibold rounded-xl transition-all duration-300 bg-transparent"
                   onClick={redirectToCart}
+                  className="w-full h-9 text-xs font-semibold rounded-xl border-gray-200 hover:bg-gray-50 text-gray-700"
                 >
                   View Full Cart
                 </Button>
-                <Button
-                  ref={checkoutBtnRef}
-                  className="w-full h-12 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-[1.02] shadow-lg hover:shadow-xl"
-                  onClick={handleCheckout}
-                >
-                  Proceed to Checkout
-                </Button>
               </div>
 
-              {/* Enhanced Disclaimer */}
-              <div className="text-center p-3 bg-gray-50 rounded-lg">
-                <p className="text-xs text-gray-500">🔒 Secure checkout • Free shipping on orders over ৳1000</p>
+              {/* Trust Badges */}
+              <div className="flex items-center justify-around pt-0.5 text-[10px] font-semibold text-gray-500">
+                <span className="flex items-center gap-1">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> Genuine Products
+                </span>
+                <span className="flex items-center gap-1">
+                  <Truck className="h-3.5 w-3.5 text-green-600" /> Fast Delivery
+                </span>
               </div>
             </div>
           )}
         </div>
       </SheetContent>
     </Sheet>
-  )
+  );
 }

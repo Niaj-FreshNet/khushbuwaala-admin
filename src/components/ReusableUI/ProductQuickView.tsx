@@ -158,7 +158,7 @@ export function ProductQuickView({ product, trigger, open, onOpenChange }: Produ
   const savings = Math.max(0, originalPrice - discountedPrice)
   const selectedPrice = currentPrice
 
-  const isOutOfStock = (product.totalStock ?? 0) <= 0
+  // const isOutOfStock = (product.totalStock ?? 0) <= 0
 
   const handleToggleWishlist = (e?: React.MouseEvent) => {
     e?.stopPropagation?.()
@@ -207,7 +207,7 @@ export function ProductQuickView({ product, trigger, open, onOpenChange }: Produ
   );
 
   const handleAddToCart = async () => {
-    if (isOutOfStock || isAddingToCart || isBuyingNow) return
+    if (/* isOutOfStock || */ isAddingToCart || isBuyingNow) return
 
     setIsAddingToCart(true)
     try {
@@ -227,7 +227,7 @@ export function ProductQuickView({ product, trigger, open, onOpenChange }: Produ
           {
             item_id: String((product as any).id || (product as any).slug || product.name),
             item_name: product.name,
-            item_brand: (product as any).brand || "KhushbuWaala",
+            item_brand: (product as any).brand || "Khushbuwaala",
             item_category: (product as any).categoryId || (product as any).category?.categoryName || "product",
             item_variant: selectedSize || "3 ml",
             price: discountedPrice,
@@ -245,7 +245,7 @@ export function ProductQuickView({ product, trigger, open, onOpenChange }: Produ
   }
 
   const handleBuyNow = async () => {
-    if (isOutOfStock || isBuyingNow || isAddingToCart) return
+    if (/* isOutOfStock || */ isBuyingNow || isAddingToCart) return
 
     setIsBuyingNow(true)
     try {
@@ -261,7 +261,7 @@ export function ProductQuickView({ product, trigger, open, onOpenChange }: Produ
           {
             item_id: String((product as any).id || (product as any).slug || product.name),
             item_name: product.name,
-            item_brand: (product as any).brand || "KhushbuWaala",
+            item_brand: (product as any).brand || "Khushbuwaala",
             item_category: (product as any).categoryId || (product as any).category?.categoryName || "product",
             item_variant: selectedSize || "3 ml",
             price: discountedPrice,
@@ -475,7 +475,7 @@ export function ProductQuickView({ product, trigger, open, onOpenChange }: Produ
                         )}
 
                         {/* Stock */}
-                        <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
+                        {/* <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
                           <span
                             className={cn(
                               "h-2 w-2 rounded-full",
@@ -483,7 +483,7 @@ export function ProductQuickView({ product, trigger, open, onOpenChange }: Produ
                             )}
                           />
                           <span>{isOutOfStock ? "Out of stock" : "In stock"}</span>
-                        </div>
+                        </div> */}
                       </div>
                     </div>
 
@@ -657,7 +657,7 @@ export function ProductQuickView({ product, trigger, open, onOpenChange }: Produ
                       : "bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white"
                   )}
                   onClick={handleAddToCart}
-                  disabled={isOutOfStock || isAddingToCart || isBuyingNow}
+                  disabled={/* isOutOfStock || */ isAddingToCart || isBuyingNow}
                 >
                   {isAddingToCart ? (
                     <>
@@ -667,7 +667,7 @@ export function ProductQuickView({ product, trigger, open, onOpenChange }: Produ
                   ) : (
                     <>
                       <ShoppingCart className="h-5 w-5 mr-2" />
-                      {isOutOfStock ? "Out of Stock" : "Add to Cart"}
+                      {/* isOutOfStock ? "Out of Stock" : */ "Add to Cart"}
                     </>
                   )}
                 </Button>
@@ -681,7 +681,7 @@ export function ProductQuickView({ product, trigger, open, onOpenChange }: Produ
                       : "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
                   )}
                   onClick={handleBuyNow}
-                  disabled={isOutOfStock || isAddingToCart || isBuyingNow}
+                  disabled={/* isOutOfStock || */ isAddingToCart || isBuyingNow}
                 >
                   {isBuyingNow ? (
                     <>

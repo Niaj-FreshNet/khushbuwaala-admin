@@ -44,28 +44,28 @@ export function ProductCarouselClient({
     setIsQuickViewOpen(true)
   }
 
-  // kept (even if unused) in case you need it later
   const wrapRef = useRef<HTMLDivElement | null>(null)
 
   return (
-    <section ref={wrapRef} className="mx-auto w-full max-w-7xl px-3 sm:px-4 lg:px-6 py-2">
+    <section ref={wrapRef} className="mx-auto w-full max-w-7xl 2xl:max-w-384 3xl:max-w-[1800px] px-1 sm:px-2 lg:px-3 mb-8 sm:mb-10 lg:mb-12">
       <SectionTitle
         title={title}
         subtitle={titleSubtitle}
         variant={titleVariant}
         icon={titleIcon}
-        underlineWidth={titleUnderlineWidth}
         animated={titleAnimated}
         showDecorations={titleShowDecorations}
         underlineVariant={titleUnderlineVariant}
       />
 
       <div className="relative">
-        <Carousel opts={{ align: "center" }} className="w-full">
-          {/* ✅ GAP REDUCED HERE (product cards) */}
-          <CarouselContent className="w-full mx-auto gap-0 md:gap-1 lg:gap-2">
+        <Carousel opts={{ align: "start" }} className="w-full">
+          <CarouselContent className="w-full -ml-2 md:-ml-3 items-start">
             {products.map((product) => (
-              <CarouselItem key={product.id} className="basis-1/2 md:basis-1/3 lg:basis-1/4">
+              <CarouselItem
+                key={product.id}
+                className="pl-1 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5 2xl:basis-1/6"
+              >
                 <div className="h-full">
                   <ProductCard className="h-auto" product={product} onQuickView={() => handleQuickView(product)} />
                 </div>
@@ -73,8 +73,8 @@ export function ProductCarouselClient({
             ))}
           </CarouselContent>
 
-          <CarouselPrevious className="hidden md:flex" />
-          <CarouselNext className="hidden md:flex" />
+          <CarouselPrevious className="hidden md:flex w-11 h-11 -left-4 lg:-left-6 bg-white/50 hover:bg-white/70 text-gray-800 backdrop-blur-md border border-gray-200 shadow-lg shadow-black/5 hover:scale-105 active:scale-95 transition-all duration-200" />
+          <CarouselNext className="hidden md:flex w-11 h-11 -right-4 lg:-right-6 bg-white/50 hover:bg-white/70 text-gray-800 backdrop-blur-md border border-gray-200 shadow-lg shadow-black/5 hover:scale-105 active:scale-95 transition-all duration-200" />
         </Carousel>
       </div>
 

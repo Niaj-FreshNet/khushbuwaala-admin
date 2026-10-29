@@ -20,10 +20,10 @@ export function CategoryCard({
     <article
       className={cn(
         "group relative overflow-hidden",
-        "rounded-none sm:rounded-2xl",
+        "rounded-none",
         "shadow-none sm:shadow-sm sm:hover:shadow-lg",
         "transition-all duration-300",
-        "bg-black/[0.02] border border-transparent sm:border-gray-100"
+        "bg-black/2 border-0 sm:border border-transparent sm:border-gray-100"
       )}
     >
       <div className="relative w-full h-60 sm:h-56 md:h-60 lg:h-64">
@@ -41,7 +41,7 @@ export function CategoryCard({
           priority={false}
         />
 
-        {/* Full-card link (kept) */}
+        {/* Full-card link */}
         <Link
           href={CategoryLink}
           className={cn(
@@ -53,31 +53,32 @@ export function CategoryCard({
           title={`Shop ${CategoryName}`}
         />
 
-        {/* Premium overlay stack */}
+        {/* Darkening Overlay */}
         <div
           className={cn(
             "absolute inset-0 pointer-events-none",
-            "bg-gradient-to-t from-black/85 via-black/35 to-black/5",
-            "opacity-100 sm:opacity-90 sm:group-hover:opacity-100",
-            "transition-opacity duration-300"
+            "bg-linear-to-t from-black/85 via-black/40 to-black/20",
+            "opacity-80 sm:group-hover:opacity-95 sm:group-focus-within:opacity-95",
+            "transition-opacity duration-500"
           )}
         />
 
-        {/* Subtle vignette + glow (premium feel) */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.14),transparent_45%)] opacity-70" />
-          <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/40 to-transparent" />
-        </div>
+        {/* Center-aligned Content Stack */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-5 lg:p-6 text-center pointer-events-none">
 
-        {/* Content */}
-        <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-5 lg:p-6 pointer-events-none">
-          {/* Title pill (glass) */}
-          <div className="inline-flex max-w-[92%]">
+          {/* Title Pill: Centered by default, glides upward on hover */}
+          <div
+            className={cn(
+              "transform transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]",
+              "translate-y-6 sm:translate-y-8",
+              "group-hover:translate-y-0 group-focus-within:translate-y-0"
+            )}
+          >
             <h3
               className={cn(
                 "text-white font-semibold tracking-wide leading-tight",
                 "text-lg sm:text-base md:text-lg lg:text-xl",
-                "px-3 py-1.5 rounded-lg",
+                "px-4 py-1.5 rounded-lg",
                 "bg-white/10 backdrop-blur-md border border-white/15",
                 "shadow-[0_8px_30px_rgba(0,0,0,0.25)]"
               )}
@@ -86,45 +87,40 @@ export function CategoryCard({
             </h3>
           </div>
 
-          {/* Reveal panel: hover (desktop) + focus-within (mobile tap/keyboard) */}
+          {/* Reveal Panel: Slides up into view below the elevated title */}
           <div
             className={cn(
-              "mt-2",
-              "opacity-0 translate-y-3",
-              "transition-all duration-300",
-              "group-focus-within:opacity-100 group-focus-within:translate-y-0",
-              "sm:group-hover:opacity-100 sm:group-hover:translate-y-0"
+              "flex flex-col items-center",
+              "max-h-0 opacity-0 translate-y-4",
+              "group-hover:max-h-48 group-hover:opacity-100 group-hover:translate-y-0",
+              "group-focus-within:max-h-48 group-focus-within:opacity-100 group-focus-within:translate-y-0",
+              "transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
             )}
           >
-            <p className="text-gray-100/90 text-sm md:text-sm lg:text-base line-clamp-3">
+            <p className="mt-2 text-gray-100/90 text-xs sm:text-xs md:text-sm line-clamp-2 max-w-[90%]">
               {description}
             </p>
 
-            {/* CTA “Shop Now” */}
+            {/* CTA Button */}
             <div className="mt-3 inline-flex items-center">
               <div
                 className={cn(
                   "inline-flex items-center gap-2",
-                  "px-4 h-10 rounded-full",
-                  "bg-white text-rose-600 font-semibold",
-                  "shadow-sm border border-white/60",
-                  "transition-transform duration-300",
-                  "sm:group-hover:translate-x-0",
-                  "translate-x-0"
+                  "px-4 h-8.5 rounded-full text-xs font-semibold",
+                  "bg-white text-rose-600",
+                  "shadow-md border border-white/60",
+                  "transition-transform duration-300 hover:scale-105"
                 )}
               >
                 Shop Now
-                <ArrowRight className="h-4 w-4" />
+                <ArrowRight className="h-3.5 w-3.5" />
               </div>
-
-              {/* tiny accent line */}
-              <div className="hidden sm:block ml-3 h-px w-10 bg-gradient-to-r from-white/60 to-transparent" />
             </div>
           </div>
-
-          {/* Corner accents (very subtle luxury detail) */}
-          <div className="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/10 border border-white/10 blur-[0.5px] opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300" />
         </div>
+
+        {/* Ambient Corner Accent */}
+        <div className="absolute top-3 right-3 h-8 w-8 rounded-full bg-white/10 border border-white/10 blur-[0.5px] opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
       </div>
     </article>
   )

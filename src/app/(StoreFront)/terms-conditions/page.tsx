@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const metadata: Metadata = {
-  title: "Terms & Conditions | KhushbuWaala",
+  title: "Terms & Conditions | Khushbuwaala",
   description:
-    "Read KhushbuWaala Terms & Conditions covering orders, payments, shipping, returns, privacy, liability, and more.",
+    "Read Khushbuwaala Terms & Conditions covering orders, payments, shipping, returns, privacy, liability, and more.",
 };
 
 export default function TermsConditions() {
@@ -13,13 +13,13 @@ export default function TermsConditions() {
       <div className="container mx-auto px-4 max-w-4xl">
         <Card className="border-gray-100 shadow-sm">
           <CardHeader className="text-center">
-            <CardTitle className="text-3xl font-bold">Terms & Conditions — KhushbuWaala</CardTitle>
+            <CardTitle className="text-3xl font-bold">Terms & Conditions — Khushbuwaala</CardTitle>
             <p className="text-sm text-gray-500 mt-2">Last updated: November 02, 2025</p>
           </CardHeader>
 
           <CardContent className="prose prose-lg max-w-none text-gray-700 space-y-6">
             <p>
-              Welcome to <strong>KhushbuWaala</strong>. By accessing or using our website{" "}
+              Welcome to <strong>Khushbuwaala</strong>. By accessing or using our website{" "}
               <strong>khushbuwaala.com</strong>, you agree to be bound by the following Terms &amp;
               Conditions. Please read them carefully before using our services.
             </p>
@@ -27,7 +27,7 @@ export default function TermsConditions() {
 
             <h2>1. About Us</h2>
             <p>
-              KhushbuWaala is a fragrance brand based in Bangladesh, offering attars, perfume oils,
+              Khushbuwaala is a fragrance brand based in Bangladesh, offering attars, perfume oils,
               perfumes, and related products through online and physical stores.
             </p>
             <p>These Terms apply to all users, customers, and visitors of the website.</p>
@@ -64,7 +64,7 @@ export default function TermsConditions() {
               <li>Delivery timelines and charges are outlined in our Shipping Policy.</li>
               <li>Customers must provide accurate delivery details.</li>
               <li>
-                KhushbuWaala is not responsible for delays caused by courier services or unforeseen
+                Khushbuwaala is not responsible for delays caused by courier services or unforeseen
                 circumstances.
               </li>
             </ul>
@@ -100,7 +100,7 @@ export default function TermsConditions() {
             <h2>9. Intellectual Property</h2>
             <p>
               All content on this website, including logos, text, images, graphics, and branding, is the
-              property of KhushbuWaala. Unauthorized use, reproduction, or distribution is strictly
+              property of Khushbuwaala. Unauthorized use, reproduction, or distribution is strictly
               prohibited.
             </p>
 
@@ -115,12 +115,12 @@ export default function TermsConditions() {
               <li>Fragrance products may cause skin sensitivity or allergic reactions in rare cases.</li>
               <li>Customers are advised to perform a patch test before full use.</li>
               <li>
-                KhushbuWaala shall not be held liable for adverse reactions caused by product use.
+                Khushbuwaala shall not be held liable for adverse reactions caused by product use.
               </li>
             </ul>
 
             <h2>12. Limitation of Liability</h2>
-            <p>KhushbuWaala shall not be liable for:</p>
+            <p>Khushbuwaala shall not be liable for:</p>
             <ul>
               <li>Indirect, incidental, or consequential damages.</li>
               <li>Delivery delays beyond our control.</li>
@@ -129,7 +129,7 @@ export default function TermsConditions() {
 
             <h2>13. Third-Party Services</h2>
             <p>
-              We may use third-party services such as payment gateways and courier partners. KhushbuWaala
+              We may use third-party services such as payment gateways and courier partners. Khushbuwaala
               is not responsible for issues caused by these third parties.
             </p>
 
@@ -165,7 +165,7 @@ export default function TermsConditions() {
               </p>
 
               <p className="mt-4 text-sm text-gray-600">
-                <strong>KhushbuWaala</strong>
+                <strong>Khushbuwaala</strong>
                 <br />
                 Authentic scents. Honest terms. Trusted experience.
               </p>

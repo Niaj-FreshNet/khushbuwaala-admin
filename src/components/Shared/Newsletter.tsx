@@ -37,10 +37,10 @@ export default function NewsletterForm() {
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full -mb-4">
       <form
         onSubmit={handleNewsletterSubmit}
-        className="flex items-center w-full bg-white shadow-sm border border-rose-200 rounded-2xl overflow-hidden focus-within:ring-2 focus-within:ring-rose-400 transition-all"
+        className="flex items-center w-full bg-white shadow-sm border border-rose-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-rose-400 transition-all"
       >
         <div className="pl-4 text-rose-500">
           <Mail className="h-5 w-5" />

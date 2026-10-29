@@ -35,7 +35,7 @@ export function ProductCarouselSection({
   titleUnderlineWidth,
   titleAnimated = true,
   titleShowDecorations = true,
-  titleUnderlineVariant = "default",
+  titleUnderlineVariant,
 }: ProductCarouselSectionProps) {
   // Conditional API calls based on props
   const {

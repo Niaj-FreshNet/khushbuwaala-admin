@@ -3,6 +3,15 @@ import { baseApi } from '../baseApi';
 export const cartApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
 
+    getAllCarts: builder.query({
+      query: (params) => ({
+        url: '/cart/all-carts',
+        method: 'GET',
+        params,
+      }),
+      providesTags: ['Cart'],
+    }),
+
     // ✅ Add item to cart (works for both visitors & logged-in users)
     addToCart: builder.mutation({
       query: (data) => ({
@@ -44,6 +53,7 @@ export const cartApi = baseApi.injectEndpoints({
 });
 
 export const {
+  useGetAllCartsQuery,
   useAddToCartMutation,
   useGetUserCartQuery,
   useUpdateCartItemMutation,

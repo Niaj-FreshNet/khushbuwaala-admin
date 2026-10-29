@@ -129,7 +129,7 @@ export default function OrderReceipt({ order, isOpen, onClose }: OrderReceiptPro
             {/* Brand + Invoice meta */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
-                <h1 className="text-2xl font-bold">KhushbuWaala</h1>
+                <h1 className="text-2xl font-bold">Khushbuwaala</h1>
                 <p className="text-xs text-gray-500">Premium Perfume Oils</p>
               </div>
               <div className="text-sm text-gray-700">

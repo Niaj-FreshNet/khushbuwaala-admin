@@ -1,87 +1,67 @@
+import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import BlogDetailClient from '../_components/BlogDetailClient';
 
 interface Props {
-    params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
-// Server-side data fetching for metadata
-export async function generateMetadata({ params }: Props) {
-    try {
-        // FIX: Use template literal correctly
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/blog/get-blog/${params.slug}`, {
-            cache: 'no-store',
-        });
+async function fetchBlog(slug: string) {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/blog/get-blog/${slug}`,
+      { cache: 'no-store' }
+    );
 
-        if (!response.ok) {
-            return {
-                title: 'Blog Not Found',
-                description: 'The requested blog could not be found.',
-            };
-        }
-
-        const data = await response.json();
-        const blog = data?.blog;
-
-        if (!blog) {
-            return {
-                title: 'Blog Not Found',
-                description: 'The requested blog could not be found.',
-            };
-        }
-
-        return {
-            title: blog.metaTitle || blog.title,
-            description: blog.metaDescription || blog.content.slice(0, 160),
-            keywords: blog.keywords?.split(','),
-            openGraph: {
-                title: blog.metaTitle || blog.title,
-                description: blog.metaDescription || blog.content.slice(0, 160),
-                images: [{ url: blog.imageUrl }],
-                url: `/blogs/${blog.slug}`,
-            },
-            twitter: {
-                card: 'summary_large_image',
-                title: blog.metaTitle || blog.title,
-                description: blog.metaDescription || blog.content.slice(0, 160),
-                images: [blog.imageUrl],
-            },
-        };
-    } catch (error) {
-        return {
-            title: 'Blog Not Found',
-            description: 'The requested blog could not be found.',
-        };
-    }
+    if (!response.ok) return null;
+    const json = await response.json();
+    return json?.data || null; // Extracts { blog, relatedBlogs }
+  } catch (error) {
+    return null;
+  }
 }
 
-// Server-side data fetching for the page
-async function getBlogData(slug: string) {
-    try {
-        // FIX: Use template literal correctly
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/blog/get-blog/${slug}`, {
-            cache: 'no-store',
-        });
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const data = await fetchBlog(slug);
+  const blog = data?.blog;
 
-        if (!response.ok) {
-            return null;
-        }
+  if (!blog) {
+    return {
+      title: 'Blog Not Found | Khushbuwaala',
+      description: 'The requested blog post could not be found.',
+    };
+  }
 
-        return await response.json();
-    } catch (error) {
-        return null;
-    }
+  const plainSummary = blog.metaDescription || blog.content?.replace(/<[^>]*>?/gm, '').slice(0, 160) || '';
+
+  return {
+    title: `${blog.metaTitle || blog.title} | Khushbuwaala`,
+    description: plainSummary,
+    keywords: blog.keywords ? blog.keywords.split(',').map((k: string) => k.trim()) : [],
+    openGraph: {
+      title: blog.metaTitle || blog.title,
+      description: plainSummary,
+      images: blog.imageUrl ? [{ url: blog.imageUrl }] : [],
+      url: `/blog/${blog.slug}`,
+      type: 'article',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: blog.metaTitle || blog.title,
+      description: plainSummary,
+      images: blog.imageUrl ? [blog.imageUrl] : [],
+    },
+  };
 }
 
-const BlogDetail = async ({ params }: Props) => {
-    const data = await getBlogData(params.slug);
+export default async function BlogDetailPage({ params }: Props) {
+  const { slug } = await params;
+  const data = await fetchBlog(slug);
 
-    if (!data?.blog) {
-        notFound();
-    }
+  if (!data?.blog) {
+    notFound();
+  }
 
-    // Pass initial data to client component for SSR
-    return <BlogDetailClient slug={params.slug} initialData={data} />;
-};
-
-export default BlogDetail;
+  return <BlogDetailClient slug={slug} initialData={data} />;
+}

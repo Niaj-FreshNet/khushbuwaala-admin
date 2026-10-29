@@ -14,14 +14,14 @@ import BannerSection from "@/components/Modules/Home/BannerSection.client"
 export const metadata: Metadata = {
   title: "Home", // This will be combined with the template from root layout
   description:
-    "Discover KhushbuWaala's exquisite collection of premium perfumes, oriental attars, and natural fragrances. Shop best sellers, new arrivals, and more.",
+    "Discover Khushbuwaala's exquisite collection of premium perfumes, oriental attars, and natural fragrances. Shop best sellers, new arrivals, and more.",
   keywords:
-    "perfume, attar, fragrance, KhushbuWaala, homepage, best sellers, new arrivals, inspired perfume, oriental attar, artificial oud, natural collection",
+    "perfume, attar, fragrance, Khushbuwaala, homepage, best sellers, new arrivals, inspired perfume, oriental attar, artificial oud, natural collection",
   alternates: {
     canonical: "https://khushbuwaala.com/", // Canonical URL for the homepage
   },
   openGraph: {
-    title: "KhushbuWaala - Premium Perfumes & Attars | Authentic Fragrances",
+    title: "Khushbuwaala - Premium Perfumes & Attars | Authentic Fragrances",
     description:
       "Your ultimate destination for premium perfumes and attars. Explore our best sellers, new collections, and exclusive offers.",
     url: "https://khushbuwaala.com/",
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
         url: "/images/og-image-homepage.jpg", // Specific OG image for homepage
         width: 1200,
         height: 630,
-        alt: "KhushbuWaala Homepage - Premium Perfumes",
+        alt: "Khushbuwaala Homepage - Premium Perfumes",
       },
     ],
   },
@@ -45,23 +45,67 @@ export default function HomePage() {
       <CarouselSlider />
 
       {/* Best Sellers Section with premium variant */}
-        <ProductCarouselSection
-          title="Best Sellers"
-          section="bestSeller"
-          linkPath="/shop"
-          titleVariant="premium"
-          titleSubtitle="Discover our most loved fragrances"
-          titleIcon={<Crown className="h-6 w-6" />}
-          titleUnderlineVariant="full"
-        />
+      <ProductCarouselSection
+        title="Best Sellers"
+        section="bestSeller"
+        linkPath="/shop"
+        titleVariant="premium"
+      />
 
       <Deferred delay={800}>
 
         {/* Category Banner Section */}
         <CategoryBanner />
 
-        {/* Enhanced Inspired Perfume Banner with Art Direction */}
+        {/* <MountOnView>
+          <BannerSection
+            heading="Explore Oriental Fragrances"
+            text="Choose Your Desired Perfume Oil from Oriental & Arabian Attar Collections"
+            buttonText="Shop Now"
+            link="/oriental-attar"
+            images={{
+              mobile: "/images/banner2-mobile.webp",
+              desktop: "/images/banner2.webp", // Tablet will fallback to desktop
+            }}
+            variant="secondary"
+          />
+        </MountOnView> */}
+
+        {/* Oriental Products Section with elegant variant */}
         <MountOnView>
+          <ProductCarouselSection
+            title="Arabian Attar"
+            category="6904acd47a035c41185d272c"
+            linkPath="/oriental-attar"
+            titleVariant="premium"
+          />
+        </MountOnView>
+
+        {/* <MountOnView>
+          <BannerSection
+            heading="Best Artificial Editions Of Oud Oils"
+            text="Choose The Royal Fragrances From Artificial Oud Collection"
+            buttonText="Shop Now"
+            link="/artificial-oud"
+            images={{
+              mobile: "/images/banner3-mobile.webp",
+              desktop: "/images/banner3.webp",
+            }}
+            variant="tertiary"
+          />
+        </MountOnView> */}
+
+        {/* Artificial Oud Products Section with modern variant */}
+        <MountOnView>
+          <ProductCarouselSection
+            title="Artificial Oud"
+            category="6904ab807a035c41185d2729"
+            linkPath="/artificial-oud"
+            titleVariant="premium"
+          />
+        </MountOnView>
+
+        {/* <MountOnView>
           <BannerSection
             heading="Premium Inspired Perfume Oils"
             text="Get The Best Perfume Oil Editions Inspired From Designer Perfumes"
@@ -74,78 +118,23 @@ export default function HomePage() {
             }}
             variant="primary"
           />
-        </MountOnView>
+        </MountOnView> */}
 
         {/* Inspired Perfume Products Section with gradient variant */}
-          <MountOnView>
-            <ProductCarouselSection
-              title="Inspired Perfume Oils"
-              category="6904ac7b7a035c41185d272a"
-              titleVariant="gradient"
-              titleSubtitle="Designer-inspired fragrances at affordable prices"
-              titleIcon={<Sparkles className="h-6 w-6" />}
-            />
-          </MountOnView>
-
-        {/* Enhanced Oriental Fragrances Banner */}
         <MountOnView>
-          <BannerSection
-            heading="Explore Oriental Fragrances"
-            text="Choose Your Desired Perfume Oil from Oriental & Arabian Attar Collections"
-            buttonText="Shop Now"
-            link="/oriental-attar"
-            images={{
-              mobile: "/images/banner2-mobile.webp",
-              desktop: "/images/banner2.webp", // Tablet will fallback to desktop
-            }}
-            variant="secondary"
+          <ProductCarouselSection
+            title="Inspired Perfume Oils"
+            category="6904ac7b7a035c41185d272a"
+            linkPath="/inspired-perfume-oud"
+            titleVariant="premium"
           />
         </MountOnView>
-
-        {/* Oriental Products Section with elegant variant */}
-          <MountOnView>
-            <ProductCarouselSection
-              title="Arabian Attar"
-              category="6904acd47a035c41185d272c"
-              linkPath="/oriental-attar"
-              titleVariant="elegant"
-              titleSubtitle="Traditional Middle Eastern fragrances"
-              titleIcon={<Star className="h-6 w-6" />}
-            />
-          </MountOnView>
-
-        {/* Enhanced Artificial Oud Banner */}
-        <MountOnView>
-          <BannerSection
-            heading="Best Artificial Editions Of Oud Oils"
-            text="Choose The Royal Fragrances From Artificial Oud Collection"
-            buttonText="Shop Now"
-            link="/artificial-oud"
-            images={{
-              mobile: "/images/banner3-mobile.webp",
-              desktop: "/images/banner3.webp",
-            }}
-            variant="tertiary"
-          />
-        </MountOnView>
-
-        {/* Artificial Oud Products Section with modern variant */}
-          <MountOnView>
-            <ProductCarouselSection
-              title="Artificial Oud"
-              category="6904ab807a035c41185d2729"
-              linkPath="/artificial-oud"
-              titleVariant="modern"
-              titleSubtitle="Premium oud alternatives"
-              titleIcon={<Gem className="h-6 w-6" />}
-            />
-          </MountOnView>
 
         {/* Services Section */}
         <ServicesSection />
 
         {/* Reviews Section */}
-        <ReviewsSection />
+        {/* <ReviewsSection /> */}
 
         {/* Subscribe Section */}
         <SubscribeSection />

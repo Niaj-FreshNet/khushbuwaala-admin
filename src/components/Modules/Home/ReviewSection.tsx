@@ -26,12 +26,12 @@ const REVIEWS = [
 
 export function ReviewsSection() {
   return (
-    <section className="py-14 px-4 text-center" aria-labelledby="reviews-heading">
+    <section
+      className="mx-auto w-full max-w-7xl 2xl:max-w-384 3xl:max-w-[1800px] px-3 sm:px-6 lg:px-8"
+      aria-labelledby="reviews-heading">
       <SectionTitle
         title="Inspired by Our Customers"
-        underlineWidth="w-52"
-        className="mb-8"
-        subtitle="Real people. Real reactions. Real compliments."
+        className="mt-6 sm:mt-8 lg:mt-10 mb-2 sm:mb-4"
       />
 
       <ReviewsGridClient items={REVIEWS} />

@@ -49,12 +49,26 @@ export function NavbarClientWrapper({ children }: NavbarClientWrapperProps) {
     closeSearch: () => setSearchVisible(false),
   }), [])
 
-  const counts = useMemo(() => ({
-    cart: cartItems.length,
-    wishlist: wishlistCount,
-  }), [cartItems.length, wishlistCount])
+  // ✅ Sum up total quantities instead of array length
+  const counts = useMemo(() => {
+    const totalCartQty = Array.isArray(cartItems)
+      ? cartItems.reduce((acc, item) => acc + (item?.quantity || 1), 0)
+      : 0
 
-  // Scroll hide/show (premium)
+    // Handles numeric wishlist count or array wishlist count
+    const totalWishlistQty = typeof wishlistCount === "number"
+      ? wishlistCount
+      : Array.isArray(wishlistCount)
+        ? (wishlistCount as any[]).reduce((acc, item) => acc + (item?.quantity || 1), 0)
+        : 0
+
+    return {
+      cart: totalCartQty,
+      wishlist: totalWishlistQty,
+    }
+  }, [cartItems, wishlistCount])
+
+  // Scroll hide/show
   useEffect(() => {
     const handleScroll = () => {
       const now = Date.now()
@@ -92,17 +106,14 @@ export function NavbarClientWrapper({ children }: NavbarClientWrapperProps) {
       bumpTimerRef.current = window.setTimeout(() => setCartBump(false), 900)
     }
 
-    // ✅ NEW: open cart drawer (after animation)
     const onOpenCart = () => {
-      // console.log("kw:open-cart received ✅");
       setIsVisible(true)
       lockUntilRef.current = Date.now() + 1400
       setCartVisible(true)
 
-      // ✅ always fire (even if already open)
       setTimeout(() => {
-        window.dispatchEvent(new CustomEvent("kw:cart-opened"));
-      }, 50);
+        window.dispatchEvent(new CustomEvent("kw:cart-opened"))
+      }, 50)
     }
 
     window.addEventListener("kw:reveal-nav", onRevealNav)

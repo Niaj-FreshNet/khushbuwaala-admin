@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | KhushbuWaala",
+  title: "Privacy Policy | Khushbuwaala",
   description:
-    "Learn how KhushbuWaala collects, uses, stores, and protects your personal information when you visit or purchase from khushbuwaala.com.",
+    "Learn how Khushbuwaala collects, uses, stores, and protects your personal information when you visit or purchase from khushbuwaala.com.",
   openGraph: {
-    title: "Privacy Policy | KhushbuWaala",
+    title: "Privacy Policy | Khushbuwaala",
     description: "Your trust matters. Learn how we protect your data.",
     url: "https://www.khushbuwaala.com/privacy-policy",
   },
@@ -24,7 +24,7 @@ export default function PrivacyPolicy() {
 
           <CardContent className="prose prose-lg max-w-none text-gray-700 space-y-6">
             <p>
-              At <strong>KhushbuWaala</strong>, we respect your privacy and are committed to protecting
+              At <strong>Khushbuwaala</strong>, we respect your privacy and are committed to protecting
               your personal information. This Privacy Policy explains how we collect, use, store, and
               safeguard your data when you visit or make a purchase from{" "}
               <strong>khushbuwaala.com</strong>.
@@ -67,7 +67,7 @@ export default function PrivacyPolicy() {
             </p>
 
             <h2>3. Cookies &amp; Tracking Technologies</h2>
-            <p>KhushbuWaala uses cookies to:</p>
+            <p>Khushbuwaala uses cookies to:</p>
             <ul>
               <li>Enhance user experience</li>
               <li>Remember preferences</li>
@@ -80,7 +80,7 @@ export default function PrivacyPolicy() {
 
             <h2>4. Payment Security</h2>
             <p>
-              All payments are processed through secure third-party payment gateways. KhushbuWaala does
+              All payments are processed through secure third-party payment gateways. Khushbuwaala does
               not store your card or payment details on its servers.
             </p>
             <p>We take reasonable technical and organizational measures to protect your information.</p>
@@ -123,7 +123,7 @@ export default function PrivacyPolicy() {
 
             <h2>9. Changes to This Privacy Policy</h2>
             <p>
-              KhushbuWaala reserves the right to update this Privacy Policy at any time. Any changes will
+              Khushbuwaala reserves the right to update this Privacy Policy at any time. Any changes will
               be posted on this page with an updated revision date.
             </p>
             <p>We encourage you to review this policy periodically.</p>
@@ -148,7 +148,7 @@ export default function PrivacyPolicy() {
               </p>
 
               <p className="mt-4 text-sm text-gray-600">
-                <strong>KhushbuWaala</strong>
+                <strong>Khushbuwaala</strong>
                 <br />
                 Your trust matters. Your privacy matters.
               </p>

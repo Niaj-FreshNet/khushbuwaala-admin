@@ -73,7 +73,7 @@ export default function ViewItemDataLayer({
                     {
                         item_id: String(product.id || product.slug),
                         item_name: product.name,
-                        item_brand: product.brand || "KhushbuWaala",
+                        item_brand: product.brand || "Khushbuwaala",
                         item_category: category || "Shop",
                         item_variant: itemVariant,
                         price,

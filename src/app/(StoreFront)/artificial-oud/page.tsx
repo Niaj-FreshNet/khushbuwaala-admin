@@ -3,14 +3,14 @@ import { ShopShell } from "@/components/Modules/Shop/ShopShell";
 
 // Metadata
 export const metadata: Metadata = {
-  title: "Artificial Oud Collection | KhushbuWaala",
+  title: "Artificial Oud Collection | Khushbuwaala",
   description:
-    "Explore KhushbuWaala's Artificial Oud collection. Premium fragrances with free nationwide shipping on orders over ৳1000.",
+    "Explore Khushbuwaala's Artificial Oud collection. Premium fragrances with free nationwide shipping on orders over ৳1000.",
   keywords: [
     "artificial oud",
     "oud perfume",
     "premium fragrance",
-    "KhushbuWaala shop",
+    "Khushbuwaala shop",
     "Bangladesh perfume",
   ].join(", "),
   alternates: { canonical: "https://khushbuwaala.com/artificial-oud" },
@@ -22,7 +22,7 @@ const shopStructuredData = {
   "@type": "CollectionPage",
   name: "Artificial Oud Collection",
   description:
-    "Explore KhushbuWaala's curated collection of artificial oud perfumes and oils",
+    "Explore Khushbuwaala's curated collection of artificial oud perfumes and oils",
   url: "https://khushbuwaala.com/artificial-oud",
   mainEntity: {
     "@type": "ItemList",

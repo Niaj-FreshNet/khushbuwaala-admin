@@ -45,13 +45,13 @@ export const DesktopCartTable = ({ items }: DesktopCartTableProps) => {
   }
 
   return (
-    <Card>
-      <CardHeader className="bg-gray-50">
-        <div className="grid grid-cols-12 gap-4 text-sm font-semibold text-gray-700">
-          <div className="col-span-6">Product</div>
-          <div className="col-span-2 text-center">Price</div>
-          <div className="col-span-2 text-center">Quantity</div>
-          <div className="col-span-2 text-center">Total</div>
+    <Card className="border-none shadow-none bg-transparent">
+      <CardHeader className="bg-gray-50/80 rounded-t-xl py-2 px-4 border-b border-gray-100">
+        <div className="grid grid-cols-12 gap-3 text-xs font-semibold text-gray-500 items-center">
+          <div className="col-span-5">Product</div>
+          <div className="col-span-2 text-right">Price</div>
+          <div className="col-span-3 text-center">Quantity</div>
+          <div className="col-span-2 text-right pr-2">Total</div>
         </div>
       </CardHeader>
       <CardContent className="p-0">
@@ -63,54 +63,48 @@ export const DesktopCartTable = ({ items }: DesktopCartTableProps) => {
 
           return (
             <div key={`${item.product?.id}-${item.selectedSize}`}>
-              <div className="grid grid-cols-12 gap-4 p-6 hover:bg-gray-50 transition-colors duration-200">
+              <div className="grid grid-cols-12 gap-3 py-3 px-4 items-center hover:bg-gray-50/50 transition-colors duration-150">
                 {/* Product */}
-                <div className="col-span-6 flex items-center gap-4">
-                  <div className="relative w-16 h-20 rounded-lg overflow-hidden bg-gray-100">
+                <div className="col-span-5 flex items-center gap-3 min-w-0">
+                  <div className="relative w-14 h-16 sm:w-16 sm:h-20 shrink-0 rounded-lg overflow-hidden bg-gray-100 border border-gray-100">
                     <Image
                       src={item.product?.primaryImage || "/placeholder.svg?height=96&width=80"}
-                      alt={item.product?.name}
+                      alt={item.product?.name || "Product Image"}
                       fill
                       className="object-cover"
                       sizes="64px"
                     />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 truncate">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold text-gray-900 text-sm truncate">
                       {item.product?.name}
                     </h3>
-                    <p className="text-gray-500 text-sm">
-                      Size: <span className="font-medium">{item.selectedSize}</span>
+                    <p className="text-gray-500 text-xs mt-0.5">
+                      Size: <span className="font-medium text-gray-700">{item.selectedSize}</span>
                     </p>
                   </div>
                 </div>
 
                 {/* Price */}
-                <div className="col-span-2 flex items-center justify-center">
-                  <span className="font-medium">৳{item.selectedPrice.toFixed(2)}</span>
+                <div className="col-span-2 text-right">
+                  <span className="font-medium text-sm text-gray-800 whitespace-nowrap">
+                    ৳{item.selectedPrice.toFixed(2)}
+                  </span>
                 </div>
 
-                {/* Quantity */}
-                <div className="col-span-2 flex items-center justify-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => handleRemove(item)}
-                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                  <div className="flex items-center border rounded-lg">
+                {/* Quantity + Remove Icon */}
+                <div className="col-span-3 flex items-center justify-center gap-1.5 sm:gap-2">
+                  <div className="flex items-center border border-gray-200 rounded-lg bg-white shadow-none">
                     <Button
                       variant="ghost"
                       size="icon-sm"
                       onClick={() => handleQuantityChange(item, -1)}
                       disabled={item.quantity === 1 || isUpdating}
-                      className="rounded-r-none border-r"
+                      className="h-7 w-7 rounded-r-none border-r border-gray-200 p-0 hover:bg-gray-100"
                     >
                       <Minus className="w-3 h-3" />
                     </Button>
-                    <div className="w-12 flex items-center justify-center text-sm font-medium">
+                    <div className="w-8 sm:w-10 flex items-center justify-center text-xs sm:text-sm font-semibold text-gray-900">
                       {isUpdating ? "..." : item.quantity}
                     </div>
                     <Button
@@ -118,16 +112,28 @@ export const DesktopCartTable = ({ items }: DesktopCartTableProps) => {
                       size="icon-sm"
                       onClick={() => handleQuantityChange(item, 1)}
                       disabled={isUpdating}
-                      className="rounded-l-none border-l"
+                      className="h-7 w-7 rounded-l-none border-l border-gray-200 p-0 hover:bg-gray-100"
                     >
                       <Plus className="w-3 h-3" />
                     </Button>
                   </div>
+
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => handleRemove(item)}
+                    className="h-7 w-7 text-rose-500 hover:text-rose-700 hover:bg-rose-50 shrink-0 p-0"
+                    title="Remove item"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
                 </div>
 
                 {/* Total */}
-                <div className="col-span-2 flex items-center justify-center">
-                  <span className="font-semibold">৳{subtotalPrice.toFixed(2)}</span>
+                <div className="col-span-2 text-right pr-2">
+                  <span className="font-bold text-sm text-gray-900 whitespace-nowrap">
+                    ৳{subtotalPrice.toFixed(2)}
+                  </span>
                 </div>
               </div>
               {index < items.length - 1 && <Separator />}

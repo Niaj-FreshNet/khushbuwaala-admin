@@ -52,7 +52,7 @@ const mockReviews = [
     name: "Nusrat Jahan",
     rating: 5,
     date: "2024-01-05",
-    comment: "This is my third purchase from KhushbuWaala and they never disappoint. The scent is beautiful and lasts all day. Fast delivery too!",
+    comment: "This is my third purchase from Khushbuwaala and they never disappoint. The scent is beautiful and lasts all day. Fast delivery too!",
     verified: true,
     helpful: 9
   }

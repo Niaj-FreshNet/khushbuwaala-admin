@@ -3,8 +3,8 @@ import React, { ReactNode } from "react";
 
 export const metadata = {
   // Optional: static metadata fallback
-  title: "Product Details | KhushbuWaala",
-  description: "Explore our premium products at KhushbuWaala.",
+  title: "Product Details | Khushbuwaala",
+  description: "Explore our premium products at Khushbuwaala.",
 };
 
 export default function ProductLayout({
@@ -13,7 +13,7 @@ export default function ProductLayout({
   children: ReactNode;
 }) {
   return (
-    <section className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 lg:pt-12">
+    <section className="max-w-screen-2xl mx-auto px-0 sm:px-6 lg:px-8 pt-0 sm:pt-4">
       {children}
     </section>
   );

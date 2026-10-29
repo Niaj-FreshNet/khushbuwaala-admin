@@ -29,7 +29,7 @@ const SocialIcons = () => {
     },
     {
       name: "WhatsApp",
-      href: "https://wa.me/8801566395807",
+      href: "https://wa.me/8801777152588",
       icon: <MessageCircle className="h-5 w-5" />,
       color: "hover:bg-green-600 hover:text-white",
       followers: "Chat",

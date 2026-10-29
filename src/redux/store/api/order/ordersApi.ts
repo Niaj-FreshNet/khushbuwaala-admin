@@ -14,50 +14,84 @@ export interface IOrderPayload {
   }
 }
 
-// export interface IOrderResponse {
-//   id: string
-//   invoice: string
-//   amount: number
-//   isPaid: boolean
-//   status: string
-//   orderSource: string
-//   createdAt: string
-//   updatedAt: string
-//   customer?: {
-//     id: string
-//     name: string
-//     imageUrl?: string
-//   }
-//   orderItems?: {
-//     id: string
-//     quantity: number
-//     product?: {
-//       id: string
-//       name: string
-//       primaryImage?: string
-//     }
-//     variant?: {
-//       id: string
-//       size?: string
-//       price?: number
-//     }
-//   }[]
-// }
-
 export type ApiResponse<T> = {
   success: boolean;
   message?: string;
   data: T;
 };
 
+export type AddressInfo = {
+  name?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  district?: string | null;
+  thana?: string | null;
+  fbp?: string | null;
+  fbc?: string | null;
+};
+
+export type OrderItemInfo = {
+  id: string;
+  userId?: string;
+  productId: string;
+  variantId: string;
+  size: number;
+  unit: string;
+  quantity: number;
+  price: number;
+  originalPrice?: number;
+  discount?: number;
+  status?: string;
+  orderId?: string;
+  product?: {
+    id: string;
+    name: string;
+    primaryImage?: string;
+  };
+  variant?: {
+    id: string;
+    productId: string;
+    sku: string;
+    unit: string;
+    size: number;
+    price: number;
+  };
+};
+
 export type IOrderData = {
   id: string;
+  invoice: string;
+  orderTime: string;
+  payToken?: string;
   amount: number;
   isPaid: boolean;
+  method?: string | null;
+  cartItems?: any[];
   status: string;
   orderSource: string;
+  productIds?: string[];
+  coupon?: string | null;
+  discountAmount?: number;
+  customerId?: string | null;
+  shippingCost?: number;
+  additionalNotes?: string | null;
+  shipping?: AddressInfo;
+  billing?: AddressInfo;
+  salesmanId?: string | null;
+  saleType?: string | null;
+  name?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
   createdAt: string;
   updatedAt: string;
+  customer?: {
+    id: string;
+    name: string;
+    imageUrl?: string;
+  };
+  orderItems?: OrderItemInfo[];
 };
 
 export type IOrderResponse = ApiResponse<IOrderData>;
@@ -73,32 +107,26 @@ export interface IPaginatedResponse<T> {
 
 export type IUpdateOrderPayload = {
   id: string;
-
-  status?: "PENDING" | "PROCESSING" | "DELIVERED" | "COMPLETED" | "CANCELED";
+  status?: "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "COMPLETED" | "CANCELED" | "RETURNED";
   isPaid?: boolean;
   method?: string | null;
-
   orderSource?: "WEBSITE" | "SHOWROOM" | "WHOLESALE" | "MANUAL";
-  saleType?: "SINGLE" | "BULK";
-
+  saleType?: "SINGLE" | "BULK" | null;
   shippingCost?: number;
   additionalNotes?: string | null;
-
   coupon?: string | null;
   discountAmount?: number;
-
-  shipping?: any; // or define the address type
-  billing?: any;
-
+  shipping?: AddressInfo;
+  billing?: AddressInfo;
   salesmanId?: string | null;
-
   name?: string | null;
   phone?: string | null;
   email?: string | null;
   address?: string | null;
-
   amount?: number;
   customerId?: string | null;
+  // ✅ Support updating quantities, removing items, and adding new ones
+  orderItems?: { id?: string; productId?: string; variantId?: string; quantity: number }[];
 };
 
 export type DashboardMetrics = {
@@ -108,15 +136,8 @@ export type DashboardMetrics = {
   totalSales: number;
 };
 
-export type WeeklySalesPoint = {
-  day: string;
-  sales: number;
-  orders: number;
-};
-
 export const orderApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    // ✅ Create order (customer or guest)
     createOrder: builder.mutation<IOrderResponse, IOrderPayload>({
       query: (body) => ({
         url: '/order/create-order',
@@ -126,7 +147,6 @@ export const orderApi = baseApi.injectEndpoints({
       invalidatesTags: ['Order'],
     }),
 
-    // ✅ Get all orders (Admin)
     getAllOrders: builder.query<IPaginatedResponse<IOrderResponse>, Record<string, any> | void>({
       query: (params) => ({
         url: '/order/get-all-orders',
@@ -135,18 +155,16 @@ export const orderApi = baseApi.injectEndpoints({
       providesTags: ['Order'],
     }),
 
-    // ✅ Get order by ID (Admin)
     getOrderById: builder.query<IOrderResponse, string>({
       query: (id) => `/order/get-order-by-id/${id}`,
       providesTags: (result, error, id) => [{ type: 'Order' as const, id }],
     }),
 
-    // ✅ Update order status (Admin)
     updateOrderStatus: builder.mutation<IOrderResponse, { id: string; status: string }>({
       query: ({ id, status }) => ({
         url: `/order/update-order-status/${id}`,
         method: 'PATCH',
-        body: { status }, // ✅
+        body: { status },
       }),
       invalidatesTags: ['Order'],
     }),
@@ -169,7 +187,6 @@ export const orderApi = baseApi.injectEndpoints({
       invalidatesTags: ["Order"],
     }),
 
-    // ✅ Get all customers (Admin)
     getAllCustomers: builder.query<IPaginatedResponse<any>, Record<string, any> | void>({
       query: (params) => ({
         url: '/order/get-all-customers',
@@ -178,19 +195,16 @@ export const orderApi = baseApi.injectEndpoints({
       providesTags: ['User'],
     }),
 
-    // ✅ Get all orders for a specific user (Admin view)
     getUserOrders: builder.query<IOrderResponse[], string>({
       query: (userId) => `/order/get-user-order/${userId}`,
       providesTags: ['Order'],
     }),
 
-    // ✅ Get logged-in user’s orders (User)
     getMyOrders: builder.query<IOrderResponse[], void>({
       query: () => '/order/my-orders',
       providesTags: ['Order'],
     }),
 
-    // ✅ Get a single logged-in user’s order
     getMyOrderById: builder.query<IOrderResponse, string>({
       query: (id) => `/order/my-order/${id}`,
       providesTags: (result, error, id) => [{ type: 'Order' as const, id }],
@@ -214,6 +228,19 @@ export const orderApi = baseApi.injectEndpoints({
       }),
       providesTags: ["Order"],
     }),
+
+    trackOrders: builder.query<ApiResponse<any[]>, string>({
+      query: (query) => `/order/track/${encodeURIComponent(query)}`,
+      providesTags: ["Order"],
+    }),
+
+    deleteOrder: builder.mutation<ApiResponse<any>, string>({
+      query: (id) => ({
+        url: `/order/delete-order/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Order'],
+    }),
   }),
   overrideExisting: true,
 });
@@ -232,4 +259,6 @@ export const {
   useGetMyOrderByIdQuery,
   useGetDashboardMetricsQuery,
   useGetWeeklySalesOverviewQuery,
+  useLazyTrackOrdersQuery,
+  useDeleteOrderMutation,
 } = orderApi

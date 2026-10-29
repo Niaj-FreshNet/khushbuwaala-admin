@@ -131,7 +131,7 @@ export const OrderInvoice = forwardRef<HTMLDivElement, OrderInvoiceProps>(
                         <div>
                             <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900">Invoice</h2>
                             <p className="text-sm text-gray-500 mt-1">
-                                Thank you for choosing <span className="font-semibold">KhushbuWaala Perfumes</span>
+                                Thank you for choosing <span className="font-semibold">Khushbuwaala Perfumes</span>
                             </p>
                         </div>
 
@@ -194,7 +194,7 @@ export const OrderInvoice = forwardRef<HTMLDivElement, OrderInvoiceProps>(
                         <Card className="border-gray-200">
                             <CardContent className="px-4 py-0 space-y-1">
                                 <p className="text-sm font-semibold">Billed From</p>
-                                <p className="text-sm text-gray-700 font-medium">KhushbuWaala Perfumes Ltd.</p>
+                                <p className="text-sm text-gray-700 font-medium">Khushbuwaala Perfumes Ltd.</p>
                                 <p className="text-sm text-gray-700">
                                     G/138, Eastern Banabithi Shopping Complex <br /> South Banasree, Khilgaon, Dhaka-1219
                                 </p>
@@ -345,7 +345,7 @@ export const OrderInvoice = forwardRef<HTMLDivElement, OrderInvoiceProps>(
                         <p className="text-gray-600 text-sm">
                             For questions about this invoice, contact us at <b>khushbuwaala@gmail.com</b>
                         </p>
-                        <p className="text-lg font-semibold mt-4 text-gray-800">Best Wishes from KhushbuWaala 💐</p>
+                        <p className="text-lg font-semibold mt-4 text-gray-800">Best Wishes from Khushbuwaala 💐</p>
                     </div>
                 </div>
             </div>

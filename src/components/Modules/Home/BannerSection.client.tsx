@@ -7,7 +7,7 @@ const BannerSection = dynamic(
     {
         ssr: false,
         loading: () => (
-            <div className="w-full h-[400px] md:h-[500px] lg:h-[600px] mt-12 mb-4 rounded-2xl bg-gray-100 animate-pulse" />
+            <div className="w-full h-100 md:h-125 lg:h-150 mt-12 mb-4 rounded-2xl bg-gray-100 animate-pulse" />
         ),
     }
 )

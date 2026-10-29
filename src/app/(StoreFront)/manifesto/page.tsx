@@ -3,11 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Fingerprint, Award, Handshake, Sparkles, HeartHandshake } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Our Values | KhushbuWaala",
+  title: "Our Values | Khushbuwaala",
   description:
-    "Discover what KhushbuWaala stands for—authenticity, quality, honesty, personal fragrance stories, and customer-first service.",
+    "Discover what Khushbuwaala stands for—authenticity, quality, honesty, personal fragrance stories, and customer-first service.",
   openGraph: {
-    title: "Our Values | KhushbuWaala",
+    title: "Our Values | Khushbuwaala",
     description: "Fragrance is identity—crafted with authenticity, quality, and trust.",
     url: "https://www.khushbuwaala.com/manifesto",
   },
@@ -53,7 +53,7 @@ export default function ManifestoPage() {
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Our Values</h1>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            At <strong>KhushbuWaala</strong>, fragrance is more than a product — it is an identity, a
+            At <strong>Khushbuwaala</strong>, fragrance is more than a product — it is an identity, a
             memory, and a quiet statement of who you are.
           </p>
         </div>
@@ -80,7 +80,7 @@ export default function ManifestoPage() {
 
         <div className="mt-12 text-center">
           <p className="text-sm text-gray-600">
-            <strong>KhushbuWaala</strong> — Authentic scents. Honest service. Trusted experience.
+            <strong>Khushbuwaala</strong> — Authentic scents. Honest service. Trusted experience.
           </p>
         </div>
       </div>

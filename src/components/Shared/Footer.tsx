@@ -1,3 +1,5 @@
+"use client"
+
 import type React from "react"
 import Link from "next/link"
 import { Home, Mail, Phone, Users, MapPin } from "lucide-react"
@@ -5,18 +7,20 @@ import { Badge } from "@/components/ui/badge"
 import FooterCollapsible from "./FooterCollapsible"
 import SocialIcons from "../Icons/SocialIcons/SocialIcons"
 import Image from "next/image"
+import { usePathname } from "next/navigation"
+import { cn } from "@/lib/utils"
 
 // SEO: Enhanced Structured Data for Footer (Server-side)
 const footerStructuredData = {
   "@context": "https://schema.org",
   "@type": "Organization",
-  name: "KhushbuWaala",
+  name: "Khushbuwaala",
   url: "https://khushbuwaala.com",
   logo: "https://khushbuwaala.com/images/khushbuwaala-logo.webp",
   description: "Premium perfumes, oriental attars, and natural fragrances with authentic quality",
   contactPoint: {
     "@type": "ContactPoint",
-    telephone: "+8801566395807",
+    telephone: "+8801777152588",
     contactType: "customer service",
     email: "khushbuwaala@gmail.com",
     availableLanguage: ["English", "Bengali"],
@@ -54,207 +58,179 @@ interface FooterSection {
   }>
 }
 
-// Server Component - No interactivity needed here
 export const Footer = () => {
+  const pathname = usePathname()
+  const isCheckoutPage = pathname?.startsWith("/checkout")
+
   const footerSections: FooterSection[] = [
     {
       id: "companyInfo",
       title: "Get in Touch",
-      underlineWidth: "w-20",
+      underlineWidth: "w-12",
       links: [
         {
           label: "Visit Our Office",
           href: "/contact",
-          icon: <Home className="h-4 w-4" />,
+          icon: <Home className="h-3.5 w-3.5" />,
           description: "Find our physical location",
         },
         {
           label: "khushbuwaala@gmail.com",
           href: "mailto:khushbuwaala@gmail.com",
-          icon: <Mail className="h-4 w-4" />,
+          icon: <Mail className="h-3.5 w-3.5" />,
           external: true,
-          description: "Email us anytime",
         },
         {
-          label: "+8801566-395807",
-          href: "tel:+8801566395807",
-          icon: <Phone className="h-4 w-4" />,
+          label: "+8801777-152588",
+          href: "tel:+8801777152588",
+          icon: <Phone className="h-3.5 w-3.5" />,
           external: true,
-          description: "Call us now",
         },
         {
           label: "Customer Support",
           href: "/contact#",
-          icon: <Users className="h-4 w-4" />,
+          icon: <Users className="h-3.5 w-3.5" />,
           badge: "24/7",
-          description: "We're here to help",
         },
         {
           label: "Store Locator",
           href: "/stores",
-          icon: <MapPin className="h-4 w-4" />,
-          description: "Find stores near you",
+          icon: <MapPin className="h-3.5 w-3.5" />,
         },
       ],
     },
     {
       id: "quickLinks",
       title: "Company",
-      underlineWidth: "w-16",
+      underlineWidth: "w-10",
       links: [
-        { label: "About Us", href: "/about", description: "Our story and mission" },
-        { label: "Blog", href: "/blog", description: "Know about perfumes" },
-        { label: "News & Updates", href: "/news", description: "Latest company news" },
-        { label: "Our Values", href: "/manifesto", description: "What we believe in" },
-        { label: "Careers", href: "/career", badge: "Hiring", description: "Join our team" },
+        { label: "About Us", href: "/about" },
+        { label: "Blog & Fragrance Tips", href: "/blog" },
+        { label: "News & Updates", href: "/news" },
+        { label: "Our Story & Values", href: "/manifesto" },
+        { label: "Careers", href: "/career", badge: "Hiring" },
       ],
     },
     {
       id: "policies",
       title: "Policies",
-      underlineWidth: "w-14",
+      underlineWidth: "w-10",
       links: [
-        { label: "Privacy Policy", href: "/privacy-policy", description: "How we protect your data" },
-        { label: "Return & Refund", href: "/refund-policy", description: "Easy returns within 30 days" },
-        { label: "Shipping Info", href: "/shipping-policy", description: "Delivery information" },
-        { label: "Exchange Policy", href: "/exchange-policy", description: "Product exchange terms" },
-        { label: "Terms of Service", href: "/terms-conditions", description: "Usage terms and conditions" },
+        { label: "Privacy Policy", href: "/privacy-policy" },
+        { label: "Return & Refund", href: "/refund-policy" },
+        { label: "Shipping Info", href: "/shipping-policy" },
+        { label: "Exchange Policy", href: "/exchange-policy" },
+        { label: "Terms of Service", href: "/terms-conditions" },
       ],
     },
     {
       id: "account",
       title: "Your Account",
-      underlineWidth: "w-20",
+      underlineWidth: "w-12",
       links: [
-        { label: "Track Your Order", href: "/track-order", description: "Real-time order tracking" },
-        { label: "My Wishlist", href: "/wishlist", description: "Saved favorite items" },
-        { label: "Shopping Cart", href: "/cart", description: "Review your selections" },
-        { label: "Order History", href: "/orders", description: "View past purchases" },
-        {
-          label: "Click & Collect",
-          href: "/click-collect",
-          badge: "New",
-          description: "Order online, pickup in-store",
-        },
+        { label: "Track Your Order", href: "/track-order" },
+        { label: "My Wishlist", href: "/wishlist" },
+        { label: "Shopping Cart", href: "/cart" },
+        { label: "Order History", href: "/orders" },
+        { label: "Click & Collect", href: "/click-collect", badge: "New" },
       ],
     },
   ]
 
   return (
     <>
-      {/* SEO: Enhanced Structured Data - Server-side rendered */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(footerStructuredData) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(footerStructuredData) }}
+      />
 
-      {/* Newsletter Section - Contains Client Component */}
-      {/* <section className="bg-gradient-to-r from-red-50 to-red-100 py-12 px-4" aria-labelledby="newsletter-heading">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 id="newsletter-heading" className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
-            Stay Updated with KhushbuWaala
-          </h2>
-          <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
-            Be the first to know about new arrivals, exclusive offers, and fragrance tips. Join our community of perfume
-            lovers.
-          </p>
-          <NewsletterForm />
-        </div>
-      </section> */}
+      <footer
+        className={cn(
+          "bg-white border-t border-gray-100 text-gray-700",
+          isCheckoutPage && "hidden md:block"
+        )}
+        role="contentinfo"
+      >
+        <div className="mx-auto w-full max-w-7xl 2xl:max-w-384 3xl:max-w-[1800px] px-3.5 sm:px-6 lg:px-8 pt-4 sm:pt-6 md:pt-8 pb-3 sm:pb-4">
 
-      {/* Main Footer - Server Component */}
-      <footer className="bg-white border-t border-gray-200" role="contentinfo">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          {/* Logo and Brand Section - Static Server Component */}
-          <div className="text-center mb-12">
-            <Link href="/" className="inline-block group">
+          {/* Top Brand Tagline Row */}
+          <div className="flex flex-col sm:flex-row items-center justify-between pb-3 sm:pb-4 mb-3 sm:mb-4 border-b border-gray-100 gap-1.5 sm:gap-3 text-center sm:text-left">
+            <Link href="/" className="inline-block shrink-0">
               <Image
                 src="/images/khushbuwaala.webp"
-                alt="KhushbuWaala - Premium Perfumes"
-                className="h-12 w-auto mx-auto transition-transform duration-300 group-hover:scale-110"
-                width={120}
-                height={48}
+                alt="Khushbuwaala - Premium Perfumes"
+                className="h-7 sm:h-9 w-auto object-contain transition-transform duration-200 hover:scale-105"
+                width={110}
+                height={36}
               />
             </Link>
-            <p className="mt-4 text-gray-600 text-sm max-w-md mx-auto">
-              Crafting exceptional fragrances that tell your unique story. Premium quality, authentic ingredients,
-              unforgettable scents.
+            <p className="text-xs sm:text-sm text-gray-500 max-w-md leading-relaxed">
+              We Bring the Legacy of Great Attars and Exquisite Perfumes.
             </p>
           </div>
 
-          {/* Footer Sections */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-8 lg:gap-12">
+          {/* Links Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-1 md:gap-6 lg:gap-8 pb-3 sm:pb-4">
             {footerSections.map((section) => (
-              <div
-                key={section.id}
-                className="space-y-2 md:space-y-6" // ✅ tight on mobile, same on desktop
-              >
-                {/* Mobile Collapsible - Client Component */}
+              <div key={section.id} className="space-y-0.5 md:space-y-2">
+                {/* Mobile Collapsible */}
                 <div className="md:hidden">
                   <FooterCollapsible section={section} />
                 </div>
 
-                {/* Desktop Static - Server Component */}
+                {/* Desktop Menu */}
                 <div className="hidden md:block">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{section.title}</h3>
-                  <div
-                    className={`h-0.5 ${section.underlineWidth} bg-gradient-to-r from-red-500 to-red-600 rounded-full mb-6`}
-                  />
+                  <div className="mb-2">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-900">
+                      {section.title}
+                    </h3>
+                    <div
+                      className={`h-0.5 ${section.underlineWidth} bg-linear-to-r from-red-600 to-pink-600 rounded-full mt-1.5`}
+                    />
+                  </div>
+
                   <nav aria-label={`${section.title} navigation`}>
-                    <ul className="space-y-4">
+                    <ul className="space-y-1">
                       {section.links.map((link) => (
                         <li key={link.href}>
-                          <div className="group">
-                            {link.external ? (
-                              <a
-                                href={link.href}
-                                className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-all duration-200"
-                                {...(link.href.startsWith("mailto:") || link.href.startsWith("tel:")
-                                  ? {}
-                                  : { target: "_blank", rel: "noopener noreferrer" })}
-                              >
-                                {link.icon && (
-                                  <span className="text-red-500 group-hover:text-red-600 transition-colors">
-                                    {link.icon}
-                                  </span>
-                                )}
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium text-gray-900 group-hover:text-red-600 transition-colors">
-                                      {link.label}
-                                    </span>
-                                    {link.badge && (
-                                      <Badge variant="secondary" className="text-xs bg-red-100 text-red-700">
-                                        {link.badge}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  {link.description && <p className="text-xs text-gray-500 mt-1">{link.description}</p>}
-                                </div>
-                              </a>
-                            ) : (
-                              <Link
-                                href={link.href}
-                                className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-all duration-200"
-                              >
-                                {link.icon && (
-                                  <span className="text-red-500 group-hover:text-red-600 transition-colors">
-                                    {link.icon}
-                                  </span>
-                                )}
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium text-gray-900 group-hover:text-red-600 transition-colors">
-                                      {link.label}
-                                    </span>
-                                    {link.badge && (
-                                      <Badge variant="secondary" className="text-xs bg-red-100 text-red-700">
-                                        {link.badge}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  {link.description && <p className="text-xs text-gray-500 mt-1">{link.description}</p>}
-                                </div>
-                              </Link>
-                            )}
-                          </div>
+                          {link.external ? (
+                            <a
+                              href={link.href}
+                              className="inline-flex items-center gap-2 py-0.5 text-xs text-gray-600 hover:text-red-600 hover:translate-x-0.5 transition-all duration-150"
+                              {...(link.href.startsWith("mailto:") || link.href.startsWith("tel:")
+                                ? {}
+                                : { target: "_blank", rel: "noopener noreferrer" })}
+                            >
+                              {link.icon && (
+                                <span className="text-red-500 shrink-0">
+                                  {link.icon}
+                                </span>
+                              )}
+                              <span>{link.label}</span>
+                              {link.badge && (
+                                <Badge variant="secondary" className="text-[10px] h-4 px-1.5 bg-red-50 text-red-700 font-semibold border-none">
+                                  {link.badge}
+                                </Badge>
+                              )}
+                            </a>
+                          ) : (
+                            <Link
+                              href={link.href}
+                              className="inline-flex items-center gap-2 py-0.5 text-xs text-gray-600 hover:text-red-600 hover:translate-x-0.5 transition-all duration-150"
+                            >
+                              {link.icon && (
+                                <span className="text-red-500 shrink-0">
+                                  {link.icon}
+                                </span>
+                              )}
+                              <span>{link.label}</span>
+                              {link.badge && (
+                                <Badge variant="secondary" className="text-[10px] h-4 px-1.5 bg-red-50 text-red-700 font-semibold border-none">
+                                  {link.badge}
+                                </Badge>
+                              )}
+                            </Link>
+                          )}
                         </li>
                       ))}
                     </ul>
@@ -264,39 +240,43 @@ export const Footer = () => {
             ))}
           </div>
 
-          {/* Social Media & Trust Badges - Server Component */}
-          <div className="mt-12 pt-8 border-t border-gray-200">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="flex flex-col items-center md:items-start">
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">Follow Us</h4>
-                {/* Social Icons - Server Component */}
-                <SocialIcons />
-              </div>
+          {/* Combined Socials & Payment Logos Row */}
+          <div className="pt-3 sm:pt-3.5 border-t border-gray-100 flex flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4">
+            {/* Follow Us */}
+            <div className="flex items-center justify-center md:justify-start gap-2.5 shrink-0">
+              <span className="text-[11px] sm:text-xs font-semibold text-gray-700">Follow:</span>
+              <SocialIcons />
+            </div>
 
-              <div className="flex flex-col items-center md:items-end">
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">We Accept</h4>
-                <div className="flex items-center gap-3">
-                  <div className="px-3 py-1 bg-gray-100 rounded text-xs font-medium text-gray-700">
-                    Cash on Delivery
-                  </div>
-                  <div className="px-3 py-1 bg-gray-100 rounded text-xs font-medium text-gray-700">Bank Transfer</div>
-                  <div className="px-3 py-1 bg-gray-100 rounded text-xs font-medium text-gray-700">Mobile Banking</div>
-                </div>
+            {/* Payment Logos with identical source */}
+            <div className="flex justify-center md:justify-end items-center">
+              <div className="w-full max-w-lg md:max-w-xl lg:max-w-3xl">
+                <Image
+                  src="/images/pay-with.jpeg"
+                  alt="Supported Payment Gateways"
+                  width={680}
+                  height={45}
+                  className="w-full h-auto object-contain"
+                  loading="lazy"
+                />
               </div>
             </div>
           </div>
+
         </div>
       </footer>
 
-      {/* Footer Bottom - Server Component */}
-      <div className="bg-gray-900 text-white py-2" role="contentinfo">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-center gap-4">
-            <p className="text-sm text-gray-300 text-center">
-              © {new Date().getFullYear()} KhushbuWaala Perfumes. All rights reserved.
-            </p>
-          </div>
-      </div>
+      {/* Copyright Bar */}
+      <div
+        className={cn(
+          "bg-gray-950 text-gray-400 py-1 border-t border-gray-800",
+          isCheckoutPage && "hidden md:block"
+        )}
+        role="contentinfo"
+      >
+        <div className="mx-auto w-full max-w-7xl 2xl:max-w-384 3xl:max-w-[1800px] px-4 sm:px-6 lg:px-8 text-center text-[11px] sm:text-xs">
+          © {new Date().getFullYear()} Khushbuwaala Perfumes. All rights reserved.
+        </div>
       </div>
     </>
   )

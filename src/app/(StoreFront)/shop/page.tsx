@@ -19,8 +19,8 @@ export async function generateMetadata({
     const searchParams = await Promise.resolve(rawSearchParams); // ✅ async-safe
     const page = Number(searchParams.page) || 1;
 
-    const title = `Shop Perfumes${page > 1 ? ` - Page ${page}` : ""} | KhushbuWaala`;
-    const description = `Browse${page > 1 ? ` page ${page} of` : ""} KhushbuWaala's premium perfume oils. Discover authentic fragrances with free shipping on orders over ৳1000.`;
+    const title = `Shop Perfumes${page > 1 ? ` - Page ${page}` : ""} | Khushbuwaala`;
+    const description = `Browse${page > 1 ? ` page ${page} of` : ""} Khushbuwaala's premium perfume oils. Discover authentic fragrances with free shipping on orders over ৳1000.`;
 
     return {
         title,
@@ -29,7 +29,7 @@ export async function generateMetadata({
             "perfume oil",
             "premium fragrance",
             "attar collection",
-            "KhushbuWaala shop",
+            "Khushbuwaala shop",
             "online perfume store",
             "natural fragrance",
             "oriental perfume",
@@ -52,11 +52,11 @@ export async function generateMetadata({
                     url: "/images/n111.webp",
                     width: 1920,
                     height: 550,
-                    alt: "KhushbuWaala Premium Perfume Oil Collection"
+                    alt: "Khushbuwaala Premium Perfume Oil Collection"
                 },
             ],
             type: "website",
-            siteName: "KhushbuWaala",
+            siteName: "Khushbuwaala",
         },
         twitter: {
             card: "summary_large_image",
@@ -103,7 +103,7 @@ export default async function ShopPage({
     //     | "oldest"
     //     | "popularity"
     //     | undefined;
-    const sortBy = "a-z" as string| undefined;
+    const sortBy = "a-z" as string | undefined;
 
     // =================== STRUCTURED DATA ===================
     // Before returning JSX in ShopPage
@@ -111,7 +111,7 @@ export default async function ShopPage({
         "@context": "https://schema.org",
         "@type": "CollectionPage",
         name: "Premium Perfume Oil Collection",
-        description: "Explore KhushbuWaala's curated collection of world-class perfume oils and fragrances",
+        description: "Explore Khushbuwaala's curated collection of world-class perfume oils and fragrances",
         url: "https://khushbuwaala.com/shop",
         mainEntity: {
             "@type": "ItemList",
@@ -160,6 +160,7 @@ export default async function ShopPage({
             />
 
             <ShopShell
+                showHeading={false}
                 bannerHeading="Best Quality Perfume Oil Collection"
                 bannerText="Choose Your Desired Perfume Oil from World's Best Perfume Oil Collection"
                 bannerImages={{ desktop: "/images/n111.png", mobile: "/images/n1.webp" }}

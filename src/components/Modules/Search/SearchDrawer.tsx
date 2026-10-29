@@ -8,6 +8,9 @@ import {
   TagIcon,
   TrendingUp,
   Clock,
+  Loader2,
+  Sparkles,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,9 +25,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
 import { useSearchProductsQuery } from "@/redux/store/api/product/productApi";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 interface SearchDrawerProps {
   visible: boolean;
@@ -65,6 +68,17 @@ const smellTypes = [
   "Organic",
 ];
 
+function computeDiscountedPrice(basePrice: number, discount: any) {
+  if (!discount || typeof discount.value !== "number") return basePrice;
+  if (discount.type === "percentage") {
+    return Math.max(0, Math.round(basePrice * (1 - discount.value / 100)));
+  }
+  if (discount.type === "fixed") {
+    return Math.max(0, Math.round(basePrice - discount.value));
+  }
+  return basePrice;
+}
+
 export default function SearchDrawer({ visible, onClose }: SearchDrawerProps) {
   const router = useRouter();
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -72,18 +86,16 @@ export default function SearchDrawer({ visible, onClose }: SearchDrawerProps) {
   const [searchValue, setSearchValue] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [searchPerformed, setSearchPerformed] = useState(false);
 
   const [showMoreTrending, setShowMoreTrending] = useState(false);
   const [showMoreRecent, setShowMoreRecent] = useState(false);
   const [showMoreRefine, setShowMoreRefine] = useState(false);
 
-
   // Debounce search input
   useEffect(() => {
     const timeout = setTimeout(() => {
       setDebouncedSearch(searchValue.trim());
-    }, 400);
+    }, 300);
     return () => clearTimeout(timeout);
   }, [searchValue]);
 
@@ -106,246 +118,356 @@ export default function SearchDrawer({ visible, onClose }: SearchDrawerProps) {
   );
 
   const products = data?.data || [];
+  const isTypingOrSearching = searchValue.trim() !== debouncedSearch || isFetching;
+
+  const dismissKeyboard = () => {
+    if (searchInputRef.current) {
+      searchInputRef.current.blur();
+    }
+  };
 
   const handleTagClick = (tag: string) => {
     setSearchValue(tag);
-    setSearchPerformed(true);
+    setDebouncedSearch(tag);
+    dismissKeyboard();
   };
 
-  const productsCountLabel =
-  debouncedSearch === ""
-    ? "100+ Products"
-    : isFetching
-      ? "Searching..."
-      : `${products.length} Products`;
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      setDebouncedSearch(searchValue.trim());
+      dismissKeyboard();
+    }
+  };
+
+  // Navigates to shop with filter sheet auto-opened
+  const handleOpenShopFilter = () => {
+    onClose();
+    const query = selectedCategory && selectedCategory !== "all"
+      ? `?category=${encodeURIComponent(selectedCategory)}&openFilters=true`
+      : `?openFilters=true`;
+    router.push(`/shop${query}`);
+  };
 
   return (
     <Sheet open={visible} onOpenChange={onClose}>
       <SheetContent
         side="right"
-        className="w-[320px] md:w-[550px] flex flex-col p-0 bg-gradient-to-b from-white to-gray-50 h-full"
+        className="w-[320px] md:w-135 flex flex-col p-0 bg-white h-full border-l border-gray-200"
       >
         {/* Header */}
-        <SheetHeader className="px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
-          <SheetTitle className="flex items-center gap-3 text-xl">
-            <div className="p-2 bg-blue-100 rounded-full">
-              <Search className="h-6 w-6 text-blue-600" />
+        <SheetHeader className="px-6 py-4 border-b bg-linear-to-r from-red-50/60 via-emerald-50/30 to-white">
+          <SheetTitle className="flex items-center gap-3 text-lg font-bold text-gray-900">
+            <div className="p-2 bg-blue-100/80 rounded-xl text-blue-600">
+              <Search className="h-5 w-5" />
             </div>
-            <div className="flex flex-col items-start">
-              <span>Search Products</span>
-              <span className="text-sm font-normal text-gray-600">
-                Find your perfect fragrance
+            <div className="flex flex-col text-left">
+              <span>Search Fragrances</span>
+              <span className="text-xs font-normal text-gray-500">
+                Discover your signature scent
               </span>
             </div>
           </SheetTitle>
         </SheetHeader>
 
-        {/* Body */}
+        {/* Controls Container */}
         <div className="flex flex-col flex-1 min-h-0">
-          {/* Search Controls */}
-          <div className="px-6 py-2 space-y-4 border-b">
+          <div className="px-6 py-3 space-y-2.5 border-b bg-white">
+            {/* Search Input with Live Spinner */}
             <div className="relative group">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-300" />
+              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
+                {isTypingOrSearching && debouncedSearch ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                ) : (
+                  <Search className="h-4 w-4 group-focus-within:text-blue-600 transition-colors" />
+                )}
+              </div>
+
               <Input
                 ref={searchInputRef}
                 type="text"
-                placeholder="Search for perfumes, brands, or scents..."
+                enterKeyHint="search"
+                placeholder="Search perfumes, notes, brands..."
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && setDebouncedSearch(searchValue)}
-                className="pl-12 pr-12 h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl text-base transition-all duration-300 bg-white shadow-sm focus:shadow-md"
+                onKeyDown={handleKeyDown}
+                className="pl-10 pr-10 h-10 border-gray-200 focus:border-blue-500 rounded-xl text-sm transition-all bg-gray-50/50 focus:bg-white shadow-none focus:ring-1 focus:ring-red-500"
               />
+
               {searchValue && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 rounded-full hover:bg-gray-100"
-                  onClick={() => setSearchValue("")}
-                  aria-label="Clear search input"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 h-7 w-7 p-0 rounded-full hover:bg-gray-100 text-gray-400"
+                  onClick={() => {
+                    setSearchValue("");
+                    setDebouncedSearch("");
+                  }}
+                  aria-label="Clear input"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3.5 w-3.5" />
                 </Button>
               )}
             </div>
 
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="h-12 border-2 border-gray-200 rounded-xl bg-white">
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="INSPIRED PERFUME OIL">Inspired Perfume Oil</SelectItem>
-                <SelectItem value="ORIENTAL ATTAR">Oriental & Arabian Attar</SelectItem>
-                <SelectItem value="ARTIFCIAL OUD">Artificial Oud</SelectItem>
-                <SelectItem value="GIFTS AND PACKAGES">Gifts & Combo Pakcages</SelectItem>
-                <SelectItem value="NATURAL ATTAR">Natural Attar</SelectItem>
-                <SelectItem value="ORGANIC ATTAR">Organic Attar</SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Category Select & Shop Filter Button Side-by-Side */}
+            <div className="flex items-center gap-2">
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="flex-1 h-8.5! min-h-0! py-0 border-gray-200 rounded-lg bg-white text-xs font-medium text-gray-700 focus:ring-1 focus:ring-emerald-600">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="ORGANIC ATTAR">Organic Attar</SelectItem>
+                  <SelectItem value="NATURAL ATTAR">Natural Collections</SelectItem>
+                  <SelectItem value="ORIENTAL ATTAR">Oriental Collections</SelectItem>
+                  <SelectItem value="ARTIFICIAL OUD">Artificial Oud</SelectItem>
+                  <SelectItem value="BRAND PERFUMES">Brand Perfumes</SelectItem>
+                  <SelectItem value="INSPIRED PERFUME OIL">Inspired Perfume Oil</SelectItem>
+                  <SelectItem value="NICHE PERFUMES">Niche Perfumes</SelectItem>
+                  <SelectItem value="GIFTS AND PACKAGES">Combo Packages</SelectItem>
+                  <SelectItem value="ACCESSORIES">Accessories</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Filter Sheet Shortcut */}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleOpenShopFilter}
+                className="h-8.5! min-h-0! py-0 px-3 rounded-lg border-emerald-600/30 bg-gray-50 hover:bg-emerald-100 text-black text-xs font-semibold flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
+                title="Open Shop Filters"
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5 text-black" />
+                <span>Filters</span>
+              </Button>
+            </div>
 
             {/* Trending & Recent Searches */}
             {debouncedSearch === "" && (
-              <div className="space-y-3">
-                {/* Trending Searches */}
-                <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1.5">
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                  Trending:
-                </div>
-                <div className="flex flex-wrap gap-2 pb-1">
-                  {(showMoreTrending ? trendingSearches : trendingSearches.slice(0, 4)).map((search) => (
-                    <Badge
-                      key={search}
-                      variant="secondary"
-                      className="cursor-pointer whitespace-nowrap text-xs py-1 px-2 bg-white text-black border border-gray-200 rounded-full hover:bg-green-100 hover:text-green-700 transition-colors"
-                      onClick={() => handleTagClick(search)}
-                    >
-                      {search}
-                    </Badge>
-                  ))}
-                  {trendingSearches.length > 4 && (
-                    <Badge
-                      className="cursor-pointer whitespace-nowrap text-xs py-1 px-2 bg-white text-black border border-gray-200 rounded-full hover:bg-green-100 hover:text-green-700 transition-colors"
-                      onClick={() => setShowMoreTrending(!showMoreTrending)}
-                    >
-                      {showMoreTrending ? "See less" : "See more..."}
-                    </Badge>
-                  )}
+              <div className="space-y-3 pt-1">
+                <div>
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 mb-2">
+                    <TrendingUp className="h-3.5 w-3.5 text-emerald-600" />
+                    Trending Fragrances:
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(showMoreTrending ? trendingSearches : trendingSearches.slice(0, 4)).map((search) => (
+                      <Badge
+                        key={search}
+                        variant="secondary"
+                        className="cursor-pointer text-xs py-1 px-2.5 bg-gray-100/80 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 border border-transparent rounded-lg transition-all"
+                        onClick={() => handleTagClick(search)}
+                      >
+                        {search}
+                      </Badge>
+                    ))}
+                    {trendingSearches.length > 4 && (
+                      <Badge
+                        variant="outline"
+                        className="cursor-pointer text-xs py-1 px-2 rounded-lg text-gray-500 hover:bg-gray-100"
+                        onClick={() => setShowMoreTrending(!showMoreTrending)}
+                      >
+                        {showMoreTrending ? "Less" : "More..."}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
 
-                {/* Recent Searches */}
-                <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1.5 mt-2">
-                  <Clock className="h-4 w-4 text-blue-500" />
-                  Recent:
-                </div>
-                <div className="flex flex-wrap gap-2 pb-1">
-                  {(showMoreRecent ? recentSearches : recentSearches.slice(0, 4)).map((search) => (
-                    <Badge
-                      key={search}
-                      variant="outline"
-                      className="cursor-pointer whitespace-nowrap text-xs py-1 px-2 rounded-full hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-colors"
-                      onClick={() => handleTagClick(search)}
-                    >
-                      {search}
-                    </Badge>
-                  ))}
-                  {recentSearches.length > 4 && (
-                    <Badge
-                      className="cursor-pointer whitespace-nowrap text-xs py-1 px-2 rounded-full hover:bg-green-100 hover:text-green-700 transition-colors"
-                      onClick={() => setShowMoreRecent(!showMoreRecent)}
-                    >
-                      {showMoreRecent ? "See less" : "See more..."}
-                    </Badge>
-                  )}
+                <div>
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 mb-2">
+                    <Clock className="h-3.5 w-3.5 text-blue-600" />
+                    Recent Searches:
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(showMoreRecent ? recentSearches : recentSearches.slice(0, 4)).map((search) => (
+                      <Badge
+                        key={search}
+                        variant="outline"
+                        className="cursor-pointer text-xs py-0.5 px-2 bg-gray-50 text-gray-700 hover:bg-emerald-100 rounded-md border border-gray-200 hover:border-emerald-200 transition-all"
+                        onClick={() => handleTagClick(search)}
+                      >
+                        {search}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Quick search tags when searching */}
+            {/* Quick Filter Accord Tags */}
             {debouncedSearch && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1.5">
-                  <TagIcon className="h-4 w-4 text-purple-500" />
-                  Refine:
+              <div className="pt-1">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 mb-2">
+                  <TagIcon className="h-3.5 w-3.5 text-emerald-600" />
+                  Filter by Notes:
                 </div>
-                <div className="flex flex-wrap gap-2 pb-1">
-                  {(showMoreRefine ? smellTypes : smellTypes.slice(0, 4)).map((type) => (
+                <div className="flex flex-wrap gap-1.5">
+                  {(showMoreRefine ? smellTypes : smellTypes.slice(0, 5)).map((type) => (
                     <Badge
                       key={type}
                       variant="secondary"
-                      className="cursor-pointer whitespace-nowrap text-xs py-1 px-2 rounded-full hover:bg-purple-100 hover:text-purple-700 transition-colors"
+                      className="cursor-pointer text-[11px] py-0.5 px-2 bg-gray-50 text-gray-700 hover:bg-emerald-100 rounded-md border border-gray-200 hover:border-emerald-200 transition-all"
                       onClick={() => handleTagClick(type)}
                     >
                       {type}
                     </Badge>
                   ))}
-                  {smellTypes.length > 4 && (
+                  {smellTypes.length > 5 && (
                     <Badge
-                      className="cursor-pointer whitespace-nowrap text-xs py-1 px-2 bg-white text-black border border-gray-200 rounded-full hover:bg-green-100 hover:text-green-700 transition-colors"
+                      variant="outline"
+                      className="cursor-pointer text-[11px] py-0.5 px-2 rounded-md text-gray-500 hover:bg-gray-100"
                       onClick={() => setShowMoreRefine(!showMoreRefine)}
                     >
-                      {showMoreRefine ? "See less" : "See more..."}
+                      {showMoreRefine ? "Less" : "More..."}
                     </Badge>
                   )}
                 </div>
               </div>
             )}
-
           </div>
 
-          {/* Search Results */}
-          <div className="flex-1 flex flex-col min-h-0">
-            <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 border-b">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="font-semibold text-gray-900">Search Results</h3>
-                  <div className="w-20 h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mt-1"></div>
-                </div>
-                <Badge variant="outline" className="bg-white">
-                  {productsCountLabel}
-                </Badge>
+          {/* Results Area with Live Status Bar */}
+          <div className="flex-1 flex flex-col min-h-0 relative">
+            {isTypingOrSearching && debouncedSearch && (
+              <div className="absolute top-0 left-0 right-0 h-0.5 z-30 bg-red-100 overflow-hidden">
+                <div className="h-full bg-linear-to-r from-blue-600 via-purple-600 to-pink-600 w-2/5 animate-[loadingbar_1s_ease-in-out_infinite]" />
+              </div>
+            )}
+
+            <div className="px-6 py-2.5 bg-gray-50/80 border-b flex justify-between items-center text-xs">
+              <span className="font-semibold text-gray-700">Results</span>
+              <div className="flex items-center gap-1.5">
+                {isTypingOrSearching && debouncedSearch ? (
+                  <span className="flex items-center gap-1 text-[11px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Searching...
+                  </span>
+                ) : (
+                  <span className="text-gray-500 font-medium">
+                    {debouncedSearch ? `${products.length} Found` : "Catalog"}
+                  </span>
+                )}
               </div>
             </div>
 
-            {/* Scrollable area */}
-            <ScrollArea className="flex-1 min-h-0 overflow-hidden">
-              <div className="px-6 py-4 space-y-4">
-                {debouncedSearch === "" ? null : isFetching ? (
-                  <div className="space-y-4" aria-busy="true" aria-label="Loading search results">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="flex gap-4 p-4 border rounded-xl">
-                        <Skeleton className="w-20 h-24 rounded-lg" />
-                        <div className="flex-1 space-y-2">
-                          <Skeleton className="h-5 w-3/4" />
-                          <Skeleton className="h-4 w-1/2" />
-                          <Skeleton className="h-4 w-1/3" />
+            {/* Scrollable Products List */}
+            <ScrollArea className="flex-1 min-h-0">
+              <div className="p-4 space-y-2.5">
+                {debouncedSearch === "" ? (
+                  <div className="flex flex-col items-center justify-center text-center py-16 px-4 text-gray-400">
+                    <div className="p-3 bg-gray-100 rounded-full mb-3 text-emerald-600">
+                      <Sparkles className="h-6 w-6" />
+                    </div>
+                    <p className="text-sm font-medium text-gray-600">Type above to search</p>
+                    <p className="text-xs text-gray-400 mt-1 max-w-[240px]">
+                      Search by perfume name, notes (e.g. Vanilla, Oud), or category
+                    </p>
+                  </div>
+                ) : isFetching && products.length === 0 ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="flex gap-3 p-3 border border-gray-100 rounded-xl bg-white shadow-xs">
+                        <Skeleton className="w-16 h-20 rounded-lg shrink-0 bg-gray-200" />
+                        <div className="flex-1 space-y-2 py-1">
+                          <Skeleton className="h-4 w-3/4 bg-gray-200" />
+                          <Skeleton className="h-3 w-1/3 bg-gray-200" />
+                          <Skeleton className="h-3 w-1/2 bg-gray-200" />
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : isError ? (
-                  <div className="text-center text-red-500 py-8">
-                    Failed to load search results.
+                  <div className="text-center text-red-500 py-12 text-sm font-medium">
+                    Failed to fetch search results. Please try again.
                   </div>
                 ) : products.length > 0 ? (
-                  <div className="space-y-4">
-                    {products.map((product) => (
-                      <Link key={product.id} href={`/product/${product.slug}`} onClick={onClose}>
-                        <div className="group flex gap-4 p-4 mb-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:shadow-lg cursor-pointer transition-all duration-300 bg-white">
-                          <div className="w-20 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 group-hover:shadow-md transition-shadow duration-300">
-                            <img
-                              src={product.primaryImage || "/placeholder.svg?height=96&width=80"}
-                              alt={product.name}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                          </div>
-                          <div className="flex-1 space-y-2">
-                            <h4 className="font-semibold text-sm leading-tight group-hover:text-blue-600 transition-colors duration-300">
-                              {product.name}
-                            </h4>
-                            <p className="text-sm text-gray-600">
-                              {product.minPrice} BDT
-                            </p>
-                            <div className="flex flex-wrap gap-1">
-                              {product.accords?.map((acc: string) => (
-                                <Badge key={acc} variant="outline" className="text-xs py-0.25 px-2">
-                                  {acc}
-                                </Badge>
-                              ))}
+                  <div className={cn("space-y-2.5 transition-opacity duration-200", isTypingOrSearching && "opacity-75")}>
+                    {products.map((product) => {
+                      const accords = product.accords || [];
+                      const visibleAccords = accords.slice(0, 2);
+                      const extraCount = Math.max(0, accords.length - visibleAccords.length);
+
+                      const basePrice = product.minPrice ?? 0;
+                      const hasDiscount = Boolean(product.discount);
+                      const finalPrice = hasDiscount
+                        ? computeDiscountedPrice(basePrice, product.discount)
+                        : basePrice;
+
+                      const discountBadgeText =
+                        product.discount?.type === "percentage"
+                          ? `-${Math.round(product.discount.value)}%`
+                          : product.discount?.type === "fixed"
+                            ? `-৳${Math.round(product.discount.value)}`
+                            : null;
+
+                      return (
+                        <Link
+                          key={product.id}
+                          href={`/product/${product.slug}`}
+                          onClick={onClose}
+                          className="block"
+                        >
+                          <div className="group flex gap-3.5 p-2.5 border border-gray-200 rounded-xl hover:border-gray-400 hover:shadow-xs transition-all bg-white">
+                            <div className="relative w-16 h-20 shrink-0 rounded-lg overflow-hidden bg-gray-50 border border-gray-100">
+                              <img
+                                src={product.primaryImage || "/placeholder.svg?height=80&width=64"}
+                                alt={product.name}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                            </div>
+
+                            <div className="flex-1 min-w-0 flex flex-col justify-center space-y-1">
+                              <h4 className="font-semibold text-sm leading-tight text-gray-900 group-hover:text-black transition-colors truncate">
+                                {product.name}
+                              </h4>
+
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-bold text-sm text-gray-900">
+                                  ৳{finalPrice}
+                                </span>
+                                {hasDiscount && (
+                                  <>
+                                    <span className="text-xs text-gray-400 line-through">
+                                      ৳{basePrice}
+                                    </span>
+                                    <span className="px-1.5 py-0.2 rounded bg-green-50 text-green-600 text-[10px] font-bold border border-green-200">
+                                      {discountBadgeText}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-1 pt-0.5">
+                                {visibleAccords.map((acc: string) => (
+                                  <span
+                                    key={acc}
+                                    className="text-[10px] px-1.5 py-0.5 rounded-md bg-gray-50/70 text-gray-800 border border-gray-200 truncate max-w-[90px]"
+                                  >
+                                    {acc}
+                                  </span>
+                                ))}
+                                {extraCount > 0 && (
+                                  <span className="text-[10px] text-gray-400 font-medium">
+                                    +{extraCount}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </Link>
-                    ))}
+                        </Link>
+                      );
+                    })}
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center text-center py-16">
-                    {/* No products found UI */}
+                  <div className="flex flex-col items-center justify-center text-center py-16 text-gray-400">
+                    <p className="text-sm font-medium text-gray-600">No results found</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Try searching with broader terms or check the spelling.
+                    </p>
                   </div>
                 )}
               </div>
             </ScrollArea>
           </div>
-
         </div>
       </SheetContent>
     </Sheet>

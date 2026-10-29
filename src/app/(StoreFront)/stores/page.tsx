@@ -6,11 +6,11 @@ import { MapPin, Clock, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
-  title: "Store Locator | KhushbuWaala Perfumes - Find Nearest Perfume Store in Dhaka",
-  description: "Discover KhushbuWaala Perfumes stores in Dhaka. Visit our flagship showroom at Eastern Banabithi Shopping Complex for authentic fragrances. Locations, hours, and directions.",
+  title: "Store Locator | Khushbuwaala Perfumes - Find Nearest Perfume Store in Dhaka",
+  description: "Discover Khushbuwaala Perfumes stores in Dhaka. Visit our flagship showroom at Eastern Banabithi Shopping Complex for authentic fragrances. Locations, hours, and directions.",
   openGraph: {
-    title: "Store Locator - KhushbuWaala Perfumes Dhaka",
-    description: "Find your nearest KhushbuWaala store for premium perfumes. Open daily 10 AM–10 PM.",
+    title: "Store Locator - Khushbuwaala Perfumes Dhaka",
+    description: "Find your nearest Khushbuwaala store for premium perfumes. Open daily 10 AM–10 PM.",
     url: "https://www.khushbuwaala.com/stores",
     type: "website",
   },
@@ -21,7 +21,7 @@ export default function StoresPage() {
     {
       name: "Flagship Showroom",
       address: "Shop-G/138, Eastern Banabithi Shopping Complex, South Banasree, Khilgaon, Dhaka-1219",
-      phone: "+8801566395807",
+      phone: "+8801777152588",
       hours: "10:00 AM – 10:00 PM (Daily)",
       mapLink: "https://maps.app.goo.gl/kEXvaRHQ46CbRh7f7", // Replace with real Google Maps link
     },
@@ -34,7 +34,7 @@ export default function StoresPage() {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "Store",
-          name: "KhushbuWaala Perfumes",
+          name: "Khushbuwaala Perfumes",
           address: {
             "@type": "PostalAddress",
             streetAddress: "Shop-G/138, Eastern Banabithi Shopping Complex, South Banasree",
@@ -43,7 +43,7 @@ export default function StoresPage() {
             postalCode: "1219",
             addressCountry: "BD",
           },
-          telephone: "+8801566395807",
+          telephone: "+8801777152588",
           openingHours: "Mo-Su 10:00-22:00",
         }) }} />
       </Head>
@@ -52,7 +52,7 @@ export default function StoresPage() {
           <div className="text-center mb-12">
             <Badge variant="secondary" className="mb-4">Find Us</Badge>
             <h1 className="text-4xl font-bold text-gray-900 mb-4">Store Locator</h1>
-            <p className="text-xl text-gray-600">Experience our collection in person at KhushbuWaala Perfumes stores across Dhaka.</p>
+            <p className="text-xl text-gray-600">Experience our collection in person at Khushbuwaala Perfumes stores across Dhaka.</p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">

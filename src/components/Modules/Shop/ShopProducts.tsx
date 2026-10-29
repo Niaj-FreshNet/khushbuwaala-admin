@@ -4,27 +4,25 @@ import { useState, useEffect, useRef } from "react";
 import { useGetAllProductsQuery, useGetProductsByCategoryIdQuery } from "@/redux/store/api/product/productApi";
 import { IProductResponse } from "@/types/product.types";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   FilterIcon,
-  ListFilter,
   LayoutGrid,
-  LayoutList,
   Loader2,
-  Grid2X2,
   Columns3,
   Grid3X3,
+  Search,
+  X,
 } from "lucide-react";
 import { FilterSheet } from "./FilterSheet";
-import { SortSheet } from "./SortSheet";
+import SortDropdown from "./SortDropdown";
 import { ProductCard } from "@/components/ReusableUI/ProductCard";
 import { ProductQuickView } from "@/components/ReusableUI/ProductQuickView";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { ShopProductsSkeletonGrid } from "./ShopProductsSkeletonGrid";
 
 interface ShopProductProps {
-  // initialProducts: IProductResponse[];
   initialPage: number;
-  // totalPages: number;
   categoryId?: string;
   categoryName?: string;
   specification?: string;
@@ -34,8 +32,9 @@ interface ShopProductProps {
   accords?: string;
   perfumeNotes?: string;
   performance?: string;
+  projection?: string;
   sortBy?: string;
-  lockCategory?: boolean; // ✅ add
+  lockCategory?: boolean;
 }
 
 type Filters = {
@@ -44,7 +43,8 @@ type Filters = {
   selectedAccords: string[];
   selectedPerfumeNotes: string[];
   selectedPerformance: string[];
-  selectedSpecification: string; // "all" | "male" | "female"
+  selectedProjection: string[];
+  selectedSpecification: string;
 };
 
 const normalizeFilters = (f: Partial<Filters> | undefined, fallback: Filters): Filters => ({
@@ -53,6 +53,7 @@ const normalizeFilters = (f: Partial<Filters> | undefined, fallback: Filters): F
   selectedAccords: Array.isArray(f?.selectedAccords) ? f!.selectedAccords : fallback.selectedAccords,
   selectedPerfumeNotes: Array.isArray(f?.selectedPerfumeNotes) ? f!.selectedPerfumeNotes : fallback.selectedPerfumeNotes,
   selectedPerformance: Array.isArray(f?.selectedPerformance) ? f!.selectedPerformance : fallback.selectedPerformance,
+  selectedProjection: Array.isArray(f?.selectedProjection) ? f!.selectedProjection : fallback.selectedProjection,
   selectedSpecification: typeof f?.selectedSpecification === "string" ? f!.selectedSpecification : fallback.selectedSpecification,
 });
 
@@ -60,47 +61,36 @@ export function ShopProducts(props: ShopProductProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  // const [page, setPage] = useState(initialPage);
   const [page, setPage] = useState(props.initialPage);
 
   const productsTopRef = useRef<HTMLDivElement | null>(null);
-
   const [pageTransitionLoading, setPageTransitionLoading] = useState(false);
+
+  // Search input state with initial search param hydration
+  const initialSearchParam = searchParams.get("search") || "";
+  const [searchInput, setSearchInput] = useState(initialSearchParam);
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearchParam);
+
+  // Debounce search input by 350ms
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchInput.trim());
+      setPage(1);
+    }, 350);
+
+    return () => clearTimeout(handler);
+  }, [searchInput]);
 
   const routeKey = `${pathname}?${searchParams.toString()}`;
 
-  const scrollToProductsTop = () => {
-    if (!productsTopRef.current) return;
-
-    const y =
-      productsTopRef.current.getBoundingClientRect().top +
-      window.scrollY -
-      210; // 👈 this is the offset from top (adjust 80–160 as you like)
-
-    window.scrollTo({ top: y, behavior: "auto" });
-  };
-
-  const scrollToProductsTopNow = () => {
-    if (!productsTopRef.current) return;
-
-    const y =
-      productsTopRef.current.getBoundingClientRect().top +
-      window.scrollY -
-      210;
-
-    window.scrollTo({ top: y, behavior: "auto" });
-  };
-
   const scrollToProductsTopStable = () => {
-    // 1) immediately
-    scrollToProductsTopNow();
+    if (!productsTopRef.current) return;
+    const y = productsTopRef.current.getBoundingClientRect().top + window.scrollY - 210;
+    window.scrollTo({ top: y, behavior: "auto" });
 
-    // 2) next paint
     requestAnimationFrame(() => {
-      scrollToProductsTopNow();
-
-      // 3) one more paint (handles images/fonts/layout shifts)
-      requestAnimationFrame(scrollToProductsTopNow);
+      window.scrollTo({ top: y, behavior: "auto" });
+      requestAnimationFrame(() => window.scrollTo({ top: y, behavior: "auto" }));
     });
   };
 
@@ -112,28 +102,34 @@ export function ShopProducts(props: ShopProductProps) {
     selectedAccords: props.accords ? props.accords.split(",") : [],
     selectedPerfumeNotes: props.perfumeNotes ? props.perfumeNotes.split(",") : [],
     selectedPerformance: props.performance ? props.performance.split(",") : [],
+    selectedProjection: props.projection ? props.projection.split(",") : [],
     selectedSpecification: props.specification || "all",
   };
 
   const [filters, setFilters] = useState<Filters>(initialFilters);
-
   const [sortOption, setSortOption] = useState(props.sortBy || "new-to-old");
   const [columns, setColumns] = useState(2);
   const [visibleProductsCount, setVisibleProductsCount] = useState(limit);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [isFilterSheetVisible, setIsFilterSheetVisible] = useState(false);
-  const [isSortSheetVisible, setIsSortSheetVisible] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState<IProductResponse | null>(null);
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("openFilters") === "true") {
+      setIsFilterSheetVisible(true);
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("openFilters");
+      const cleanUrl = `${pathname}${params.toString() ? `?${params.toString()}` : ""}`;
+      router.replace(cleanUrl, { scroll: false });
+    }
+  }, [searchParams, pathname, router]);
 
   const [stableProducts, setStableProducts] = useState<IProductResponse[]>([]);
   const [hasResolvedOnce, setHasResolvedOnce] = useState(false);
 
   const LOADING_TIMEOUT_MS = 20_000;
-
   const [timedOut, setTimedOut] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
 
   type SortBy = "name" | "price_asc" | "price_desc" | "newest" | "oldest" | "popularity";
 
@@ -142,51 +138,12 @@ export function ShopProducts(props: ShopProductProps) {
     featured: "popularity",
     onSale: "price_asc",
     "a-z": "name",
-    "z-a": "name",         // or add name_desc to backend union if you need
+    "z-a": "name",
     "low-to-high": "price_asc",
     "high-to-low": "price_desc",
     "old-to-new": "oldest",
     "new-to-old": "newest",
   };
-
-  const genderMap: Record<string, string | undefined> = {
-    all: undefined,
-    male: "MALE",
-    female: "FEMALE",
-  };
-
-  // useEffect(() => {
-  //   // Read URL params whenever they change
-  //   const params = new URLSearchParams(searchParams.toString());
-
-  //   const urlFilters = {
-  //     selectedCategories: params.get("category")?.split(",") || [],
-  //     selectedSpecification: params.get("specification") || "all",
-  //     selectedSmells: params.get("smells")?.split(",") || [],
-  //     priceRange: [
-  //       Number(params.get("minPrice") || 100),
-  //       Number(params.get("maxPrice") || 5000),
-  //     ],
-  //   };
-
-  //   setFilters(urlFilters);
-  //   setPage(Number(params.get("page") || 1));
-  // }, [searchParams]);
-
-  // const { data, error, isLoading, isFetching } = useGetAllProductsQuery(
-  //   {
-  //     page,
-  //     limit,
-  //     category: filters.selectedCategories.join(","),
-  //     specification: filters.selectedSpecification === "all" ? undefined : filters.selectedSpecification,
-  //     minPrice: filters.priceRange[0],
-  //     maxPrice: filters.priceRange[1],
-  //     smells: filters.selectedSmells.join(","),
-  //     sortBy: sortMap[sortOption] as ProductQueryParams["sortBy"],
-  //     section,
-  //   },
-  //   { skip: page === initialPage } // Skip initial fetch to use server data
-  // );
 
   const isLocked = !!props.lockCategory;
   const categoryId = props.categoryId;
@@ -196,85 +153,69 @@ export function ShopProducts(props: ShopProductProps) {
   const DEFAULT_SORT = "new-to-old";
 
   const isFilteringActive =
-    // any checkbox filters
     filters.selectedAccords.length > 0 ||
     filters.selectedPerfumeNotes.length > 0 ||
     filters.selectedPerformance.length > 0 ||
-    // spec
     filters.selectedSpecification !== "all" ||
-    // price changed
     filters.priceRange[0] !== DEFAULT_MIN ||
     filters.priceRange[1] !== DEFAULT_MAX ||
-    // sorting changed
     sortOption !== DEFAULT_SORT ||
-    // unlocked shop category dropdown changed (only meaningful when not locked)
+    debouncedSearch.length > 0 ||
     (!props.lockCategory && filters.selectedCategories.length > 0);
 
-  // ✅ the ONLY category we send to backend
   const apiCategoryForAllProducts = isLocked
-    ? props.categoryName // locked categoryName slug
+    ? props.categoryName
     : (filters.selectedCategories.join(",") || undefined);
 
-  // Fetch products using updated filters and sortOption
-
-  // ✅ 1) unlocked -> all products (all-products endpoint)
-  const allQuery = useGetAllProductsQuery({
-    page,
-    limit,
-    category: apiCategoryForAllProducts,
-    gender: filters.selectedSpecification === "all"
-      ? undefined
-      : filters.selectedSpecification.toUpperCase(), // "MALE" | "FEMALE"
-    section: props.section,
-    minPrice: filters.priceRange[0],
-    maxPrice: filters.priceRange[1],
-    accords: filters.selectedAccords.join(",") || undefined,
-    perfumeNotes: filters.selectedPerfumeNotes.join(",") || undefined,
-    performance: filters.selectedPerformance.join(",") || undefined,
-    sortBy: sortMap[sortOption] as any,
-  },
+  // 1) all products query (includes searchTerm)
+  const allQuery = useGetAllProductsQuery(
     {
-      skip: props.lockCategory ? !isFilteringActive : false, // ✅ don't run when locked
-    },
-  );
-
-  // ✅ 2) locked -> category products (categoryId endpoint)
-  const catQuery = useGetProductsByCategoryIdQuery(
-    {
-      categoryId: categoryId as string,
-      params: {
-        page,
-        limit,
-      },
+      page,
+      limit,
+      searchTerm: debouncedSearch || undefined,
+      category: apiCategoryForAllProducts,
+      gender: filters.selectedSpecification === "all" ? undefined : filters.selectedSpecification.toUpperCase(),
+      section: props.section,
+      minPrice: filters.priceRange[0],
+      maxPrice: filters.priceRange[1],
+      accords: filters.selectedAccords.join(",") || undefined,
+      perfumeNotes: filters.selectedPerfumeNotes.join(",") || undefined,
+      performance: filters.selectedPerformance.join(",") || undefined,
+      projection: filters.selectedProjection.join(",") || undefined,
+      sortBy: sortMap[sortOption] as any,
     },
     {
-      skip: !props.lockCategory || !props.categoryId || isFilteringActive, // ✅ don't run when unlocked or missing id
+      skip: props.lockCategory ? !isFilteringActive : false,
     }
   );
 
-  // ✅ choose active query result
-  const active = isLocked
-    ? (isFilteringActive ? allQuery : catQuery)
-    : allQuery;
+  // 2) category products query
+  const catQuery = useGetProductsByCategoryIdQuery(
+    {
+      categoryId: categoryId as string,
+      params: { page, limit },
+    },
+    {
+      skip: !props.lockCategory || !props.categoryId || isFilteringActive,
+    }
+  );
+
+  const active = isLocked ? (isFilteringActive ? allQuery : catQuery) : allQuery;
   const { data, isLoading, isFetching, error } = active;
 
   useEffect(() => {
-    // after the first request finishes (success or error), allow empty state
     if (!isLoading && !isFetching) {
       setHasResolvedOnce(true);
     }
   }, [isLoading, isFetching]);
 
-  // keep last good products (prevents blank during refetch)
   useEffect(() => {
     if (Array.isArray(data?.data)) setStableProducts(data.data);
   }, [data?.data]);
 
   const products = Array.isArray(data?.data) ? data!.data : stableProducts;
   const totalPages = data?.meta?.totalPage || 1;
-  const totalFilteredProducts = data?.meta.total ?? totalPages * limit;
 
-  // ✅ show loading + scroll to products top whenever URL changes
   const prevKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -289,33 +230,23 @@ export function ShopProducts(props: ShopProductProps) {
     setPageTransitionLoading(true);
   }, [routeKey]);
 
-  // useEffect(() => {
-  //   if (isFetching || !isLoading)
-  //     setPageTransitionLoading(false);
-  // }, [isFetching, isLoading]);
-
   useEffect(() => {
     const busy = isLoading || isFetching || pageTransitionLoading;
 
-    // ✅ if we already have data, stop custom loader immediately
     if (Array.isArray(data?.data)) {
       setPageTransitionLoading(false);
     }
 
-    // ✅ start timer only when busy
     if (busy && !timedOut) {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
-
       timeoutRef.current = setTimeout(() => {
         setTimedOut(true);
         setPageTransitionLoading(false);
         setHasResolvedOnce(true);
       }, LOADING_TIMEOUT_MS);
-
       return;
     }
 
-    // ✅ not busy => clear timer
     if (!busy) {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
@@ -324,7 +255,6 @@ export function ShopProducts(props: ShopProductProps) {
     }
   }, [isLoading, isFetching, pageTransitionLoading, data?.data]);
 
-  // cleanup effect
   useEffect(() => {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -332,89 +262,19 @@ export function ShopProducts(props: ShopProductProps) {
   }, []);
 
   const isBusy = (isLoading || isFetching || pageTransitionLoading) && !timedOut;
-
-  // only show full skeleton when we have nothing yet
   const showInitialSkeleton = isBusy && products.length === 0;
+  const showEmptyState = (hasResolvedOnce || timedOut) && !isBusy && !error && products.length === 0;
 
-  const showEmptyState =
-    (hasResolvedOnce || timedOut) && !isBusy && !error && products.length === 0;
-
-
-  // const products =
-  //   page === initialPage && !isFetching
-  //     ? initialProducts
-  //     : data?.data || [];
-
-  // Update URL with page and filters
-  // useEffect(() => {
-  //   const params = new URLSearchParams(searchParams.toString());
-  //   if (page > 1) params.set("page", page.toString());
-  //   // if (filters.selectedCategories.length) params.set("category", filters.selectedCategories.join(","));
-  //   if (filters.selectedSpecification && filters.selectedSpecification !== "all")
-  //     params.set("specification", filters.selectedSpecification);
-  //   if (filters.selectedSmells.length) params.set("smells", filters.selectedSmells.join(","));
-  //   if (filters.priceRange[0] !== 100) params.set("minPrice", filters.priceRange[0].toString());
-  //   if (filters.priceRange[1] !== 5000) params.set("maxPrice", filters.priceRange[1].toString());
-  //   if (sortOption !== "new-to-old") params.set("sortBy", sortOption);
-  //   // if (section) params.set("section", section);
-
-  //   // ✅ Keep SEO-friendly path for "new-arrivals"
-  //   // const basePath = pathname === "/new-arrivals" ? "/new-arrivals" : "/shop";
-
-  //   // Only set section param if not already on new-arrivals page
-  //   // if (section && pathname !== "/new-arrivals") {
-  //   //   params.set("section", section);
-  //   // } else {
-  //   //   params.delete("section");
-  //   // }
-
-  //   // Use pathname as base, but remove category if it matches the page's category
-  //   const basePath = pathname;
-  //   if (category) {
-  //     // Remove category from params if it's already implied by the page
-  //     params.delete("category");
-  //   }
-  //   if (category) {
-  //     params.delete("section");
-  //   }
-
-  //   const url = `${basePath}${params.toString() ? `?${params.toString()}` : ""}`;
-
-  //   // const url = `${basePath}${params.toString() ? `?${params.toString()}` : ""}`;
-
-  //   // const url = `/shop${params.toString() ? `?${params.toString()}` : ""}`;
-  //   router.push(url, { scroll: false });
-  // }, [page, filters, sortOption, section, router, searchParams, pathname, category, section]);
-
-  // ✅ Update URL when filters, sorting, or page changes
-  // useEffect(() => {
-  //   const params = new URLSearchParams();
-
-  //   if (page > 1) params.set("page", page.toString());
-  //   if (filters.selectedCategories.length)
-  //     params.set("category", filters.selectedCategories.join(","));
-  //   if (filters.selectedSpecification !== "all")
-  //     params.set("specification", filters.selectedSpecification);
-  //   if (filters.selectedSmells.length)
-  //     params.set("smells", filters.selectedSmells.join(","));
-  //   if (filters.priceRange[0] !== 100)
-  //     params.set("minPrice", filters.priceRange[0].toString());
-  //   if (filters.priceRange[1] !== 5000)
-  //     params.set("maxPrice", filters.priceRange[1].toString());
-  //   if (sortOption !== "new-to-old")
-  //     params.set("sortBy", sortOption);
-  //   if (props.section) params.set("section", props.section);
-
-  //   const url = `${pathname}${params.toString() ? `?${params.toString()}` : ""}`;
-  //   router.replace(url, { scroll: false });
-  // }, [page, filters, sortOption, props.section, pathname, router]);
-
+  // Sync URL Params
   useEffect(() => {
-    const params = new URLSearchParams(searchParams.toString()); // keep existing
+    const params = new URLSearchParams(searchParams.toString());
 
     if (page > 1) params.set("page", page.toString());
-    // if (filters.selectedCategories.length) params.set("category", filters.selectedCategories.join(","));
-    // ✅ only add category to query when NOT locked
+    else params.delete("page");
+
+    if (debouncedSearch) params.set("search", debouncedSearch);
+    else params.delete("search");
+
     if (!props.lockCategory && filters.selectedCategories.length) {
       params.set("category", filters.selectedCategories.join(","));
     }
@@ -425,6 +285,8 @@ export function ShopProducts(props: ShopProductProps) {
     else params.delete("perfumeNotes");
     if (filters.selectedPerformance.length) params.set("performance", filters.selectedPerformance.join(","));
     else params.delete("performance");
+    if (filters.selectedProjection.length) params.set("projection", filters.selectedProjection.join(","));
+    else params.delete("projection");
     if (filters.priceRange[0] !== 100) params.set("minPrice", filters.priceRange[0].toString());
     else params.delete("minPrice");
     if (filters.priceRange[1] !== 5000) params.set("maxPrice", filters.priceRange[1].toString());
@@ -438,64 +300,16 @@ export function ShopProducts(props: ShopProductProps) {
     const currentUrl = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
 
     if (nextUrl !== currentUrl) router.replace(nextUrl, { scroll: false });
-  }, [page, filters, sortOption, props.section, pathname, router, searchParams]);
-
-
-  // Infinite scroll
-  // useEffect(() => {
-  //   const handleScroll = () => {
-  //     if (
-  //       window.innerHeight + window.scrollY >= document.body.offsetHeight - 100 &&
-  //       visibleProductsCount < totalFilteredProducts &&
-  //       !isFetching
-  //     ) {
-  //       setVisibleProductsCount((prev) => Math.min(prev + limit, totalFilteredProducts));
-  //       if (visibleProductsCount + limit > page * limit) {
-  //         setPage((prev) => prev + 1);
-  //       }
-  //     }
-  //   };
-  //   window.addEventListener("scroll", handleScroll);
-  //   return () => window.removeEventListener("scroll", handleScroll);
-  // }, [visibleProductsCount, totalFilteredProducts, isFetching, page, limit]);
-
-  // useEffect(() => {
-  //   const handleScroll = () => {
-  //     const reachedBottom =
-  //       window.innerHeight + window.scrollY >= document.body.offsetHeight - 200;
-
-  //     if (!reachedBottom) return;
-  //     if (isFetching) return;
-
-  //     const nextPage = page + 1;
-  //     if (nextPage <= totalPages) {
-  //       setPage(nextPage);
-  //     }
-  //   };
-
-  //   window.addEventListener("scroll", handleScroll);
-  //   return () => window.removeEventListener("scroll", handleScroll);
-  // }, [page, totalPages, isFetching]);
+  }, [page, filters, sortOption, debouncedSearch, props.section, pathname, router, searchParams, props.lockCategory]);
 
   const handleQuickView = (product: IProductResponse) => {
     setQuickViewProduct(product);
     setIsQuickViewOpen(true);
   };
 
-  const handleCloseQuickView = () => {
-    setIsQuickViewOpen(false);
-    setQuickViewProduct(null);
-  };
-
-  // const handleApplyFilters = (newFilters: Partial<Filters>) => {
-  //   setFilters(prev => normalizeFilters(newFilters, prev));
-  //   setPage(1);
-  //   setVisibleProductsCount(limit);
-  // };
-
   const handleApplyFilters = (newFilters: Partial<Filters>) => {
     setTimedOut(false);
-    setHasResolvedOnce(false); // optional: treat as fresh attempt
+    setHasResolvedOnce(false);
 
     setFilters((prev) => {
       const next = normalizeFilters(newFilters, prev);
@@ -512,7 +326,6 @@ export function ShopProducts(props: ShopProductProps) {
   const handleSortChange = (newSortOption: string) => {
     setTimedOut(false);
     setHasResolvedOnce(false);
-
     setSortOption(newSortOption);
     setPage(1);
     setVisibleProductsCount(limit);
@@ -522,20 +335,12 @@ export function ShopProducts(props: ShopProductProps) {
     setColumns(cols);
   };
 
-  const handleLoadMore = () => {
-    setLoadingMore(true);
-    setVisibleProductsCount((prev) =>
-      Math.min(prev + 20, totalFilteredProducts)
-    );
-    setLoadingMore(false);
-  };
-
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 1280) {
-        setColumns(4);
+        setColumns(5);
       } else if (window.innerWidth >= 768) {
-        setColumns(3);
+        setColumns(4);
       } else {
         setColumns(2);
       }
@@ -545,20 +350,7 @@ export function ShopProducts(props: ShopProductProps) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // console.log("products", products);
-
-  // const gridColsClass =
-  //   {
-  //     1: "grid-cols-1",
-  //     2: "grid-cols-2",
-  //     3: "grid-cols-2 md:grid-cols-3",
-  //     4: "grid-cols-2 md:grid-cols-3 lg:grid-cols-4",
-  //     5: "grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5",
-  //   }[columns] || "grid-cols-2 md:grid-cols-3 lg:grid-cols-4";
-
-  const safeCols = typeof window !== "undefined" && window.innerWidth < 640
-    ? 2
-    : columns;
+  const safeCols = typeof window !== "undefined" && window.innerWidth < 640 ? 2 : columns;
 
   const gridColsClass =
     {
@@ -572,12 +364,8 @@ export function ShopProducts(props: ShopProductProps) {
   function ErrorUI() {
     return (
       <div className="flex flex-col items-center justify-center text-center py-20 bg-white rounded-xl shadow-lg border border-gray-100">
-        <h3 className="text-xl font-semibold text-gray-800 mb-2">
-          Error Loading Perfumes
-        </h3>
-        <p className="text-sm text-gray-600 max-w-sm">
-          Failed to fetch products. Please try again later.
-        </p>
+        <h3 className="text-xl font-semibold text-gray-800 mb-2">Error Loading Perfumes</h3>
+        <p className="text-sm text-gray-600 max-w-sm">Failed to fetch products. Please try again later.</p>
       </div>
     );
   }
@@ -592,27 +380,22 @@ export function ShopProducts(props: ShopProductProps) {
         <p className="text-sm text-gray-600 max-w-sm">
           {timedOut
             ? "The request didn’t finish within 20 seconds. Please try again."
-            : "Try adjusting your filters or sorting options to find what you're looking for."}
+            : "Try searching for a different keyword or resetting your filters."}
         </p>
       </div>
     );
   }
 
-  /**
-   * Renders the grid + your overlay loader (the nice one).
-   */
   function ProductsGrid({
     products,
     visibleProductsCount,
     gridColsClass,
-    columns,
     isBusy,
     onQuickView,
   }: {
     products: IProductResponse[];
     visibleProductsCount: number;
     gridColsClass: string;
-    columns: number;
     isBusy: boolean;
     onQuickView: (p: IProductResponse) => void;
   }) {
@@ -620,39 +403,29 @@ export function ShopProducts(props: ShopProductProps) {
       <div className="relative">
         <div
           className={[
-            `grid gap-2 sm:gap-3 md:gap-4 ${gridColsClass}`,
+            `grid gap-2 sm:gap-3 md:gap-4 items-start ${gridColsClass}`,
             isBusy ? "opacity-60" : "opacity-100",
             "transition-opacity duration-200",
           ].join(" ")}
         >
           {products.slice(0, visibleProductsCount).map((product) => (
             <ProductCard
-              className="py-0 px-0 sm:px-0"
               key={product.id}
               product={product}
-              layout={columns === 1 ? "list" : "grid"}
-              showDescription={columns === 1}
               onQuickView={() => onQuickView(product)}
             />
           ))}
         </div>
 
-        {/* ✅ your better loading overlay */}
-        {/* {(pageTransitionLoading || (isFetching && products.length === 0)) && ( */}
         {isBusy && products.length > 0 && (
           <div className="absolute inset-0 pointer-events-none">
-            {/* subtle dim */}
             <div className="absolute inset-0 bg-white/35 backdrop-blur-[1px]" />
-
-            {/* top loading bar */}
-            <div className="absolute left-0 right-0 top-0 h-[3px] overflow-hidden rounded-t-xl">
-              <div className="h-full w-1/2 animate-[loadingbar_1.1s_ease-in-out_infinite] bg-gray-900/70" />
+            <div className="absolute left-0 right-0 top-0 h-0.75 overflow-hidden rounded-t-xl">
+              <div className="h-full w-1/2 animate-[loadingbar_1.1s_ease-in-out_infinite] bg-green-700/80" />
             </div>
-
-            {/* floating loader */}
             <div className="absolute top-4 left-1/2 -translate-x-1/2">
               <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-white/90 px-4 py-2 text-sm font-medium text-gray-800 shadow-md">
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin text-green-700" />
                 Loading products…
               </div>
             </div>
@@ -663,25 +436,11 @@ export function ShopProducts(props: ShopProductProps) {
   }
 
   return (
-    <section
-      className="container mx-auto py-6 sm:py-8 px-3 sm:px-4 relative"
-      aria-labelledby="shop-products-heading"
-    >
-      {/* Hidden crawlable pagination links for SEO */}
-      {page > 1 && (
-        <link
-          rel="prev"
-          href={`/shop?page=${page - 1}`}
-        />
-      )}
-      {page < totalPages && (
-        <link
-          rel="next"
-          href={`/shop?page=${page + 1}`}
-        />
-      )}
+    <section className="container mx-auto py-0 px-3 sm:px-4 relative" aria-labelledby="shop-products-heading">
+      {page > 1 && <link rel="prev" href={`/shop?page=${page - 1}`} />}
+      {page < totalPages && <link rel="next" href={`/shop?page=${page + 1}`} />}
 
-      {/* Structured Data for SEO */}
+      {/* SEO Structured Data */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -689,7 +448,7 @@ export function ShopProducts(props: ShopProductProps) {
             "@context": "https://schema.org",
             "@type": "CollectionPage",
             name: "Premium Perfume Oil Collection",
-            description: "Explore KhushbuWaala's curated collection of world-class perfume oils and fragrances",
+            description: "Explore Khushbuwaala's curated collection of world-class perfume oils and fragrances",
             url: `https://khushbuwaala.com/shop${page > 1 ? `?page=${page}` : ""}`,
             mainEntity: {
               "@type": "ItemList",
@@ -697,7 +456,7 @@ export function ShopProducts(props: ShopProductProps) {
               description: "Premium quality perfume oils and fragrances",
               itemListElement: products.map((product, index) => ({
                 "@type": "ListItem",
-                position: index + 1 + (page - 1) * limit, // paginate properly
+                position: index + 1 + (page - 1) * limit,
                 url: `https://khushbuwaala.com/product/${product.slug}`,
                 name: product.name,
               })),
@@ -717,168 +476,123 @@ export function ShopProducts(props: ShopProductProps) {
         All Products
       </h2>
 
-      {/* Enhanced Sticky Controls: Filter, Sort, Column Layout */}
-      <div className="sticky top-0 z-40 flex justify-between items-center bg-white/95 backdrop-blur-xl py-1 sm:py-3 px-2 sm:px-4 rounded-b-xl shadow-lg mb-4 sm:mb-8 border border-gray-200/50 transition-all duration-300">
+      {/* Sticky Controls Bar */}
+      <div className="sticky top-0 z-40 flex items-center gap-2 bg-white/95 backdrop-blur-xl py-2 sm:py-3 px-2 sm:px-4 rounded-b-xl shadow-sm mb-4 sm:mb-8 border border-gray-200 transition-all duration-300">
+        {/* Filter Button */}
         <Button
           variant="outline"
-          className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:bg-red-50 hover:text-red-600 transition-all duration-300 bg-transparent rounded-lg px-4 py-2 shadow-sm hover:shadow-md"
+          className="h-8.5! min-h-0! py-0! flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-gray-700 hover:bg-gray-50 bg-white rounded-lg px-2.5 sm:px-4 shadow-xs shrink-0"
           onClick={() => setIsFilterSheetVisible(true)}
           aria-controls="filter-sheet"
           aria-expanded={isFilterSheetVisible}
         >
-          <FilterIcon className="h-4 w-4" /> Filter
+          <FilterIcon className="h-3.5 w-3.5" />
+          <span>Filter</span>
         </Button>
 
-        <div className="flex gap-1 bg-gray-50 p-1 rounded-lg">
-          {/* Column Layout Buttons */}
+        {/* Embedded Live Search Input */}
+        <div className="relative flex-1 min-w-0">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+          <Input
+            type="text"
+            placeholder="Search perfumes, notes, attars..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="w-full h-8.5 sm:h-9 pl-8 pr-7 text-xs bg-gray-50/80 border-gray-200 rounded-lg placeholder:text-gray-400 focus-visible:ring-1 focus-visible:ring-green-600 focus-visible:bg-white transition-all"
+          />
+          {searchInput && (
+            <button
+              type="button"
+              onClick={() => setSearchInput("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-600 rounded-full"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* Desktop Columns Toggles */}
+        <div className="hidden lg:flex gap-1 bg-gray-50 p-1 rounded-lg shrink-0 border border-gray-100">
           <Button
             variant="outline"
             size="icon"
-            className={`sm:flex h-8 w-8 text-gray-700 hover:bg-white hover:text-blue-600 transition-all duration-300 rounded-md shadow-sm ${columns === 1
-              ? "bg-white text-blue-600 shadow-md"
-              : "bg-transparent"
-              }`}
-            onClick={() => handleColumnChange(1)}
-            aria-label="Show products in 1 column"
-          >
-            <LayoutList className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className={`h-8 w-8 text-gray-700 hover:bg-white hover:text-blue-600 transition-all duration-300 rounded-md shadow-sm ${columns === 2
-              ? "bg-white text-blue-600 shadow-md"
-              : "bg-transparent"
-              }`}
-            onClick={() => handleColumnChange(2)}
-            aria-label="Show products in 2 columns"
-          >
-            <Grid2X2 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className={`hidden md:flex h-8 w-8 text-gray-700 hover:bg-white hover:text-blue-600 transition-all duration-300 rounded-md shadow-sm ${columns === 3
-              ? "bg-white text-blue-600 shadow-md"
-              : "bg-transparent"
+            className={`h-7 w-7 text-gray-700 rounded-md border-transparent ${columns === 3 ? "bg-white text-green-700 shadow-xs border-gray-200" : "bg-transparent hover:bg-white"
               }`}
             onClick={() => handleColumnChange(3)}
             aria-label="Show products in 3 columns"
           >
-            <Columns3 className="h-4 w-4" />
+            <Columns3 className="h-3.5 w-3.5" />
           </Button>
           <Button
             variant="outline"
             size="icon"
-            className={`hidden lg:flex h-8 w-8 text-gray-700 hover:bg-white hover:text-blue-600 transition-all duration-300 rounded-md shadow-sm ${columns === 4
-              ? "bg-white text-blue-600 shadow-md"
-              : "bg-transparent"
+            className={`hidden lg:flex h-7 w-7 text-gray-700 rounded-md border-transparent ${columns === 4 ? "bg-white text-green-700 shadow-xs border-gray-200" : "bg-transparent hover:bg-white"
               }`}
             onClick={() => handleColumnChange(4)}
             aria-label="Show products in 4 columns"
           >
-            <Grid3X3 className="h-4 w-4" />
+            <Grid3X3 className="h-3.5 w-3.5" />
           </Button>
           <Button
             variant="outline"
             size="icon"
-            className={`hidden xl:flex h-8 w-8 text-gray-700 hover:bg-white hover:text-blue-600 transition-all duration-300 rounded-md shadow-sm ${columns === 5
-              ? "bg-white text-blue-600 shadow-md"
-              : "bg-transparent"
+            className={`hidden xl:flex h-7 w-7 text-gray-700 rounded-md border-transparent ${columns === 5 ? "bg-white text-green-700 shadow-xs border-gray-200" : "bg-transparent hover:bg-white"
               }`}
             onClick={() => handleColumnChange(5)}
             aria-label="Show products in 5 columns"
           >
-            <LayoutGrid className="h-4 w-4" />
+            <LayoutGrid className="h-3.5 w-3.5" />
           </Button>
         </div>
 
-        <Button
-          variant="outline"
-          className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-300 bg-transparent rounded-lg px-4 py-2 shadow-sm hover:shadow-md"
-          onClick={() => setIsSortSheetVisible(true)}
-          aria-controls="sort-sheet"
-          aria-expanded={isSortSheetVisible}
-        >
-          <ListFilter className="h-4 w-4" /> Sort
-        </Button>
+        {/* Integrated Sort Dropdown */}
+        <div className="shrink-0">
+          <SortDropdown
+            value={sortOption}
+            onSortChange={handleSortChange}
+          />
+        </div>
       </div>
 
-      {/* ✅ Put overflow-x-hidden AFTER sticky */}
+      {/* Main Product Container */}
       <div className="overflow-x-hidden">
-
-        {/* Product List */}
         <div ref={productsTopRef} />
 
         {showInitialSkeleton ? (
-          // ✅ First load only (no products yet)
           <ShopProductsSkeletonGrid />
         ) : error ? (
           <ErrorUI />
         ) : products.length > 0 ? (
-          // ✅ Normal render (never blank)
           <ProductsGrid
             products={products}
             visibleProductsCount={visibleProductsCount}
             gridColsClass={gridColsClass}
-            columns={columns}
             isBusy={isBusy}
             onQuickView={handleQuickView}
           />
         ) : showEmptyState ? (
-          // ✅ show empty state ONLY after first real resolve
           <NoProductsUI timedOut={timedOut} />
         ) : (
-          // ✅ fallback during hydration/transient state to prevent flash
           <ShopProductsSkeletonGrid colsClass={gridColsClass} />
         )}
 
-
-        {/* Load More Button */}
-        {/* {totalFilteredProducts > visibleProductsCount && (
-      <div className="text-center mt-8">
-        <p className="text-sm text-gray-600 mb-6">
-          You&apos;ve viewed{" "}
-          {Math.min(visibleProductsCount, totalFilteredProducts)} of{" "}
-          {totalFilteredProducts} products
-        </p>
-        <Button
-          className="px-10 py-4 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-semibold rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
-          onClick={handleLoadMore}
-          disabled={loadingMore}
-        >
-          {loadingMore ? (
-            <span className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" /> Loading More...
-            </span>
-          ) : (
-            "Load More"
-          )}
-        </Button>
-      </div>
-    )} */}
-
         {/* Pagination */}
-        <div className="mt-10">
+        <div className="mt-8 mb-8">
           <div className="mx-auto w-full max-w-full overflow-x-hidden">
             <div className="flex flex-wrap items-center justify-center gap-2">
-              {/* Previous */}
               <Button
                 variant="outline"
                 disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="h-9 px-3 rounded-lg"
+                className="h-8 sm:h-9 px-3 text-xs sm:text-sm rounded-lg"
               >
                 Previous
               </Button>
 
-              {/* Page numbers (responsive, capped, no overflow) */}
               {(() => {
                 const total = totalPages;
                 const current = page;
-
-                // how many pages to show around current
-                const delta = 1; // current +/- 1 (mobile friendly)
+                const delta = 1;
                 const range: number[] = [];
                 const rangeWithDots: (number | "...")[] = [];
 
@@ -889,10 +603,8 @@ export function ShopProducts(props: ShopProductProps) {
                 for (let i = left; i <= right; i++) range.push(i);
                 if (total > 1) range.push(total);
 
-                // remove duplicates + sort
                 const uniq = Array.from(new Set(range)).sort((a, b) => a - b);
 
-                // build with dots
                 for (let i = 0; i < uniq.length; i++) {
                   const n = uniq[i];
                   const prev = uniq[i - 1];
@@ -906,10 +618,7 @@ export function ShopProducts(props: ShopProductProps) {
                 return rangeWithDots.map((item, idx) => {
                   if (item === "...") {
                     return (
-                      <span
-                        key={`dots-${idx}`}
-                        className="px-2 text-sm text-gray-500 select-none"
-                      >
+                      <span key={`dots-${idx}`} className="px-2 text-xs sm:text-sm text-gray-500 select-none">
                         …
                       </span>
                     );
@@ -922,10 +631,9 @@ export function ShopProducts(props: ShopProductProps) {
                       key={pageNum}
                       onClick={() => setPage(pageNum)}
                       className={[
-                        "h-9 min-w-9 px-3 rounded-lg",
-                        "text-sm",
+                        "h-8 sm:h-9 min-w-8 sm:min-w-9 px-2 sm:px-3 rounded-lg text-xs sm:text-sm",
                         page === pageNum
-                          ? "bg-red-600 text-white hover:bg-red-700"
+                          ? "bg-green-600 text-white hover:bg-green-700"
                           : "bg-gray-100 text-gray-700 hover:bg-gray-200",
                       ].join(" ")}
                     >
@@ -935,12 +643,11 @@ export function ShopProducts(props: ShopProductProps) {
                 });
               })()}
 
-              {/* Next */}
               <Button
                 variant="outline"
                 disabled={page >= totalPages}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                className="h-9 px-3 rounded-lg"
+                className="h-8 sm:h-9 px-3 text-xs sm:text-sm rounded-lg"
               >
                 Next
               </Button>
@@ -949,7 +656,6 @@ export function ShopProducts(props: ShopProductProps) {
         </div>
       </div>
 
-      {/* Filter and Sort Sheets */}
       <FilterSheet
         visible={isFilterSheetVisible}
         onClose={setIsFilterSheetVisible}
@@ -957,16 +663,13 @@ export function ShopProducts(props: ShopProductProps) {
         initialFilters={{ categoryName: props.categoryName }}
         lockCategory={props.lockCategory}
       />
-      <SortSheet
-        visible={isSortSheetVisible}
-        onClose={setIsSortSheetVisible}
-        onSortChange={handleSortChange}
-      />
-      {
-        quickViewProduct && (
-          <ProductQuickView product={quickViewProduct} open={isQuickViewOpen} onOpenChange={setIsQuickViewOpen} />
-        )
-      }
-    </section >
+      {quickViewProduct && (
+        <ProductQuickView
+          product={quickViewProduct}
+          open={isQuickViewOpen}
+          onOpenChange={setIsQuickViewOpen}
+        />
+      )}
+    </section>
   );
 }

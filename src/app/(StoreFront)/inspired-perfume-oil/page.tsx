@@ -3,15 +3,15 @@ import { ShopShell } from "@/components/Modules/Shop/ShopShell";
 
 // Metadata
 export const metadata: Metadata = {
-  title: "Inspired Perfume Oils | KhushbuWaala",
+  title: "Inspired Perfume Oils | Khushbuwaala",
   description:
-    "Explore KhushbuWaala's inspired perfume oil collection. Premium fragrances with free nationwide shipping on orders over ৳1000.",
+    "Explore Khushbuwaala's inspired perfume oil collection. Premium fragrances with free nationwide shipping on orders over ৳1000.",
   keywords: [
     "inspired perfume oil",
     "perfume oil",
     "premium fragrance",
     "attar collection",
-    "KhushbuWaala shop",
+    "Khushbuwaala shop",
     "Bangladesh perfume",
   ].join(", "),
   alternates: { canonical: "https://khushbuwaala.com/inspired-perfume-oil" },
@@ -23,7 +23,7 @@ const shopStructuredData = {
   "@type": "CollectionPage",
   name: "Inspired Perfume Oils",
   description:
-    "Explore KhushbuWaala's curated collection of inspired perfume oils and fragrances",
+    "Explore Khushbuwaala's curated collection of inspired perfume oils and fragrances",
   url: "https://khushbuwaala.com/inspired-perfume-oil",
   mainEntity: {
     "@type": "ItemList",

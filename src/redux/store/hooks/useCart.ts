@@ -40,40 +40,42 @@ export const useCart = () => {
   // -------------------- CART ACTIONS --------------------
   const addToCart = useCallback(
     async (product: IProductResponse, quantity: number, selectedSize: string, selectedPrice: number) => {
-      dispatch(addToCartAction({ product, quantity, selectedSize, selectedPrice }))
-      // toast.success(`${product.name} added to cart!`)
+      // 1. Optimistic UI update
+      dispatch(addToCartAction({ product, quantity, selectedSize, selectedPrice }));
 
       try {
+        const [sizeVal, sizeUnit] = String(selectedSize || "").split(" ");
         const variant = product?.variants?.find(
-          (v) => `${v.size} ${v.unit.toLowerCase()}` === selectedSize
-        )
-        const response = await addToCartApi({
+          (v) =>
+            Number(v.size) === Number(sizeVal) &&
+            String(v.unit || "").toLowerCase() === String(sizeUnit || "").toLowerCase()
+        );
+
+        const response: any = await addToCartApi({
           productId: product.id,
           variantId: variant?.id || null,
-          size: variant?.size || null,
+          size: variant?.size ? Number(variant.size) : null,
           unit: variant?.unit || null,
           quantity,
-        }).unwrap()
-        // console.log('response', response)
+        }).unwrap();
 
-        // ✅ Assume backend returns { id: 'cartItemId', ... }
+        // 👉 CRUCIAL FIX: Sync the TRUE database quantity and cartItemId back into Redux!
         if (response?.data?.id) {
           dispatch(
             updateQuantityAction({
               productId: product.id,
               selectedSize,
-              quantity,
+              quantity: response.data.quantity, // 👈 Takes the true DB quantity (e.g. 6, not 1)
               cartItemId: response.data.id,
             })
-          )
-          // console.log('dispatch done')
+          );
         }
       } catch (err) {
-        console.warn('Failed to sync add to cart API', err)
+        console.warn('Failed to sync add to cart API', err);
       }
     },
     [dispatch, addToCartApi]
-  )
+  );
 
   const removeFromCart = useCallback(
     async (productId: string, size: string, productName?: string, cartItenId?: string) => {
@@ -124,11 +126,28 @@ export const useCart = () => {
   // -------------------- CHECKOUT / CLEAR --------------------
   const setCheckoutOnlyItem = useCallback(
     (product: IProductResponse, quantity: number, selectedSize: string, selectedPrice: number) => {
-      dispatch(setCheckoutOnlyItemAction({ product, quantity, selectedSize, selectedPrice }))
-      router.push('/checkout')
+      const existing = cartItems.find(
+        (item) => item.product?.id === product.id && item.selectedSize === selectedSize
+      );
+
+      dispatch(
+        setCheckoutOnlyItemAction({
+          product,
+          quantity,
+          selectedSize,
+          selectedPrice,
+        })
+      );
+
+      // If this product was already in their cart, reset its DB quantity to the single purchase quantity
+      if (existing?.cartItemId) {
+        updateCartItemApi({ id: existing.cartItemId, quantity: Math.max(1, quantity) }).catch(() => { });
+      }
+
+      router.push('/checkout');
     },
-    [dispatch]
-  )
+    [dispatch, cartItems, updateCartItemApi, router]
+  );
 
   const proceedToCartCheckout = useCallback(() => {
     dispatch(proceedToCartCheckoutAction())

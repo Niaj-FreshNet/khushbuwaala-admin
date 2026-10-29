@@ -5,10 +5,10 @@ import { Users, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
-  title: "About Us | KhushbuWaala Perfumes - Authentic Fragrances from Dhaka",
-  description: "Learn about KhushbuWaala Perfumes: Dhaka's premier destination for original perfumes since 2020. Our story, commitment to quality, and passion for scents.",
+  title: "About Us | Khushbuwaala Perfumes - Authentic Fragrances from Dhaka",
+  description: "Learn about Khushbuwaala Perfumes: Dhaka's premier destination for original perfumes since 2020. Our story, commitment to quality, and passion for scents.",
   openGraph: {
-    title: "About KhushbuWaala Perfumes - Dhaka's Scent Story",
+    title: "About Khushbuwaala Perfumes - Dhaka's Scent Story",
     description: "From passion to perfume: Discover our journey in bringing luxury fragrances to Bangladesh.",
     url: "https://www.khushbuwaala.com/about",
   },
@@ -20,7 +20,7 @@ export default function AboutPage() {
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="text-center mb-12">
           <Badge variant="secondary" className="mb-4">Our Story</Badge>
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">About KhushbuWaala Perfumes</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">About Khushbuwaala Perfumes</h1>
           <p className="text-xl text-gray-600">Bringing the world's finest scents to Dhaka since 2020.</p>
         </div>
 
@@ -33,7 +33,7 @@ export default function AboutPage() {
           </CardHeader>
           <CardContent className="prose prose-lg max-w-none text-gray-700 space-y-6">
             <p>
-              Founded in the heart of Dhaka, KhushbuWaala Perfumes was born from a simple love for fragrances that tell stories. We curate authentic, long-lasting perfumes from global brands, making luxury accessible to every Bangladeshi. From our flagship showroom in Khilgaon, we blend tradition with modernity—offering everything from classic attars to contemporary eau de parfums.
+              Founded in the heart of Dhaka, Khushbuwaala Perfumes was born from a simple love for fragrances that tell stories. We curate authentic, long-lasting perfumes from global brands, making luxury accessible to every Bangladeshi. From our flagship showroom in Khilgaon, we blend tradition with modernity—offering everything from classic attars to contemporary eau de parfums.
             </p>
             <p>
               Our mission: <strong>Empower confidence through scent.</strong> We source directly from trusted suppliers, ensuring 100% originality without compromise.

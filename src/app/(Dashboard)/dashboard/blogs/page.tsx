@@ -1,16 +1,28 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useState, useMemo, useEffect } from 'react';
+import dynamic from 'next/dynamic';
+import { useRouter, useSearchParams } from 'next/navigation';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Search, Plus, Edit, Trash, X, Upload } from 'lucide-react';
-import JoditEditor from 'jodit-react';
+import { Search, Plus, Edit, Trash, X, Upload, Loader2 } from 'lucide-react';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -20,7 +32,9 @@ import {
   useUpdateBlogMutation,
   useDeleteBlogMutation,
 } from '@/redux/store/api/blog/blogApi';
-import Image from 'next/image';
+
+// Prevent SSR hydration mismatch with Jodit
+const JoditEditor = dynamic(() => import('jodit-react'), { ssr: false });
 
 interface BlogData {
   id: string;
@@ -36,28 +50,31 @@ interface BlogData {
 }
 
 const formSchema = z.object({
-  title: z.string().min(1, 'Blog title is required').max(70, 'Title must be 70 characters or less'),
-  metaTitle: z.string().min(1, 'SEO title is required').max(70, 'SEO title must be 70 characters or less'),
-  metaDescription: z.string().min(1, 'Meta description is required').max(160, 'Meta description must be 160 characters or less'),
+  title: z
+    .string()
+    .min(1, 'Blog title is required')
+    .max(120, 'Title must be 120 characters or less'),
+  metaTitle: z
+    .string()
+    .min(1, 'SEO title is required')
+    .max(70, 'SEO title must be 70 characters or less'),
+  metaDescription: z
+    .string()
+    .min(1, 'Meta description is required')
+    .max(160, 'Meta description must be 160 characters or less'),
   keywords: z.string().optional(),
   isPublish: z.boolean(),
 });
 
-interface FormValues {
-  title: string;
-  metaTitle: string;
-  metaDescription: string;
-  keywords?: string;
-  isPublish: boolean;
-}
+type FormValues = z.infer<typeof formSchema>;
 
 const joditConfig = {
   readonly: false,
-  height: 300,
+  height: 320,
   toolbar: true,
   spellcheck: true,
   language: 'en',
-  toolbarButtonSize: 'small',
+  toolbarButtonSize: 'small' as const,
   toolbarAdaptive: false,
   showCharsCounter: false,
   showWordsCounter: false,
@@ -65,48 +82,52 @@ const joditConfig = {
   askBeforePasteHTML: false,
   askBeforePasteFromWord: false,
   buttons: [
-    'font',
-    'fontsize',
-    '|',
     'bold',
     'italic',
     'underline',
     'strikethrough',
     '|',
-    'superscript',
-    'subscript',
-    '|',
-    'align',
-    '|',
     'ul',
     'ol',
     '|',
-    'outdent',
-    'indent',
+    'font',
+    'fontsize',
+    'paragraph',
     '|',
+    'align',
     'link',
     'image',
-    '|',
-    'hr',
     'table',
     '|',
     'undo',
     'redo',
   ],
-  style: {
-    font: '14px Arial, sans-serif',
-  },
 };
 
 const BlogList = () => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pageParam = Number(searchParams.get('page')) || 1;
+
+  const [currentPage, setCurrentPage] = useState(pageParam);
   const [searchTerm, setSearchTerm] = useState('');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingBlog, setEditingBlog] = useState<BlogData | null>(null);
   const [blogContent, setBlogContent] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const router = useRouter();
-  const { data, isLoading } = useGetAdminBlogsQuery({ page: 1, limit: 10 });
+
+  // Sync state with URL parameter if it changes
+  useEffect(() => {
+    setCurrentPage(pageParam);
+  }, [pageParam]);
+
+  // Query passing dynamic page
+  const { data, isLoading, isFetching } = useGetAdminBlogsQuery({
+    page: currentPage,
+    limit: 10,
+  });
+
   const [updateBlog, { isLoading: isUpdating }] = useUpdateBlogMutation();
   const [deleteBlog] = useDeleteBlogMutation();
 
@@ -124,19 +145,35 @@ const BlogList = () => {
 
   const isPublishValue = useWatch({ control, name: 'isPublish' });
 
-  const allBlogs: BlogData[] = useMemo(() => data?.data?.data || [], [data]);
+  // Handle data mapping cleanly based on backend response shape
+  const allBlogs: BlogData[] = useMemo(() => {
+    return data?.data?.data || data?.data || [];
+  }, [data]);
+
   const meta = data?.data?.meta;
 
-  const filteredBlogs = useMemo(
-    () => allBlogs.filter((blog) => blog.title.toLowerCase().includes(searchTerm.toLowerCase())),
-    [allBlogs, searchTerm]
-  );
+  const filteredBlogs = useMemo(() => {
+    return allBlogs.filter((blog) =>
+      blog.title.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [allBlogs, searchTerm]);
+
+  // Cleanup object URLs to avoid memory leaks
+  useEffect(() => {
+    return () => {
+      if (imagePreview && imagePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
 
   const handleEdit = (blog: BlogData) => {
     setEditingBlog(blog);
     setIsEditModalOpen(true);
-    setBlogContent(blog.content);
+    setBlogContent(blog.content || '');
     setImagePreview(blog.imageUrl);
+    setImageFile(null);
+
     setValue('title', blog.title);
     setValue('metaTitle', blog.metaTitle || blog.title);
     setValue('metaDescription', blog.metaDescription || '');
@@ -145,14 +182,15 @@ const BlogList = () => {
   };
 
   const handleDelete = async (id: string) => {
-    const confirmed = window.confirm('Are you sure you want to delete this blog?');
-    if (confirmed) {
-      try {
-        await deleteBlog(id).unwrap();
-        toast.success('Blog deleted successfully');
-      } catch {
-        toast.error('Failed to delete blog');
-      }
+    if (!window.confirm('Are you sure you want to permanently delete this blog?')) {
+      return;
+    }
+
+    try {
+      await deleteBlog(id).unwrap();
+      toast.success('Blog deleted successfully');
+    } catch {
+      toast.error('Failed to delete blog');
     }
   };
 
@@ -160,51 +198,63 @@ const BlogList = () => {
     try {
       const formData = new FormData();
       formData.append('isPublish', checked.toString());
+      formData.append('title', blog.title);
+      formData.append('content', blog.content);
       if (blog.imageUrl) formData.append('imageUrl', blog.imageUrl);
       if (blog.metaTitle) formData.append('metaTitle', blog.metaTitle);
       if (blog.metaDescription) formData.append('metaDescription', blog.metaDescription);
       if (blog.keywords) formData.append('keywords', blog.keywords);
-      formData.append('title', blog.title);
-      formData.append('content', blog.content);
+
       await updateBlog({ id: blog.id, data: formData }).unwrap();
-      toast.success('Blog status updated successfully');
+      toast.success(checked ? 'Blog published' : 'Blog unpublished');
     } catch {
-      toast.error('Failed to update blog status');
+      toast.error('Failed to change publish status');
     }
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png';
+      const isJpgOrPng =
+        file.type === 'image/jpeg' ||
+        file.type === 'image/png' ||
+        file.type === 'image/webp';
       const isLt25M = file.size / 1024 / 1024 < 25;
+
       if (!isJpgOrPng) {
-        toast.error('You can only upload JPG/PNG files!');
+        toast.error('Upload only JPG, PNG, or WEBP images.');
         return;
       }
       if (!isLt25M) {
-        toast.error('Image must be smaller than 25MB!');
+        toast.error('Image must be smaller than 25MB.');
         return;
       }
+
+      if (imagePreview && imagePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(imagePreview);
+      }
+
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
     }
   };
 
-  const handleUpdate = async (data: FormValues) => {
-    if (!editingBlog || !blogContent) {
+  const handleUpdate = async (formDataValues: FormValues) => {
+    if (!editingBlog) return;
+    if (!blogContent || blogContent.trim() === '<p><br></p>') {
       toast.error('Blog content is required');
       return;
     }
 
     try {
       const formData = new FormData();
-      formData.append('title', data.title);
-      formData.append('metaTitle', data.metaTitle);
-      formData.append('metaDescription', data.metaDescription);
-      if (data.keywords) formData.append('keywords', data.keywords);
+      formData.append('title', formDataValues.title);
+      formData.append('metaTitle', formDataValues.metaTitle);
+      formData.append('metaDescription', formDataValues.metaDescription);
+      if (formDataValues.keywords) formData.append('keywords', formDataValues.keywords);
       formData.append('content', blogContent);
-      formData.append('isPublish', data.isPublish.toString());
+      formData.append('isPublish', formDataValues.isPublish.toString());
+
       if (imageFile) {
         formData.append('image', imageFile);
       } else if (editingBlog.imageUrl) {
@@ -213,6 +263,7 @@ const BlogList = () => {
 
       await updateBlog({ id: editingBlog.id, data: formData }).unwrap();
       toast.success('Blog updated successfully');
+
       setIsEditModalOpen(false);
       setEditingBlog(null);
       setBlogContent('');
@@ -224,96 +275,154 @@ const BlogList = () => {
     }
   };
 
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    router.push(`/dashboard/blogs?page=${newPage}`);
+  };
+
   return (
-    <div className="p-6 bg-gray-50">
-      <div className="max-w-7xl mx-auto">
-        {/* Search & Add */}
-        <div className="flex justify-between items-center mb-6 gap-4">
-          <Input
-            placeholder="Search Blogs..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-80 border-[#FB923C] focus:ring-[#FB923C]"
-          />
+    <div className="p-6 bg-white min-h-[calc(100vh-64px)]">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header Controls */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="relative w-full sm:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search by title..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 border-gray-200 focus-visible:ring-emerald-600"
+            />
+          </div>
+
           <Button
-            className="bg-[#FB923C] hover:bg-[#ff8a29] text-white"
+            className="bg-emerald-700 hover:bg-emerald-800 text-white gap-1.5 shadow-sm"
             onClick={() => router.push('/dashboard/blogs/add')}
           >
-            <Plus className="w-4 h-4 mr-2" /> Add Blog
+            <Plus className="w-4 h-4" /> Add New Blog
           </Button>
         </div>
 
         {/* Blog Table */}
-        <Table className="border-[#FB923C]">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Image</TableHead>
-              <TableHead>Title</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Publish</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredBlogs.map((blog) => (
-              <TableRow key={blog.id}>
-                <TableCell>
-                  <Image
-                    src={blog.imageUrl || '/placeholder.svg'}
-                    alt={blog.title}
-                    width={80}
-                    height={80}
-                    className="object-cover rounded"
-                  />
-                </TableCell>
-                <TableCell className="font-medium">{blog.title}</TableCell>
-                <TableCell>
-                  <div className="max-w-[300px] truncate" dangerouslySetInnerHTML={{ __html: blog.content }} />
-                </TableCell>
-                <TableCell>
-                  <Switch
-                    checked={blog.isPublish}
-                    onCheckedChange={(checked) => handlePublishToggle(checked, blog)}
-                    className="data-[state=checked]:bg-[#4CD964]"
-                  />
-                </TableCell>
-                <TableCell>{new Date(blog.createdAt).toLocaleDateString()}</TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(blog)}>
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(blog.id)}>
-                      <Trash className="w-4 h-4 text-red-500" />
-                    </Button>
-                  </div>
-                </TableCell>
+        <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-xs">
+          <Table>
+            <TableHeader className="bg-gray-50/75">
+              <TableRow>
+                <TableHead className="w-20">Image</TableHead>
+                <TableHead className="min-w-[180px]">Title</TableHead>
+                <TableHead className="min-w-[260px]">Excerpt</TableHead>
+                <TableHead className="w-24 text-center">Status</TableHead>
+                <TableHead className="w-32">Created Date</TableHead>
+                <TableHead className="w-24 text-right">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {isLoading || isFetching ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-44 text-center">
+                    <div className="flex items-center justify-center gap-2 text-gray-500 text-sm">
+                      <Loader2 className="h-5 w-5 animate-spin text-emerald-700" />
+                      Loading articles...
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : filteredBlogs.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-32 text-center text-gray-500 text-sm">
+                    No articles found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredBlogs.map((blog) => {
+                  const plainExcerpt =
+                    blog.content?.replace(/<[^>]*>?/gm, '').trim().slice(0, 100) || '';
 
-        {/* Pagination */}
-        {meta && (
-          <div className="flex justify-between items-center mt-4">
-            <p className="text-sm text-gray-600">
-              Showing {filteredBlogs.length} of {meta.total} blogs
+                  return (
+                    <TableRow key={blog.id} className="hover:bg-gray-50/50">
+                      <TableCell>
+                        <div className="h-12 w-14 relative rounded-md overflow-hidden bg-gray-100 border border-gray-200">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={blog.imageUrl || '/images/placeholder.webp'}
+                            alt={blog.title}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-semibold text-gray-900 text-sm">
+                        {blog.title}
+                      </TableCell>
+                      <TableCell>
+                        <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">
+                          {plainExcerpt || 'No text content available'}
+                        </p>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Switch
+                          checked={blog.isPublish}
+                          onCheckedChange={(checked) => handlePublishToggle(checked, blog)}
+                          className="data-[state=checked]:bg-emerald-600"
+                        />
+                      </TableCell>
+                      <TableCell className="text-xs text-gray-500">
+                        {new Date(blog.createdAt).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-gray-600 hover:text-emerald-700"
+                            onClick={() => handleEdit(blog)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-gray-600 hover:text-red-600"
+                            onClick={() => handleDelete(blog.id)}
+                          >
+                            <Trash className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Pagination Controls */}
+        {meta && meta.total > 0 && (
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-2">
+            <p className="text-xs text-gray-500">
+              Showing <span className="font-medium">{filteredBlogs.length}</span> of{' '}
+              <span className="font-medium">{meta.total}</span> blogs (Page {meta.page} of{' '}
+              {meta.totalPage})
             </p>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
-                disabled={meta.page === 1}
-                onClick={() => router.push(`/dashboard/blogs?page=${meta.page - 1}`)}
-                className="border-[#FB923C] text-[#FB923C]"
+                size="sm"
+                disabled={currentPage <= 1 || isFetching}
+                onClick={() => handlePageChange(currentPage - 1)}
+                className="text-xs"
               >
                 Previous
               </Button>
               <Button
                 variant="outline"
-                disabled={meta.page >= meta.totalPage}
-                onClick={() => router.push(`/dashboard/blogs?page=${meta.page + 1}`)}
-                className="border-[#FB923C] text-[#FB923C]"
+                size="sm"
+                disabled={currentPage >= meta.totalPage || isFetching}
+                onClick={() => handlePageChange(currentPage + 1)}
+                className="text-xs"
               >
                 Next
               </Button>
@@ -321,108 +430,172 @@ const BlogList = () => {
           </div>
         )}
 
-        {/* Edit Blog Modal */}
+        {/* Edit Modal */}
         <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-          <DialogContent className="max-w-3xl">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="text-[#FB923C]">Edit Blog</DialogTitle>
+              <DialogTitle className="text-xl font-bold text-gray-900">
+                Edit Article
+              </DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit(handleUpdate)} className="space-y-6">
+
+            <form onSubmit={handleSubmit(handleUpdate)} className="space-y-5 pt-2">
               {/* Title */}
               <div>
-                <Label htmlFor="title">Blog Title</Label>
-                <Input id="title" placeholder="Enter blog title" {...register('title')} className="border-[#FB923C]" />
-                {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title.message}</p>}
-              </div>
-
-              {/* SEO */}
-              <div>
-                <Label htmlFor="metaTitle">SEO Title</Label>
-                <Input id="metaTitle" {...register('metaTitle')} className="border-[#FB923C]" />
-                {errors.metaTitle && <p className="text-red-500 text-sm mt-1">{errors.metaTitle.message}</p>}
-              </div>
-
-              <div>
-                <Label htmlFor="metaDescription">Meta Description</Label>
-                <Textarea id="metaDescription" {...register('metaDescription')} className="border-[#FB923C]" />
-                {errors.metaDescription && (
-                  <p className="text-red-500 text-sm mt-1">{errors.metaDescription.message}</p>
+                <Label htmlFor="title" className="text-xs font-semibold text-gray-700">
+                  Blog Title *
+                </Label>
+                <Input
+                  id="title"
+                  placeholder="Enter blog title"
+                  {...register('title')}
+                  className="mt-1"
+                />
+                {errors.title && (
+                  <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>
                 )}
               </div>
 
-              <div>
-                <Label htmlFor="keywords">Keywords</Label>
-                <Input id="keywords" {...register('keywords')} className="border-[#FB923C]" />
+              {/* SEO Controls */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="metaTitle" className="text-xs font-semibold text-gray-700">
+                    Meta Title (SEO) *
+                  </Label>
+                  <Input
+                    id="metaTitle"
+                    placeholder="Short SEO title"
+                    {...register('metaTitle')}
+                    className="mt-1"
+                  />
+                  {errors.metaTitle && (
+                    <p className="text-red-500 text-xs mt-1">{errors.metaTitle.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="keywords" className="text-xs font-semibold text-gray-700">
+                    Keywords (Comma-separated)
+                  </Label>
+                  <Input
+                    id="keywords"
+                    placeholder="attar, oud, perfume oil"
+                    {...register('keywords')}
+                    className="mt-1"
+                  />
+                </div>
               </div>
 
-              {/* Image Upload */}
               <div>
-                <Label>Blog Image</Label>
-                <div className="border-2 border-dashed border-[#FB923C] rounded-lg p-4 text-center">
-                  <input type="file" accept="image/jpeg,image/png" onChange={handleImageChange} className="hidden" id="image-upload-edit" />
-                  <Label htmlFor="image-upload-edit" className="cursor-pointer">
+                <Label htmlFor="metaDescription" className="text-xs font-semibold text-gray-700">
+                  Meta Description (Max 160 characters) *
+                </Label>
+                <Textarea
+                  id="metaDescription"
+                  rows={2}
+                  placeholder="Summary for search engines..."
+                  {...register('metaDescription')}
+                  className="mt-1 resize-none"
+                />
+                {errors.metaDescription && (
+                  <p className="text-red-500 text-xs mt-1">{errors.metaDescription.message}</p>
+                )}
+              </div>
+
+              {/* Image Upload Area */}
+              <div>
+                <Label className="text-xs font-semibold text-gray-700">Cover Banner</Label>
+                <div className="mt-1 border-2 border-dashed border-gray-200 hover:border-emerald-600 rounded-xl p-4 text-center transition-colors">
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleImageChange}
+                    className="hidden"
+                    id="image-upload-edit"
+                  />
+                  <Label htmlFor="image-upload-edit" className="cursor-pointer block">
                     <div className="flex flex-col items-center">
-                      <Upload className="w-6 h-6 text-[#FB923C] mb-2" />
-                      <p className="text-sm text-gray-600">Drop file or browse (JPEG/PNG, max 25MB)</p>
+                      <Upload className="w-6 h-6 text-gray-400 mb-1" />
+                      <p className="text-xs font-medium text-gray-700">Click to replace image</p>
+                      <p className="text-[11px] text-gray-400">JPG, PNG, or WEBP (Max 25MB)</p>
                     </div>
                   </Label>
                 </div>
+
                 {imagePreview && (
-                  <div className="mt-4 relative inline-block">
-                    <img src={imagePreview} alt="Preview" className="w-32 h-20 object-cover rounded" />
+                  <div className="mt-3 relative inline-block">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="w-36 h-20 object-cover rounded-lg border border-gray-200 shadow-xs"
+                    />
                     <Button
+                      type="button"
                       variant="ghost"
                       size="icon"
-                      className="absolute top-0 right-0 bg-white rounded-full"
+                      className="absolute -top-2 -right-2 bg-white hover:bg-gray-100 rounded-full h-6 w-6 shadow-sm border border-gray-200"
                       onClick={() => {
                         setImageFile(null);
                         setImagePreview(editingBlog?.imageUrl || null);
                       }}
                     >
-                      <X className="w-4 h-4 text-[#FB923C]" />
+                      <X className="w-3.5 h-3.5 text-gray-600" />
                     </Button>
                   </div>
                 )}
               </div>
 
-              {/* Blog Content */}
+              {/* Editor */}
               <div>
-                <Label>Blog Content</Label>
-                <div className="border border-[#FB923C] rounded-lg overflow-hidden">
-                  <JoditEditor value={blogContent} config={joditConfig} onBlur={(newContent) => setBlogContent(newContent)} />
+                <Label className="text-xs font-semibold text-gray-700">Content *</Label>
+                <div className="mt-1 rounded-lg border border-gray-200 overflow-hidden">
+                  <JoditEditor
+                    value={blogContent}
+                    config={joditConfig}
+                    onBlur={(newContent) => setBlogContent(newContent)}
+                  />
                 </div>
               </div>
 
               {/* Publish Toggle */}
-              <div className="flex items-center gap-4">
-                <Label htmlFor="isPublish">Published</Label>
+              <div className="flex items-center gap-3 py-1">
                 <Switch
                   id="isPublish"
                   checked={!!isPublishValue}
                   onCheckedChange={(checked) => setValue('isPublish', checked)}
-                  className="data-[state=checked]:bg-[#4CD964]"
+                  className="data-[state=checked]:bg-emerald-600"
                 />
+                <Label htmlFor="isPublish" className="text-sm font-medium text-gray-700 cursor-pointer">
+                  Publish to storefront immediately
+                </Label>
               </div>
 
-              {/* Buttons */}
-              <div className="flex justify-end gap-4">
+              {/* Dialog Actions */}
+              <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
                 <Button
                   type="button"
                   variant="outline"
-                  className="border-[#FB923C] text-[#FB923C]"
                   onClick={() => {
                     setIsEditModalOpen(false);
                     setEditingBlog(null);
-                    setBlogContent('');
-                    setImageFile(null);
-                    setImagePreview(null);
                     reset();
                   }}
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isUpdating} className="bg-[#FB923C] hover:bg-[#ff8a29] text-white">
-                  {isUpdating ? 'Updating...' : 'Update Blog'}
+                <Button
+                  type="submit"
+                  disabled={isUpdating}
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white min-w-[120px]"
+                >
+                  {isUpdating ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Saving...
+                    </span>
+                  ) : (
+                    'Save Changes'
+                  )}
                 </Button>
               </div>
             </form>

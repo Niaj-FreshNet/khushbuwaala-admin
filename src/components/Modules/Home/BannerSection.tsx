@@ -63,7 +63,7 @@ export function BannerSection({
     switch (variant) {
       case "primary":
         return {
-          overlay: "bg-gradient-to-br from-slate-900/95 via-purple-900/90 to-rose-900/95",
+          overlay: "bg-linear-to-br from-slate-900/95 via-purple-900/90 to-rose-900/95",
           accent: "from-rose-400 via-pink-400 to-purple-400",
           buttonStyle: "gradient",
           decorativeColor: "text-rose-300",
@@ -72,7 +72,7 @@ export function BannerSection({
         }
       case "secondary":
         return {
-          overlay: "bg-gradient-to-br from-indigo-950/95 via-blue-900/90 to-cyan-900/95",
+          overlay: "bg-linear-to-br from-indigo-950/95 via-blue-900/90 to-cyan-900/95",
           accent: "from-cyan-400 via-blue-400 to-indigo-400",
           buttonStyle: "gradient-secondary",
           decorativeColor: "text-cyan-300",
@@ -81,7 +81,7 @@ export function BannerSection({
         }
       case "tertiary":
         return {
-          overlay: "bg-gradient-to-br from-amber-950/95 via-orange-900/90 to-red-900/95",
+          overlay: "bg-linear-to-br from-amber-950/95 via-orange-900/90 to-red-900/95",
           accent: "from-amber-400 via-orange-400 to-red-400",
           buttonStyle: "gradient",
           decorativeColor: "text-amber-300",
@@ -90,7 +90,7 @@ export function BannerSection({
         }
       default:
         return {
-          overlay: "bg-gradient-to-br from-slate-900/95 via-purple-900/90 to-rose-900/95",
+          overlay: "bg-linear-to-br from-slate-900/95 via-purple-900/90 to-rose-900/95",
           accent: "from-rose-400 via-pink-400 to-purple-400",
           buttonStyle: "gradient",
           decorativeColor: "text-rose-300",
@@ -103,9 +103,10 @@ export function BannerSection({
   return (
     <section
       ref={sectionRef}
-      id="banner-section"
+      id="banner-heading"
       className={cn(
-        "relative w-full h-[400px] md:h-[500px] lg:h-[600px] overflow-hidden mt-12 mb-4 group",
+        // Sleek responsive height: compact on mobile, capped at 320px-360px on desktop/ultrawide
+        "relative w-full h-[220px] sm:h-[260px] md:h-[300px] lg:h-[340px] xl:h-[360px] max-h-[380px] overflow-hidden my-6 sm:my-8 group",
         "transition-all duration-700 ease-out",
         hasLoaded && isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
       )}
@@ -174,64 +175,41 @@ export function BannerSection({
 
       {/* Content */}
       <div className="relative h-full flex items-center justify-center px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center space-y-8 relative">
-          <div
-            className={cn(
-              "inline-flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-md border border-white/20 text-sm font-medium",
-              styles.decorativeColor,
-              "transition-all duration-700 ease-out delay-75",
-              hasLoaded && isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
-            )}
-          >
-            <Sparkles className="h-4 w-4" />
-            <span>Premium Fragrance Collection</span>
-            <Star className="h-4 w-4" />
-          </div>
-
+        <div className="max-w-3xl mx-auto text-center space-y-4 sm:space-y-5 relative">
           <h1
             id="banner-heading"
             className={cn(
-              "text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white leading-tight",
+              "text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white tracking-tight leading-tight",
               "transition-all duration-700 ease-out delay-100",
               hasLoaded && isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
             )}
           >
-            <span className={cn("bg-gradient-to-r bg-clip-text text-transparent", styles.accent)}>
+            <span className={cn("bg-linear-to-r bg-clip-text text-transparent", styles.accent)}>
               {heading.split(" ")[0]}
             </span>{" "}
             {heading.split(" ").slice(1).join(" ")}
           </h1>
 
-          <p
-            className={cn(
-              "text-md md:text-lg lg:text-xl text-gray-200 max-w-2xl mx-auto leading-relaxed",
-              "transition-all duration-700 ease-out delay-150",
-              hasLoaded && isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
-            )}
-          >
-            {text}
-          </p>
-
           {/* CTA */}
           <div
             className={cn(
-              "flex flex-col sm:flex-row gap-4 justify-center items-center",
-              "transition-all duration-700 ease-out delay-200",
+              "flex flex-row gap-3 justify-center items-center pt-1",
+              "transition-all duration-700 ease-out delay-150",
               hasLoaded && isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
             )}
           >
             <Button
               asChild
               variant={styles.buttonStyle as any}
-              size="lg"
+              size="sm"
               className={cn(
-                "bg-white group/button shadow-2xl transition-transform duration-300 hover:scale-105",
+                "bg-white group/button text-xs sm:text-sm h-8 sm:h-9 px-4 sm:px-5 rounded-full shadow-lg transition-transform duration-300 hover:scale-105",
                 styles.glowColor
               )}
             >
               <Link href={link}>
                 <span className="relative z-10">{buttonText}</span>
-                <ArrowRight className="h-5 w-5 ml-2 transition-transform duration-300 group-hover/button:translate-x-1" />
+                <ArrowRight className="h-3.5 w-3.5 ml-1.5 transition-transform duration-300 group-hover/button:translate-x-1" />
               </Link>
             </Button>
 
@@ -239,45 +217,14 @@ export function BannerSection({
               <Button
                 type="button"
                 variant="ghost"
-                size="lg"
-                className="group/play text-white hover:bg-white/10"
+                size="sm"
+                className="group/play text-white text-xs sm:text-sm h-8 sm:h-9 hover:bg-white/10 rounded-full"
                 onClick={() => window.open(videoUrl, "_blank", "noopener,noreferrer")}
               >
-                <Play className="h-5 w-5 mr-2 transition-transform duration-300 group-hover/play:scale-110" />
+                <Play className="h-3.5 w-3.5 mr-1.5 transition-transform duration-300 group-hover/play:scale-110" />
                 Watch Video
               </Button>
             )}
-          </div>
-
-          {/* Stats (optional) */}
-          {stats?.length ? (
-            <div
-              className={cn(
-                "pt-2 flex flex-wrap justify-center gap-6",
-                "transition-all duration-700 ease-out delay-300",
-                hasLoaded && isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
-              )}
-            >
-              {stats.map((s, i) => (
-                <div key={i} className="text-center">
-                  <div className="text-white font-bold text-2xl">{s.value}</div>
-                  <div className="text-white/70 text-sm">{s.label}</div>
-                </div>
-              ))}
-            </div>
-          ) : null}
-
-          {/* Scroll hint */}
-          <div
-            className={cn(
-              "absolute bottom-2 md:bottom-12 left-1/2 -translate-x-1/2",
-              "transition-opacity duration-500",
-              hasLoaded && isInView ? "opacity-100" : "opacity-0"
-            )}
-          >
-            <div className="animate-bounce">
-              <ChevronDown className="h-6 w-6 text-white/60" />
-            </div>
           </div>
         </div>
       </div>
@@ -301,8 +248,8 @@ export function BannerSection({
         />
       )}
 
-      <div className="absolute inset-x-0 bottom-0 h-12 md:h-28 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
-      <div className="absolute inset-x-0 top-0 h-12 md:h-28 bg-gradient-to-b from-black/20 to-transparent pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-0 h-12 md:h-28 bg-linear-to-t from-black/30 to-transparent pointer-events-none" />
+      <div className="absolute inset-x-0 top-0 h-12 md:h-28 bg-linear-to-b from-black/20 to-transparent pointer-events-none" />
     </section>
   )
 }

@@ -11,14 +11,14 @@ import { ShopShell } from "@/components/Modules/Shop/ShopShell";
 
 // Metadata
 export const metadata: Metadata = {
-  title: "Perfume Gift Packages | KhushbuWaala",
+  title: "Perfume Gift Packages | Khushbuwaala",
   description:
-    "Explore KhushbuWaala's curated perfume gift packages. Premium quality fragrances with free nationwide shipping on orders over ৳1000.",
+    "Explore Khushbuwaala's curated perfume gift packages. Premium quality fragrances with free nationwide shipping on orders over ৳1000.",
   keywords: [
     "perfume gift",
     "perfume packages",
     "premium fragrance",
-    "KhushbuWaala shop",
+    "Khushbuwaala shop",
     "Bangladesh perfume",
   ].join(", "),
   alternates: { canonical: "https://khushbuwaala.com/gifts-and-packages" },
@@ -30,7 +30,7 @@ const shopStructuredData = {
   "@type": "CollectionPage",
   name: "Perfume Gift Packages",
   description:
-    "Explore KhushbuWaala's curated collection of perfume gift packages",
+    "Explore Khushbuwaala's curated collection of perfume gift packages",
   url: "https://khushbuwaala.com/gifts-and-packages",
   mainEntity: {
     "@type": "ItemList",

@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const metadata: Metadata = {
-  title: "Refund & Exchange Policy | KhushbuWaala",
+  title: "Refund & Exchange Policy | Khushbuwaala",
   description:
-    "Read KhushbuWaala's Return, Refund & Exchange Policy including eligibility, non-returnable items, and return process.",
+    "Read Khushbuwaala's Return, Refund & Exchange Policy including eligibility, non-returnable items, and return process.",
 };
 
 export default function RefundPolicy() {
@@ -20,7 +20,7 @@ export default function RefundPolicy() {
 
           <CardContent className="prose prose-lg max-w-none text-gray-700 space-y-6">
             <p>
-              At <strong>KhushbuWaala</strong>, customer satisfaction is our top priority.
+              At <strong>Khushbuwaala</strong>, customer satisfaction is our top priority.
               If you face any issue with your order, we are here to help. Please read
               our Return &amp; Exchange Policy carefully before making a purchase.
             </p>
@@ -102,10 +102,10 @@ export default function RefundPolicy() {
                 </a>
                 ,{" "}
                 <a
-                  href="tel:+8801566395807"
+                  href="tel:+8801777152588"
                   className="text-blue-600 hover:underline"
                 >
-                  +8801566395807
+                  +8801777152588
                 </a>
                 <br />
                 <strong>Email:</strong>{" "}
@@ -118,7 +118,7 @@ export default function RefundPolicy() {
               </p>
 
               <p className="mt-4 text-sm text-gray-600">
-                <strong>KhushbuWaala</strong>
+                <strong>Khushbuwaala</strong>
                 <br />
                 Authentic scents. Honest service. Customer-first experience.
               </p>

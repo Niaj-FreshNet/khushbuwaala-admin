@@ -4,8 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { MapPin, Clock, ShoppingBag, CheckCircle } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Click & Collect | KhushbuWaala Perfumes",
-  description: "Order online and pick up your favorite perfumes in-store. Fast, free, and convenient at KhushbuWaala Perfumes.",
+  title: "Click & Collect | Khushbuwaala Perfumes",
+  description: "Order online and pick up your favorite perfumes in-store. Fast, free, and convenient at Khushbuwaala Perfumes.",
   openGraph: {
     title: "Click & Collect – Order Online, Pick Up In-Store",
     description: "Skip shipping. Pick up your order same day or next day.",
@@ -108,7 +108,7 @@ export default function ClickAndCollect() {
               </h3>
               <div className="space-y-2 text-gray-700">
                 <p>
-                  <strong>KhushbuWaala Perfumes – Flagship Store</strong><br />
+                  <strong>Khushbuwaala Perfumes – Flagship Store</strong><br />
                   House 12, Road 5, Block C, Banani, Dhaka 1213
                 </p>
                 <p className="flex items-center gap-2 text-sm">
@@ -119,8 +119,8 @@ export default function ClickAndCollect() {
                 </p>
                 <p className="text-sm">
                   <strong>Phone:</strong>{" "}
-                  <a href="tel:+8801566395807" className="text-amber-700 hover:underline">
-                    +8801566395807
+                  <a href="tel:+8801777152588" className="text-amber-700 hover:underline">
+                    +8801777152588
                   </a>
                 </p>
               </div>
@@ -144,8 +144,8 @@ export default function ClickAndCollect() {
             <div className="border-t pt-6 text-center text-sm text-gray-600">
               <p>
                 Need help? Call us at{" "}
-                <a href="tel:+8801566395807" className="font-medium text-amber-700 hover:underline">
-                  +8801566395807
+                <a href="tel:+8801777152588" className="font-medium text-amber-700 hover:underline">
+                  +8801777152588
                 </a>{" "}
                 or email{" "}
                 <a href="mailto:khushbuwaala@gmail.com" className="font-medium text-amber-700 hover:underline">

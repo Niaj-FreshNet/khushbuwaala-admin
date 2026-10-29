@@ -8,6 +8,11 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        // Fallback chain: Inter for English -> Noto Sans Bengali for Bangla -> system fonts
+        sans: ["var(--font-inter)", "var(--font-noto-serif-bengali)", "sans-serif"],
+        bangla: ["var(--font-noto-serif-bengali)", "var(--font-inter)", "serif"],
+      },
       animation: {
         'float': 'float 6s ease-in-out infinite',
         'float-delayed': 'float 6s ease-in-out infinite 2s',

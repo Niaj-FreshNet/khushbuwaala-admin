@@ -12,7 +12,7 @@ export default function ProductDetailSection({ product }: Props) {
                 ...product,
                 description:
                     product.description ||
-                    `Premium ${product.gender === "male" ? "men's" : "women's"} perfume from KhushbuWaala`,
+                    `Premium ${product.gender === "male" ? "men's" : "women's"} perfume from Khushbuwaala`,
             }}
         />
     );

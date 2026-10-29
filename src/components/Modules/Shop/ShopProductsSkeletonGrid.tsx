@@ -1,18 +1,18 @@
-"use client"
+"use client";
 
-import React from "react"
-import { Skeleton } from "@/components/ui/skeleton"
+import React from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
-function LiveSkeleton({
+export function LiveSkeleton({
   className = "",
   delayMs = 0,
   speedMs = 1400,
   children,
 }: {
-  className?: string
-  delayMs?: number
-  speedMs?: number
-  children: React.ReactNode
+  className?: string;
+  delayMs?: number;
+  speedMs?: number;
+  children: React.ReactNode;
 }) {
   return (
     <div
@@ -26,73 +26,80 @@ function LiveSkeleton({
     >
       {children}
     </div>
-  )
+  );
 }
 
 export function ShopProductsSkeletonGrid({
-  count = 12,
-  colsClass = "grid-cols-2 md:grid-cols-3 lg:grid-cols-4",
+  count = 10,
+  colsClass = "grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5",
 }: {
-  count?: number
-  colsClass?: string
+  count?: number;
+  colsClass?: string;
 }) {
   return (
-    <div className={`grid ${colsClass} gap-2 sm:gap-3 md:gap-4`}>
+    <div className={`grid ${colsClass} gap-2 sm:gap-3 md:gap-4 items-start`}>
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden"
+          className="bg-white border border-gray-100 rounded-2xl shadow-xs overflow-hidden flex flex-col"
         >
-          <div className="relative">
-            <LiveSkeleton delayMs={80 + i * 30} speedMs={1450 + (i % 3) * 120}>
-              <Skeleton className="w-full h-52 sm:h-64" />
+          {/* Product Image Area */}
+          <div className="relative aspect-square w-full bg-gray-50 overflow-hidden">
+            <LiveSkeleton delayMs={60 + (i % 6) * 35} speedMs={1400}>
+              <Skeleton className="w-full h-full rounded-none" />
             </LiveSkeleton>
 
-            <div className="absolute top-3 left-3 flex gap-2">
-              <LiveSkeleton delayMs={140 + i * 25} speedMs={1400}>
-                <Skeleton className="h-7 w-16 rounded-full" />
-              </LiveSkeleton>
-              <LiveSkeleton delayMs={155 + i * 25} speedMs={1450}>
-                <Skeleton className="h-7 w-12 rounded-full" />
+            {/* Badges Overlay */}
+            <div className="absolute top-2 left-2 flex gap-1.5 pointer-events-none">
+              <LiveSkeleton delayMs={120 + (i % 5) * 20} speedMs={1350}>
+                <Skeleton className="h-5 sm:h-6 w-12 sm:w-14 rounded-full" />
               </LiveSkeleton>
             </div>
 
-            <div className="absolute top-3 right-3">
-              <LiveSkeleton delayMs={160 + i * 25} speedMs={1500}>
-                <Skeleton className="h-9 w-9 rounded-full" />
+            {/* Wishlist Button Placeholder */}
+            <div className="absolute top-2 right-2">
+              <LiveSkeleton delayMs={140 + (i % 5) * 20} speedMs={1350}>
+                <Skeleton className="h-7 w-7 sm:h-8 sm:w-8 rounded-full" />
               </LiveSkeleton>
             </div>
           </div>
 
-          <div className="p-4 space-y-3">
-            <LiveSkeleton delayMs={120 + i * 20} speedMs={1450}>
-              <Skeleton className="h-5 w-5/6 rounded" />
-            </LiveSkeleton>
-
-            <LiveSkeleton delayMs={160 + i * 20} speedMs={1550}>
-              <Skeleton className="h-4 w-2/3 rounded" />
-            </LiveSkeleton>
-
-            <div className="flex items-center justify-between pt-1">
-              <LiveSkeleton delayMs={220 + i * 10} speedMs={1400}>
-                <Skeleton className="h-6 w-20 rounded" />
+          {/* Details Content */}
+          <div className="p-2.5 sm:p-3.5 flex flex-col flex-1 justify-between gap-2.5">
+            <div className="space-y-1.5 sm:space-y-2">
+              {/* Product Title */}
+              <LiveSkeleton delayMs={100 + (i % 6) * 25} speedMs={1450}>
+                <Skeleton className="h-4 sm:h-4.5 w-11/12 rounded" />
               </LiveSkeleton>
-              <LiveSkeleton delayMs={260 + i * 10} speedMs={1550}>
-                <Skeleton className="h-6 w-14 rounded-full" />
+
+              {/* Sub-line / Accords / Category */}
+              <LiveSkeleton delayMs={140 + (i % 6) * 25} speedMs={1450}>
+                <Skeleton className="h-3 sm:h-3.5 w-7/12 rounded" />
               </LiveSkeleton>
             </div>
 
-            <div className="flex gap-2 pt-2">
-              <LiveSkeleton delayMs={240 + i * 10} speedMs={1500}>
-                <Skeleton className="h-10 w-10 rounded-full" />
+            {/* Pricing Section */}
+            <div className="flex items-center justify-between pt-1">
+              <LiveSkeleton delayMs={180 + (i % 6) * 20} speedMs={1400}>
+                <Skeleton className="h-5 sm:h-6 w-16 sm:w-20 rounded" />
               </LiveSkeleton>
-              <LiveSkeleton delayMs={280 + i * 10} speedMs={1450}>
-                <Skeleton className="h-10 flex-1 rounded-xl" />
+              <LiveSkeleton delayMs={210 + (i % 6) * 20} speedMs={1400}>
+                <Skeleton className="h-4 w-10 sm:w-12 rounded" />
+              </LiveSkeleton>
+            </div>
+
+            {/* Actions (Size Pill / Cart Button) */}
+            <div className="flex gap-1.5 sm:gap-2 pt-1">
+              <LiveSkeleton delayMs={240 + (i % 6) * 20} speedMs={1500} className="flex-1">
+                <Skeleton className="h-8 sm:h-9 w-full rounded-lg" />
+              </LiveSkeleton>
+              <LiveSkeleton delayMs={260 + (i % 6) * 20} speedMs={1500}>
+                <Skeleton className="h-8 sm:h-9 w-8 sm:w-9 rounded-lg" />
               </LiveSkeleton>
             </div>
           </div>
         </div>
       ))}
     </div>
-  )
+  );
 }

@@ -11,43 +11,42 @@ import { ShopShell } from "@/components/Modules/Shop/ShopShell";
 
 // Metadata
 export const metadata: Metadata = {
-  title: "Natural Attar Collection | KhushbuWaala",
+  title: "Brand Perfume Collection | Khushbuwaala",
   description:
-    "Explore KhushbuWaala's Natural and Authentic Attar collection. Premium fragrances with free nationwide shipping on orders over ৳1000.",
+    "Explore Khushbuwaala's Brand Perfume collection. Premium fragrances with free nationwide shipping on orders over ৳1000.",
   keywords: [
-    "natural attar",
-    "authentic attar",
+    "brand perfume",
     "premium fragrance",
-    "KhushbuWaala shop",
+    "Khushbuwaala shop",
     "Bangladesh perfume",
   ].join(", "),
-  alternates: { canonical: "https://khushbuwaala.com/natural-collection" },
+  alternates: { canonical: "https://khushbuwaala.com/brand-perfumes" },
 };
 
 // Structured Data (Optional)
 const shopStructuredData = {
   "@context": "https://schema.org",
   "@type": "CollectionPage",
-  name: "Natural Attar Collection",
+  name: "Brand Perfume Collection",
   description:
-    "Explore KhushbuWaala's curated collection of natural and authentic attars",
-  url: "https://khushbuwaala.com/natural-collection",
+    "Explore Khushbuwaala's curated collection of brand perfumes",
+  url: "https://khushbuwaala.com/brand-perfumes",
   mainEntity: {
     "@type": "ItemList",
     name: "Perfume Oil Products",
-    description: "Premium quality natural and authentic attars",
+    description: "Premium quality organic and authentic attars",
   },
   breadcrumb: {
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: "https://khushbuwaala.com" },
-      { "@type": "ListItem", position: 2, name: "Natural Attar", item: "https://khushbuwaala.com/natural-collection" },
+      { "@type": "ListItem", position: 2, name: "Brand Perfumes", item: "https://khushbuwaala.com/brand-perfumes" },
     ],
   },
 };
 
 // Page Component
-export default async function NaturalCollectionPage({
+export default async function BrandPerfumesPage({
   searchParams: rawSearchParams
 }: {
   searchParams: Record<string, string | undefined>
@@ -56,7 +55,7 @@ export default async function NaturalCollectionPage({
   // const store = initializeStore();
 
   const page = Number(searchParams.page) || 1;
-  const categoryName = "NATURAL-ATTAR";
+  const categoryName = "BRAND-PERFUMES";
   const categoryId = "";
 
   return (
@@ -65,13 +64,13 @@ export default async function NaturalCollectionPage({
       {page > 1 && (
         <link
           rel="prev"
-          href={`/natural-attar?page=${page - 1}`}
+          href={`/brand-perfumes?page=${page - 1}`}
         />
       )}
       {page < 100 && (
         <link
           rel="next"
-          href={`/natural-attar?page=${page + 1}`}
+          href={`/brand-perfumes?page=${page + 1}`}
         />
       )}
 
@@ -81,11 +80,11 @@ export default async function NaturalCollectionPage({
       />
 
       <ShopShell
-        bannerHeading="Explore Natural and Authentic Attar"
-        bannerText="Choose The Best Quality Natural & Authentic Attar"
+        bannerHeading="Explore Brand Perfumes"
+        bannerText="Choose Brand Perfumes from our curated collection of premium fragrances"
         bannerImages={{ desktop: "/images/n111.png", mobile: "/images/n1.webp" }}
-        bannerAlt="anner displaying the best quality natural & authentic attar"
-        noticesHeading="Natural Attar"
+        bannerAlt="Banner displaying the best quality brand perfumes"
+        noticesHeading="Brand Perfumes"
         initialPage={page}
         categoryId={categoryId}
         categoryName={categoryName}

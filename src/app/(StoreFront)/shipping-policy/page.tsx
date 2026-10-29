@@ -3,8 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export const metadata: Metadata = {
-  title: "Shipping Policy | KhushbuWaala Perfumes",
-  description: "Nationwide & international shipping from KhushbuWaala Perfumes. Delivery in 2-5 days inside Bangladesh.",
+  title: "Shipping Policy | Khushbuwaala Perfumes",
+  description: "Nationwide & international shipping from Khushbuwaala Perfumes. Delivery in 2-5 days inside Bangladesh.",
 };
 
 export default function ShippingPolicy() {
@@ -61,7 +61,7 @@ export default function ShippingPolicy() {
             </p>
 
             <h2 className="text-xl font-semibold">Order Tracking</h2>
-            <p>Call <strong>+8801566395807</strong> or message us on social media.</p>
+            <p>Call <strong>+8801777152588</strong> or message us on social media.</p>
 
             <h2 className="text-xl font-semibold">Delayed Delivery?</h2>
             <p>Contact us immediately. We’ll resolve it.</p>
@@ -72,7 +72,7 @@ export default function ShippingPolicy() {
             <div className="border-t pt-6 mt-8">
               <h2 className="text-xl font-semibold">Contact Us</h2>
               <p>
-                <strong>Phone:</strong> <a href="tel:+8801566395807" className="text-blue-600">+8801566395807</a><br />
+                <strong>Phone:</strong> <a href="tel:+8801777152588" className="text-blue-600">+8801777152588</a><br />
                 <strong>Email:</strong> <a href="mailto:khushbuwaala@gmail.com" className="text-blue-600">khushbuwaala@gmail.com</a><br />
                 <strong>Hours:</strong> 10:00 AM – 10:00 PM
               </p>

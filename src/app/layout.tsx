@@ -1,31 +1,40 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { Inter } from "next/font/google"
+import { Inter, Noto_Serif_Bengali } from "next/font/google"
 import Script from "next/script"
 import "./globals.css"
 import { siteConfig } from "@/config/site"
 import { Providers } from "@/lib/Providers"
 
+// English Font
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
   display: "swap",
 })
 
+// Bangla Serif Font
+const notoSerifBengali = Noto_Serif_Bengali({
+  weight: ["400", "500", "600", "700"],
+  subsets: ["bengali"],
+  variable: "--font-noto-serif-bengali",
+  display: "swap",
+})
+
 const GTM_ID = "GTM-KDFMX5QL"
 
-// SEO: Structured Data for KhushbuWaala Navigation (moved from navbar)
+// SEO: Structured Data for Khushbuwaala Navigation (moved from navbar)
 const navigationStructuredData = {
   "@context": "https://schema.org",
   "@type": "SiteNavigationElement",
-  name: "KhushbuWaala Main Navigation",
+  name: "Khushbuwaala Main Navigation",
   url: "https://khushbuwaala.com",
   hasPart: [
     {
       "@type": "WebPage",
       name: "Home",
       url: "https://khushbuwaala.com/",
-      description: "KhushbuWaala homepage with featured perfumes and collections",
+      description: "Khushbuwaala homepage with featured perfumes and collections",
     },
     {
       "@type": "WebPage",
@@ -58,14 +67,14 @@ const navigationStructuredData = {
 const organizationStructuredData = {
   "@context": "https://schema.org",
   "@type": "Organization",
-  name: "KhushbuWaala",
+  name: "Khushbuwaala",
   url: "https://khushbuwaala.com",
   logo: "https://khushbuwaala.com/images/khushbuwaala-logo.webp",
   description:
     "Premium perfumes, oriental attars, and natural fragrances with authentic quality",
   contactPoint: {
     "@type": "ContactPoint",
-    telephone: "+8801566395807",
+    telephone: "+8801777152588",
     contactType: "customer service",
     email: "khushbuwaala@gmail.com",
     availableLanguage: ["English", "Bengali"],
@@ -163,17 +172,15 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${inter.variable}`}
+      className={`${inter.variable} ${notoSerifBengali.variable}`}
     >
       <head>
-        {/* Optional: speed up DNS/TLS for GTM */}
         <link rel="preconnect" href="https://www.googletagmanager.com" crossOrigin="" />
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
 
-        {/* GTM: do NOT block initial render */}
         <Script
           id="gtm-script"
-          strategy="afterInteractive" // ✅ was beforeInteractive
+          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -185,8 +192,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       </head>
 
       <body
-        className={`min-h-screen text-foreground bg-background font-sans antialiased ${inter.className}`}
-      >
+        className={`min-h-screen text-foreground bg-background font-sans antialiased`}      >
         {/* Google Tag Manager (noscript) - immediately after opening <body> */}
         <noscript>
           <iframe

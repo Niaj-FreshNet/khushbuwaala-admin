@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export const metadata: Metadata = {
-  title: "Return & Exchange Policy | KhushbuWaala",
+  title: "Return & Exchange Policy | Khushbuwaala",
   description:
     "Apply for return or exchange within 7 days of receiving your product. View eligibility rules and contact details.",
 };
@@ -63,8 +63,8 @@ export default function ExchangePolicy() {
                   +8801777152588
                 </a>
                 ,{" "}
-                <a href="tel:+8801566395807" className="text-blue-600 hover:underline">
-                  +8801566395807
+                <a href="tel:+8801777152588" className="text-blue-600 hover:underline">
+                  +8801777152588
                 </a>
                 <br />
                 <strong>Email:</strong>{" "}

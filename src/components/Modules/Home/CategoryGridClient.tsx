@@ -43,7 +43,7 @@ export function CategoryGridClient({ categories }: { categories: CategoryItem[] 
             variants={container}
             initial="hidden"
             animate={inView ? "show" : "hidden"}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-0 sm:gap-5 lg:gap-6"
+            className="grid grid-cols-2 sm:grid-cols-6 gap-0 sm:gap-0 lg:gap-0"
         >
             {categories.map((category) => (
                 <motion.div key={category.CategoryName} variants={item}>

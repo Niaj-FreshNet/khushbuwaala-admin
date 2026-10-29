@@ -23,7 +23,7 @@ export function ReviewsGridClient({ items }: { items: ReviewItem[] }) {
 
   return (
     <div className="flex justify-center">
-      <div className="max-w-screen-xl w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
+      <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1">
         {items.map((item, idx) => (
           <motion.div
             key={idx}
@@ -33,7 +33,7 @@ export function ReviewsGridClient({ items }: { items: ReviewItem[] }) {
             transition={{ duration: 0.5, delay: idx * 0.05 }}
             whileHover={reduce ? undefined : { y: -5 }}
             className="
-              relative group overflow-hidden rounded-2xl
+              relative group overflow-hidden rounded-lg
               border border-gray-100 bg-white
               shadow-sm hover:shadow-xl
               transition-all duration-300
@@ -52,7 +52,7 @@ export function ReviewsGridClient({ items }: { items: ReviewItem[] }) {
             />
 
             {/* Premium dark overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
             {/* Social Dock */}
             <div

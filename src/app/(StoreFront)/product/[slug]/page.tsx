@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!product) {
     return {
-      title: "Product Not Found - KhushbuWaala",
+      title: "Product Not Found - Khushbuwaala",
       description: "The product you're looking for could not be found.",
     };
   }
@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const firstImage = product.primaryImage || "/default-product-image.jpg";
 
   return {
-    title: `${product.name} - Premium Perfume | KhushbuWaala`,
+    title: `${product.name} - Premium Perfume | Khushbuwaala`,
     description:
       product.description?.substring(0, 160) ||
       `Buy ${product.name} premium perfume online. Authentic fragrances with fast delivery across Bangladesh.`,
@@ -30,9 +30,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       type: "website",
       title: product.name,
-      description: product.description || `Buy ${product.name} online at KhushbuWaala`,
+      description: product.description || `Buy ${product.name} online at Khushbuwaala`,
       images: [{ url: firstImage, width: 1200, height: 630, alt: product.name }],
-      siteName: "KhushbuWaala",
+      siteName: "Khushbuwaala",
     },
     twitter: {
       card: "summary_large_image",

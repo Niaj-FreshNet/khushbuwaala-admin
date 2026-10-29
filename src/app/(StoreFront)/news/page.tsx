@@ -5,10 +5,10 @@ import { Calendar, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
-  title: "News & Updates | KhushbuWaala Perfumes - Latest Perfume Launches & Events in Dhaka",
-  description: "Stay updated with KhushbuWaala Perfumes: New arrivals, promotions, and events. Discover the latest in fragrances from our Dhaka showroom.",
+  title: "News & Updates | Khushbuwaala Perfumes - Latest Perfume Launches & Events in Dhaka",
+  description: "Stay updated with Khushbuwaala Perfumes: New arrivals, promotions, and events. Discover the latest in fragrances from our Dhaka showroom.",
   openGraph: {
-    title: "News - KhushbuWaala Perfumes Updates",
+    title: "News - Khushbuwaala Perfumes Updates",
     description: "Fresh scents and stories from Dhaka's perfume experts.",
     url: "https://www.khushbuwaala.com/news",
   },
@@ -37,7 +37,7 @@ export default function NewsPage() {
         <div className="text-center mb-12">
           <Badge variant="secondary" className="mb-4">Stay Informed</Badge>
           <h1 className="text-4xl font-bold text-gray-900 mb-4">News & Updates</h1>
-          <p className="text-xl text-gray-600">The latest from KhushbuWaala Perfumes.</p>
+          <p className="text-xl text-gray-600">The latest from Khushbuwaala Perfumes.</p>
         </div>
 
         <div className="space-y-6">

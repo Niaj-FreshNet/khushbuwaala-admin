@@ -73,7 +73,7 @@ const TrustSignals = () => {
   return (
     <div className="space-y-6 sm:space-y-8">
       {/* Trust Features Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-4">
+      {/* <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-4">
         {trustFeatures.map((feature, index) => {
           const IconComponent = feature.icon;
           return (
@@ -97,10 +97,10 @@ const TrustSignals = () => {
             </div>
           );
         })}
-      </div>
+      </div> */}
 
       {/* Customer Statistics */}
-      <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded-3xl p-5 sm:p-8 text-white">
+      {/* <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded-3xl p-5 sm:p-8 text-white">
         <div className="text-center mb-5 sm:mb-8">
           <h3 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">
             Trusted Since 2020
@@ -130,36 +130,35 @@ const TrustSignals = () => {
           })}
         </div>
 
-        {/* Small highlight line */}
         <p className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-gray-300">
-          ⭐ Most of our growth comes from repeat customers & referrals — thank you for trusting KhushbuWaala.
+          ⭐ Most of our growth comes from repeat customers & referrals — thank you for trusting Khushbuwaala.
         </p>
-      </div>
+      </div> */}
 
       {/* Contact Section */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 sm:p-6 border border-blue-200">
+      <div className="bg-linear-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-200">
         <div className="text-center">
-          <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3">
+          <h3 className="text-sm sm:text-base font-bold text-gray-900 mb-2 sm:mb-3">
             Need Help Choosing?
           </h3>
-          <p className="text-sm sm:text-base text-gray-600 mb-4">
+          <p className="text-xs sm:text-sm text-gray-600 mb-4">
             Tell us what you like — we’ll recommend the perfect scent for you.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <a
-              href="tel:+8801566395807"
-              className="inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors duration-200"
+              href="tel:+8801777152588"
+              className="inline-flex items-center justify-center px-6 py-1.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors duration-200"
             >
               <Phone className="w-5 h-5 mr-2" />
               Call Us
             </a>
 
             <a
-              href="https://wa.me/8801566395807"
+              href="https://wa.me/8801777152588"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors duration-200"
+              className="inline-flex items-center justify-center px-6 py-1.5 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors duration-200"
             >
               <MessageSquare className="w-5 h-5 mr-2" />
               WhatsApp

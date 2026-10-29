@@ -11,13 +11,13 @@ import { ShopShell } from "@/components/Modules/Shop/ShopShell";
 
 // ✅ SEO Metadata
 export const metadata: Metadata = {
-  title: "New Arrivals - Latest Perfume Oil Collection | KhushbuWaala",
+  title: "New Arrivals - Latest Perfume Oil Collection | Khushbuwaala",
   description:
-    "Discover the newest perfume oils from KhushbuWaala. Premium quality, inspired and oriental fragrances — freshly added to our collection!",
+    "Discover the newest perfume oils from Khushbuwaala. Premium quality, inspired and oriental fragrances — freshly added to our collection!",
   keywords: [
     "new perfume arrivals",
     "latest perfume oil",
-    "KhushbuWaala new collection",
+    "Khushbuwaala new collection",
     "premium fragrance",
     "attar collection",
     "Bangladesh perfume",
@@ -26,26 +26,26 @@ export const metadata: Metadata = {
     canonical: "https://khushbuwaala.com/new-arrivals",
   },
   openGraph: {
-    title: "New Arrivals - Latest Perfume Oil Collection | KhushbuWaala",
+    title: "New Arrivals - Latest Perfume Oil Collection | Khushbuwaala",
     description:
-      "Explore KhushbuWaala's latest perfume oil arrivals. Authentic, luxurious, and freshly added fragrances.",
+      "Explore Khushbuwaala's latest perfume oil arrivals. Authentic, luxurious, and freshly added fragrances.",
     url: "https://khushbuwaala.com/new-arrivals",
     images: [
       {
         url: "/images/n111.webp",
         width: 1920,
         height: 550,
-        alt: "KhushbuWaala New Perfume Arrivals",
+        alt: "Khushbuwaala New Perfume Arrivals",
       },
     ],
     type: "website",
-    siteName: "KhushbuWaala",
+    siteName: "Khushbuwaala",
   },
   twitter: {
     card: "summary_large_image",
-    title: "New Perfume Arrivals | KhushbuWaala",
+    title: "New Perfume Arrivals | Khushbuwaala",
     description:
-      "Shop the latest perfume oils freshly added to KhushbuWaala’s premium fragrance collection.",
+      "Shop the latest perfume oils freshly added to Khushbuwaala’s premium fragrance collection.",
     images: ["/images/n111.webp"],
   },
   robots: {
@@ -67,7 +67,7 @@ const newArrivalStructuredData = {
   "@type": "CollectionPage",
   name: "New Arrivals - Perfume Oil Collection",
   description:
-    "Discover the newest perfume oils and fragrances from KhushbuWaala’s premium collection.",
+    "Discover the newest perfume oils and fragrances from Khushbuwaala’s premium collection.",
   url: "https://khushbuwaala.com/new-arrivals",
   mainEntity: {
     "@type": "ItemList",
@@ -148,7 +148,7 @@ export default async function NewArrivalsPage({
         bannerText="Choose Your Desired Perfume Oil from Our New Arrivals"
         bannerImages={{ desktop: "/images/n111.png", mobile: "/images/n1.webp" }}
         bannerAlt="Banner displaying the newest perfume oil arrivals"
-        noticesHeading="New Arrival Perfume Oils"
+        noticesHeading="New Arrivals"
         initialPage={page}
         categoryName={categoryName}
         specification={specification}

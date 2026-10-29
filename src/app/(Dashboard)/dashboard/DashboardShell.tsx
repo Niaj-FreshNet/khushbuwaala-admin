@@ -48,7 +48,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     }, []);
 
     return (
-        <div className="flex w-full h-[100dvh] overflow-hidden bg-gray-50">
+        <div className="flex w-full h-dvh overflow-hidden bg-gray-50">
             {/* Backdrop for mobile drawer */}
             <div
                 onClick={() => setIsOpen(false)}
@@ -76,11 +76,11 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
                 {/* Scroll area */}
                 <main className="flex-1 min-h-0 overflow-y-auto">
-                    <div className="p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4">
+                    <div className="p-2">
                         <BreadCrumb />
 
                         {/* content card */}
-                        <div className="rounded-lg border bg-white shadow-sm p-3 sm:p-4 md:p-6">
+                        <div className="shadow-sm">
                             {/* ✅ keep skeleton time OK (isLoading true), but after that show clear not logged in */}
                             {isLoading ? (
                                 <div className="py-10 text-center">

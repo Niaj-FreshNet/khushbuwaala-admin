@@ -81,12 +81,12 @@ export default function ProductDetailPage({ product }: IProductResponseProps) {
 
             {/* Breadcrumbs */}
             <div className="bg-white">
-                <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
+                <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 pt-1.5 sm:pt-2.5 pb-0.5 sm:pb-1.5">
                     <Breadcrumbs items={breadcrumbItems} />
                 </div>
             </div>
 
-            <main className="bg-white pb-[var(--kw-bottom-bar-h,0px)]">
+            <main className="bg-white">
                 <ProductSelectionProvider product={mappedProduct}>
                     <ViewItemDataLayer product={mappedProduct} />
                     <TrackVariantChange product={mappedProduct} />
@@ -98,7 +98,7 @@ export default function ProductDetailPage({ product }: IProductResponseProps) {
                         <div className="absolute bottom-0 left-0 w-72 h-72 sm:w-96 sm:h-96 bg-gradient-to-tr from-purple-50/30 to-transparent rounded-full blur-3xl pointer-events-none" />
 
                         {/* ✅ tighter vertical spacing + proper container padding */}
-                        <div className="relative max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4">
+                        <div className="relative max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 xl:gap-8 items-start">
                                 {/* Product Gallery */}
                                 <div className="w-full order-1 flex justify-center">
@@ -121,10 +121,10 @@ export default function ProductDetailPage({ product }: IProductResponseProps) {
                     <section className="bg-white relative">
                         {/* ✅ same container + less padding */}
                         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4 lg:py-6">
-                            <div className="flex items-center gap-2 sm:gap-3 mb-3">
-                                <div className="inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg">
+                            <div className="flex items-center gap-2 sm:gap-3 mb-1">
+                                {/* <div className="inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg">
                                     <Info className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                                </div>
+                                </div> */}
                                 <h2 className="text-base sm:text-lg font-bold text-gray-900">
                                     Product Details
                                 </h2>
@@ -137,10 +137,10 @@ export default function ProductDetailPage({ product }: IProductResponseProps) {
                     </section>
 
                     {/* Related Products */}
-                    <section className="bg-gradient-to-b from-gray-50 to-white relative">
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-50/30 to-transparent pointer-events-none" />
+                    <section className="bg-linear-to-b from-gray-50 to-white relative">
+                        <div className="absolute inset-0 bg-linear-to-r from-transparent via-blue-50/30 to-transparent pointer-events-none" />
                         {/* ✅ MUCH smaller padding */}
-                        <div className="relative max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-4 lg:py-6">
+                        <div className="relative max-w-7xl mx-auto">
                             <Suspense fallback={<RelatedProductsLoading />}>
                                 <RelatedProductsWrapper product={mappedProduct} />
                             </Suspense>
@@ -148,19 +148,18 @@ export default function ProductDetailPage({ product }: IProductResponseProps) {
                     </section>
 
                     {/* Trust Signals Section */}
-                    <section className="relative bg-gradient-to-r from-slate-50 via-blue-50/50 to-indigo-50/30">
-                        <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] pointer-events-none" />
+                    <section>
 
                         {/* ✅ reduced padding + reduced heading gap */}
-                        <div className="relative max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-8 sm:py-10 lg:py-12">
-                            <div className="text-center mb-6 sm:mb-8">
+                        <div className="relative max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+                            {/* <div className="text-center mb-3 sm:mb-6 mt-2 sm:mt-4">
                                 <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-2 sm:mb-3">
-                                    Why Choose KhushbuWaala?
+                                    Why Choose Khushbuwaala?
                                 </h2>
                                 <p className="text-sm sm:text-base text-gray-600 max-w-3xl mx-auto">
                                     Your trusted partner for authentic, premium fragrances with exceptional service
                                 </p>
-                            </div>
+                            </div> */}
 
                             <TrustSignals />
                         </div>

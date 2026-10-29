@@ -20,6 +20,7 @@ import {
   Boxes,
   TrendingUp,
   ClipboardList,
+  CreditCard,
 } from "lucide-react";
 
 import { MdCategory } from "react-icons/md";
@@ -254,33 +255,47 @@ export const navLinks: NavLink[] = [
     roles: ["ADMIN", "SUPER_ADMIN"],
   },
 
-  {
-    name: "Suppliers",
-    href: "#",
-    icon: Users,
-    roles: ["ADMIN", "SUPER_ADMIN"],
-    subItems: [
-      {
-        name: "Add Supplier",
-        href: "/dashboard/suppliers/add",
-        icon: Plus,
-        roles: ["ADMIN", "SUPER_ADMIN"],
-      },
-      {
-        name: "Suppliers List",
-        href: "/dashboard/suppliers",
-        icon: List,
-        roles: ["ADMIN", "SUPER_ADMIN"],
-      },
-    ],
-  },
+  // {
+  //   name: "Suppliers",
+  //   href: "#",
+  //   icon: Users,
+  //   roles: ["ADMIN", "SUPER_ADMIN"],
+  //   subItems: [
+  //     {
+  //       name: "Add Supplier",
+  //       href: "/dashboard/suppliers/add",
+  //       icon: Plus,
+  //       roles: ["ADMIN", "SUPER_ADMIN"],
+  //     },
+  //     {
+  //       name: "Suppliers List",
+  //       href: "/dashboard/suppliers",
+  //       icon: List,
+  //       roles: ["ADMIN", "SUPER_ADMIN"],
+  //     },
+  //   ],
+  // },
 
   // ================= ANALYTICS =================
+  // {
+  //   name: "Analytics",
+  //   href: "/dashboard/analytics",
+  //   icon: TrendingUp,
+  //   roles: ["SUPER_ADMIN"],
+  // },
+
   {
-    name: "Analytics",
-    href: "/dashboard/analytics",
-    icon: TrendingUp,
-    roles: ["SUPER_ADMIN"],
+    name: "Carts",
+    href: "/dashboard/carts",
+    icon: ShoppingCart,
+    roles: ["ADMIN", "SUPER_ADMIN"],
+  },
+
+  {
+    name: "Payments",
+    href: "/dashboard/payments",
+    icon: CreditCard,
+    roles: ["ADMIN", "SUPER_ADMIN"],
   },
 
   {
@@ -291,54 +306,54 @@ export const navLinks: NavLink[] = [
   },
 
   // ================= ACCOUNT =================
-  {
-    name: "Profile",
-    href: "/dashboard/admin-profile",
-    icon: Settings,
-    roles: ["SUPER_ADMIN"],
-  },
-  {
-    name: "Passwords Change",
-    href: "/dashboard/admin-passwords",
-    icon: UserCog,
-    roles: ["SUPER_ADMIN"],
-  },
+  // {
+  //   name: "Profile",
+  //   href: "/dashboard/admin-profile",
+  //   icon: Settings,
+  //   roles: ["SUPER_ADMIN"],
+  // },
+  // {
+  //   name: "Passwords Change",
+  //   href: "/dashboard/admin-passwords",
+  //   icon: UserCog,
+  //   roles: ["SUPER_ADMIN"],
+  // },
 
   // ================= FINANCE =================
-  {
-    name: "Investors",
-    href: "#",
-    icon: Users,
-    roles: ["SUPER_ADMIN"],
-    subItems: [
-      { name: "Add Investor", href: "/dashboard/investors/add", icon: Plus, roles: ["SUPER_ADMIN"] },
-      { name: "Investors List", href: "/dashboard/investors", icon: List, roles: ["SUPER_ADMIN"] },
-    ],
-  },
+  // {
+  //   name: "Investors",
+  //   href: "#",
+  //   icon: Users,
+  //   roles: ["SUPER_ADMIN"],
+  //   subItems: [
+  //     { name: "Add Investor", href: "/dashboard/investors/add", icon: Plus, roles: ["SUPER_ADMIN"] },
+  //     { name: "Investors List", href: "/dashboard/investors", icon: List, roles: ["SUPER_ADMIN"] },
+  //   ],
+  // },
 
-  {
-    name: "Financial Overview",
-    href: "/dashboard/financial-overview",
-    icon: Calculator,
-    roles: ["SUPER_ADMIN"],
-  },
+  // {
+  //   name: "Financial Overview",
+  //   href: "/dashboard/financial-overview",
+  //   icon: Calculator,
+  //   roles: ["SUPER_ADMIN"],
+  // },
 
-  {
-    name: "Ledger",
-    href: "/dashboard/ledger",
-    icon: BookOpen,
-    roles: ["SUPER_ADMIN"],
-  },
+  // {
+  //   name: "Ledger",
+  //   href: "/dashboard/ledger",
+  //   icon: BookOpen,
+  //   roles: ["SUPER_ADMIN"],
+  // },
 
-  {
-    name: "User Management",
-    href: "#",
-    icon: UserCog,
-    roles: ["SUPER_ADMIN"],
-    subItems: [
-      { name: "Add User", href: "/dashboard/users/add", icon: Plus, roles: ["SUPER_ADMIN"] },
-      { name: "Users List", href: "/dashboard/users", icon: Users, roles: ["SUPER_ADMIN"] },
-      { name: "Assign Roles", href: "/dashboard/assign-roles", icon: Settings, roles: ["SUPER_ADMIN"] },
-    ],
-  },
+  // {
+  //   name: "User Management",
+  //   href: "#",
+  //   icon: UserCog,
+  //   roles: ["SUPER_ADMIN"],
+  //   subItems: [
+  //     { name: "Add User", href: "/dashboard/users/add", icon: Plus, roles: ["SUPER_ADMIN"] },
+  //     { name: "Users List", href: "/dashboard/users", icon: Users, roles: ["SUPER_ADMIN"] },
+  //     { name: "Assign Roles", href: "/dashboard/assign-roles", icon: Settings, roles: ["SUPER_ADMIN"] },
+  //   ],
+  // },
 ];

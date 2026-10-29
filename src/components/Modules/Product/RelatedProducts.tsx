@@ -15,7 +15,7 @@ interface RelatedProductsProps {
 
 function RelatedProductsSkeleton() {
   return (
-    <section className="mt-12 max-w-screen-xl mx-auto px-4 lg:px-8">
+    <section className="mt-12 max-w-screen-xl mx-auto px-3 lg:px-6">
       <div className="flex items-end justify-between gap-4 mb-6">
         <div>
           <div className="h-6 w-48 bg-gray-200 rounded animate-pulse" />
@@ -77,16 +77,11 @@ export default function RelatedProducts({ product }: RelatedProductsProps) {
   return (
     <section
       aria-label="Related products"
-      className="mt-4 max-w-screen-xl mx-auto px-4 lg:px-8"
+      className="mt-4 max-w-screen-xl mx-auto px-3 lg:px-6"
     >
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-4">
         <div>
-          {/* <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-100 text-gray-800 text-xs font-semibold">
-            <Sparkles className="w-4 h-4" />
-            Handpicked for you
-          </div> */}
-
           <h3 className="mt-3 text-xl md:text-2xl font-bold text-gray-900">
             You may also like
           </h3>
@@ -95,9 +90,10 @@ export default function RelatedProducts({ product }: RelatedProductsProps) {
           </p>
         </div>
 
+        {/* Desktop only: top right button */}
         <Link
           href="/shop"
-          className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-gray-200 bg-white text-gray-900 text-sm font-semibold hover:shadow-sm hover:border-gray-300 transition"
+          className="hidden sm:inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-gray-200 bg-white text-gray-900 text-sm font-semibold hover:shadow-sm hover:border-gray-300 transition"
         >
           View all
           <ArrowRight className="w-4 h-4" />
@@ -105,7 +101,7 @@ export default function RelatedProducts({ product }: RelatedProductsProps) {
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-1.5 sm:gap-3">
         {items.map((p: any) => {
           const pid = p?.id ?? p?._id;
 
@@ -182,7 +178,7 @@ export default function RelatedProducts({ product }: RelatedProductsProps) {
                 {/* Meta line */}
                 <div className="mt-1 flex items-center justify-between gap-3">
                   <span className="text-xs text-gray-500 line-clamp-1">
-                    KhushbuWaala
+                    Khushbuwaala
                   </span>
                   {/* <span className="text-[11px] font-semibold text-gray-600">
                     {unit ? `${sizeCount}+ sizes • ${unit}` : "Standard size"}
@@ -226,6 +222,17 @@ export default function RelatedProducts({ product }: RelatedProductsProps) {
             </Link>
           );
         })}
+      </div>
+
+      {/* Phone only: bottom full-width button */}
+      <div className="mt-4 sm:hidden">
+        <Link
+          href="/shop"
+          className="flex items-center justify-center gap-2 w-full h-11 rounded-xl border border-gray-200 bg-white text-gray-900 text-sm font-semibold shadow-xs active:bg-gray-50 transition"
+        >
+          View all
+          <ArrowRight className="w-4 h-4" />
+        </Link>
       </div>
     </section>
   );

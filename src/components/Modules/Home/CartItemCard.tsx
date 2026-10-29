@@ -33,7 +33,7 @@ export const CartItemCard = ({ item }: CartItemCardProps) => {
 
   return (
     <Card className="group hover:shadow-md transition-all duration-300">
-      <CardContent className="p-4">
+      <CardContent className="px-4 py-0">
         <div className="flex gap-4">
           {/* Product Image */}
           <div className="relative">
@@ -46,12 +46,12 @@ export const CartItemCard = ({ item }: CartItemCardProps) => {
                 sizes="(max-width: 768px) 80px, 96px"
               />
             </div>
-            <Badge
+            {/* <Badge
               variant="secondary"
               className="absolute -top-2 -right-2 text-xs px-1.5 py-0.5"
             >
               {item.selectedSize}
-            </Badge>
+            </Badge> */}
           </div>
 
           {/* Product Details */}
@@ -84,7 +84,7 @@ export const CartItemCard = ({ item }: CartItemCardProps) => {
                     size="icon-sm"
                     onClick={() => handleQuantityChange(-1)}
                     disabled={item.quantity === 1 || isUpdating}
-                    className="rounded-r-none border-r"
+                    className="h-8.5! min-h-0! py-0 rounded-r-none border-r"
                   >
                     <Minus className="w-3 h-3" />
                   </Button>
@@ -96,7 +96,7 @@ export const CartItemCard = ({ item }: CartItemCardProps) => {
                     size="icon-sm"
                     onClick={() => handleQuantityChange(1)}
                     disabled={isUpdating}
-                    className="rounded-l-none border-l"
+                    className="h-8.5! min-h-0! py-0 rounded-l-none border-l"
                   >
                     <Plus className="w-3 h-3" />
                   </Button>

@@ -2,52 +2,32 @@ import { baseApi } from "../baseApi";
 
 export const paymentApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
-        // ✅ Start bKash payment: returns bkashURL -> redirect user to it
-        createBkashPayment: builder.mutation<
-            { success: boolean; bkashURL: string; paymentID: string },
+
+        // DGePay payment endpoint
+        createDgepayPayment: builder.mutation<
+            { success: boolean; paymentUrl: string; transactionId: string },
             { orderId: string; payToken: string }
         >({
             query: (body) => ({
-                url: "/checkout/bkash/create",
+                url: "/checkout/dgepay/create",
                 method: "POST",
                 body,
             }),
-            // you can invalidate Order/Cart if you want after success page refresh
-            // invalidatesTags: ["Order", "Cart"],
         }),
 
-
-        // ✅ Refund by trxID (admin)
-        refundBkashByTrxId: builder.mutation<
-            { success: boolean; refund: any },
-            { trxID: string }
-        >({
-            query: ({ trxID }) => ({
-                url: `/checkout/bkash/refund/${trxID}`,
-                method: "POST",
+        // ✅ Add this endpoint to fetch payment history for the admin dashboard
+        getAllPaymentHistory: builder.query<any, Record<string, any> | void>({
+            query: (params) => ({
+                url: "/payment/get-all-payment-history",
+                method: "GET",
+                params: params ?? undefined,
             }),
-            // invalidatesTags: ["Payment", "Order"],
+            providesTags: ["Order"],
         }),
-
-        /**
-         * OPTIONAL (only if you add these endpoints in backend)
-         * -----------------------------------------------
-         * getMyPayments: builder.query({
-         *   query: () => ({ url: "/payment/my", method: "GET" }),
-         *   providesTags: ["Payment"],
-         * }),
-         *
-         * getAllPaymentsAdmin: builder.query({
-         *   query: (params) => ({ url: "/payment/admin", method: "GET", params }),
-         *   providesTags: ["Payment"],
-         * }),
-         */
     }),
 });
 
 export const {
-    useCreateBkashPaymentMutation,
-    useRefundBkashByTrxIdMutation,
-    // useGetMyPaymentsQuery,
-    // useGetAllPaymentsAdminQuery,
+    useCreateDgepayPaymentMutation,
+    useGetAllPaymentHistoryQuery,
 } = paymentApi;

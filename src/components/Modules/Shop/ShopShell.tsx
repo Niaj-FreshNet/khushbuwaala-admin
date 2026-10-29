@@ -1,5 +1,3 @@
-import { NoticeBar } from "@/components/Modules/Shop/NoticeBar";
-import { ShopBanner } from "@/components/Modules/Shop/ShopBanner";
 import { ClientShopProducts } from "@/components/Modules/Shop/ClientShopProducts";
 
 type ShopShellProps = {
@@ -24,8 +22,9 @@ type ShopShellProps = {
   sortBy?: string;
 
   // behavior
-  lockCategory?: boolean; // ✅ category pages can lock the category
+  lockCategory?: boolean;
   noticesHeading?: string;
+  showHeading?: boolean; // ✅ Controls heading visibility
 };
 
 export function ShopShell({
@@ -49,18 +48,11 @@ export function ShopShell({
 
   lockCategory = false,
   noticesHeading = "World's Finest Perfume Oils",
+  showHeading = true, // ✅ Defaults to visible
 }: ShopShellProps) {
 
-  const notices = [
-    "🚚 Free Nationwide Shipping on Orders Over ৳1000",
-    "🔥 Up to 50% Off on Selected Premium Items",
-    "✨ Authentic Quality Guaranteed - 100% Original Products",
-    "🏪 Visit Our Banasree Outlet for In-Person Experience",
-    "💝 Special Gift Wrapping Available for All Orders",
-  ];
-
   return (
-    <div className="w-full mx-auto mt-8 md:mt-10">
+    <div className="w-full mx-auto mt-0 sm:mt-4">
       {/* <ShopBanner
         heading={bannerHeading}
         text={bannerText}
@@ -71,11 +63,20 @@ export function ShopShell({
         variant="premium"
       /> */}
 
-      <div className="py-0 bg-gradient-to-r from-gray-50 via-white to-gray-50">
-        <NoticeBar heading={noticesHeading} notices={notices} interval={4500} />
-      </div>
+      {/* Render heading only when showHeading is true and a heading exists */}
+      {showHeading && noticesHeading && (
+        <div className="py-0 bg-linear-to-r from-gray-50 via-white to-gray-50">
+          <div className="bg-linear-to-r from-red-50 to-pink-50 pt-4 pb-2 px-4 text-center overflow-hidden">
+            <div className="max-w-4xl mx-auto">
+              <h2 className="text-xl md:text-3xl font-extrabold text-gray-900 flex items-center justify-center gap-3">
+                {noticesHeading}
+              </h2>
+            </div>
+          </div>
+        </div>
+      )}
 
-      <div id="products" className="bg-white pt-0 pb-8">
+      <div id="products" className="bg-white pt-0 pb-4">
         <ClientShopProducts
           initialPage={initialPage}
           categoryId={categoryId}
@@ -88,7 +89,7 @@ export function ShopShell({
           perfumeNotes={perfumeNotes}
           performance={performance}
           sortBy={sortBy}
-          lockCategory={lockCategory}   // ✅ IMPORTANT
+          lockCategory={lockCategory}
         />
       </div>
     </div>

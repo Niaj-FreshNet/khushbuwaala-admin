@@ -5,10 +5,10 @@ import { Briefcase, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
-  title: "Careers | KhushbuWaala Perfumes - Join Our Team in Dhaka",
-  description: "Explore job openings at KhushbuWaala Perfumes. We're hiring passionate talent for sales, marketing, and more in our Dhaka showroom. Apply today!",
+  title: "Careers | Khushbuwaala Perfumes - Join Our Team in Dhaka",
+  description: "Explore job openings at Khushbuwaala Perfumes. We're hiring passionate talent for sales, marketing, and more in our Dhaka showroom. Apply today!",
   openGraph: {
-    title: "Careers at KhushbuWaala - Perfume Jobs in Dhaka",
+    title: "Careers at Khushbuwaala - Perfume Jobs in Dhaka",
     description: "Be part of our scent revolution. Open positions now.",
     url: "https://www.khushbuwaala.com/career",
   },

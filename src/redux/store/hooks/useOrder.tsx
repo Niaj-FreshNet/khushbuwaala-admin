@@ -42,7 +42,9 @@ export const useOrder = () => {
         // ✅ Use API response directly to ensure all required fields exist
         dispatch(setOrder(res))
 
-        toast.success('Order placed successfully!')
+        // ❌ REMOVED: toast.success('Order placed successfully!')
+        // Toast is now triggered conditionally in CheckoutPage based on payment method.
+
         return res
       } catch (err: any) {
         console.error(err)

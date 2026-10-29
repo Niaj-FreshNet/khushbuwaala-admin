@@ -3,11 +3,11 @@
 import type React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, ShoppingBag, Heart, MessageCircle, Search } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Home, ShoppingBag, Heart, MessageCircle, User, LogIn } from "lucide-react"
 import { cn } from "@/lib/utils"
 import SearchDrawer from "../Modules/Search/SearchDrawer"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { useAuth } from "@/redux/store/hooks/useAuth"
 
 type NavItem = {
   key: string
@@ -55,8 +55,12 @@ function useHideOnScroll() {
 
 export default function BottomBar() {
   const pathname = usePathname()
+  if (pathname.startsWith("/product/")) return null;
+  if (pathname.startsWith("/checkout")) return null;
+  
   const isMobileDevice = useIsMobileUA()
   const isVisible = useHideOnScroll()
+  const { user } = useAuth()
 
   const [searchVisible, setSearchVisible] = useState(false)
   const [cartBump, setCartBump] = useState(false)
@@ -97,15 +101,26 @@ export default function BottomBar() {
     return pathname.startsWith(path)
   }
 
+  // Determine path, icon, and label based on authentication status
+  const profilePath = user ? "/my-account" : "/login"
+  const profileLabel = user ? "Profile" : "Login"
+  const profileIcon = user ? <User className="h-5 w-5" /> : <User className="h-5 w-5" />
+
   const navItems: NavItem[] = useMemo(
     () => [
       { key: "home", label: "Home", path: "/", ariaLabel: "Go to homepage", icon: <Home className="h-5 w-5" /> },
       { key: "shop", label: "Shop", path: "/shop", ariaLabel: "Go to shop page", icon: <ShoppingBag className="h-5 w-5" /> },
-      { key: "support", label: "Support", ariaLabel: "Chat with us on Messenger", icon: <MessageCircle className="h-5 w-5" />, onClick: handleMessengerClick },
       { key: "wishlist", label: "Wishlist", path: "/wishlist", ariaLabel: "View wishlist", icon: <Heart className="h-5 w-5" /> },
-      { key: "cart", label: "Cart", path: "/cart", ariaLabel: "View cart", icon: <ShoppingBag className="h-5 w-5" /> },
+      { key: "support", label: "Support", ariaLabel: "Chat with us on Messenger", icon: <MessageCircle className="h-5 w-5" />, onClick: handleMessengerClick },
+      {
+        key: "profile",
+        label: profileLabel,
+        path: profilePath,
+        ariaLabel: user ? "View profile" : "Log in to your account",
+        icon: profileIcon,
+      },
     ],
-    [pathname, isMobileDevice]
+    [pathname, isMobileDevice, user, profilePath, profileLabel, profileIcon]
   )
 
   return (
@@ -114,7 +129,7 @@ export default function BottomBar() {
       <div
         className={cn(
           "fixed lg:hidden left-0 right-0 bottom-0 z-40 pointer-events-none",
-          "h-16 bg-gradient-to-t from-white/75 via-white/25 to-transparent backdrop-blur-[2px] transition-opacity duration-200",
+          "h-11.5 bg-linear-to-t from-white/75 via-white/25 to-transparent backdrop-blur-[2px] transition-opacity duration-200",
           isVisible ? "opacity-100" : "opacity-0"
         )}
       />
@@ -128,39 +143,34 @@ export default function BottomBar() {
       >
         <div className="relative">
           <div className="absolute inset-0 bg-white/92 backdrop-blur-xl border-t border-gray-200/60 shadow-[0_-12px_28px_-18px_rgba(0,0,0,0.45)]" />
-          <div className="absolute inset-0 bg-gradient-to-t from-gray-50/35 to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-t from-gray-50/35 to-transparent" />
 
           <div className="relative max-w-7xl mx-auto px-2">
-            {/* ✅ A bit taller + better bottom padding so labels look “normal” */}
-            <div className="h-[62px] flex items-center justify-between px-1 pt-1 pb-2">
+            <div className="h-11.5 flex items-center justify-between px-1 pt-2 pb-0">
               {navItems.map((item) => {
                 const active = isActive(item.path)
                 const isCart = item.key === "cart"
 
-                const container =
-                  "group relative w-full flex justify-center"
-                const tap =
-                  "active:scale-[0.97] transition-transform duration-150"
+                const container = "group relative w-full flex justify-center"
+                const tap = "active:scale-[0.97] transition-transform duration-150"
 
                 const ActiveBG =
-                  "bg-gradient-to-b from-red-50 to-white ring-1 ring-red-200 shadow-[0_10px_18px_-14px_rgba(239,68,68,0.65)]"
+                  "bg-gradient-to-b from-emerald-50 to-white ring-1 ring-emerald-200 shadow-[0_10px_18px_-14px_rgba(239,68,68,0.65)]"
 
-                const InactiveBG =
-                  "hover:bg-gray-50/80"
+                const InactiveBG = "hover:bg-gray-50/80"
 
                 const Content = (
                   <div
                     className={cn(
                       "relative flex flex-col items-center justify-center",
-                      "w-[74px] rounded-2xl",
-                      "py-2", // ✅ gives space for label (fix weird text)
+                      "w-18.5 rounded-t-2xl",
+                      "py-1.5",
                       "transition-all duration-200",
                       active ? ActiveBG : InactiveBG
                     )}
                   >
-                    {/* soft glow for full area (not only icon) */}
                     {active && (
-                      <span className="pointer-events-none absolute -inset-2 rounded-[22px] bg-red-500/10 blur-md" />
+                      <span className="pointer-events-none absolute -inset-2 rounded-[22px] bg-emerald-500/10 blur-md" />
                     )}
 
                     <div className="relative">
@@ -168,7 +178,7 @@ export default function BottomBar() {
                         className={cn(
                           "h-9 w-9 rounded-xl flex items-center justify-center",
                           "transition-colors duration-200",
-                          active ? "text-red-600" : "text-gray-600 group-hover:text-gray-900"
+                          active ? "text-emerald-600" : "text-gray-600 group-hover:text-gray-900"
                         )}
                       >
                         <div
@@ -189,18 +199,17 @@ export default function BottomBar() {
 
                     <span
                       className={cn(
-                        "mt-0.5 text-[10.5px] leading-none font-semibold tracking-tight",
-                        active ? "text-red-600" : "text-gray-700"
+                        "mt-0 text-[10.5px] leading-none font-semibold tracking-tight",
+                        active ? "text-emerald-600" : "text-gray-700"
                       )}
                     >
                       {item.label}
                     </span>
 
-                    {/* selected indicator line */}
                     <span
                       className={cn(
-                        "mt-1 h-[3px] w-8 rounded-full transition-all duration-200",
-                        active ? "bg-gradient-to-r from-red-500 to-pink-500" : "bg-transparent"
+                        "mt-1 h-0.75 w-8 rounded-full transition-all duration-200",
+                        active ? "bg-linear-to-r from-emerald-500 to-green-500" : "bg-transparent"
                       )}
                     />
                   </div>
@@ -235,36 +244,10 @@ export default function BottomBar() {
               })}
             </div>
 
-            {/* safe area (small, but keeps iPhone home bar happy) */}
             <div className="h-[max(4px,env(safe-area-inset-bottom))]" />
           </div>
         </div>
       </nav>
-
-      {/* Search FAB (compact) */}
-      <div
-        className={cn(
-          "fixed lg:hidden right-4 z-40 transition-all duration-200",
-          isVisible ? "bottom-[78px]" : "bottom-3"
-        )}
-      >
-        <Button
-          size="icon"
-          onClick={() => {
-            haptic(20)
-            setSearchVisible(true)
-          }}
-          aria-label="Search products"
-          className={cn(
-            "h-11 w-11 rounded-full",
-            "bg-gray-900 text-white hover:bg-gray-800",
-            "shadow-xl transition-all duration-200",
-            "border border-white/10"
-          )}
-        >
-          <Search className="h-5 w-5" />
-        </Button>
-      </div>
 
       <SearchDrawer visible={searchVisible} onClose={() => setSearchVisible(false)} />
     </>

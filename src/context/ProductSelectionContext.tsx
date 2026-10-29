@@ -29,14 +29,22 @@ function getDefaultVariant(product: IProduct): IProductVariant | null {
   const variants = Array.isArray(product?.variants) ? product.variants : [];
   if (!variants.length) return null;
 
-  const priced = variants
-    .map((v) => ({ v, price: Number((v as any)?.price ?? 0) }))
-    .filter((x) => Number.isFinite(x.price) && x.price > 0);
+  const getNumericSize = (v: any) => {
+    const raw = v?.size ?? v?.title ?? v?.name ?? "";
+    const parsed = parseFloat(String(raw).replace(/[^0-9.]/g, ""));
+    return Number.isFinite(parsed) ? parsed : Infinity;
+  };
 
-  if (!priced.length) return variants[0] ?? null;
+  // Sort ascending by numeric size (fallback to price)
+  const sorted = [...variants].sort((a: any, b: any) => {
+    const sA = getNumericSize(a);
+    const sB = getNumericSize(b);
+    if (sA !== sB) return sA - sB;
+    return Number(a?.price ?? 0) - Number(b?.price ?? 0);
+  });
 
-  priced.sort((a, b) => a.price - b.price);
-  return priced[0]?.v ?? null;
+  // Pick the 2nd lowest variant (index 1), fallback to index 0 if only 1 exists
+  return sorted[1] ?? sorted[0] ?? null;
 }
 
 export function ProductSelectionProvider({
@@ -49,8 +57,8 @@ export function ProductSelectionProvider({
   const defaultVariant = useMemo(() => getDefaultVariant(product), [product]);
 
   useEffect(() => {
-  setSelectedVariant(defaultVariant);
-}, [defaultVariant]);
+    setSelectedVariant(defaultVariant);
+  }, [defaultVariant]);
 
   const [selectedVariant, setSelectedVariant] = useState<IProductVariant | null>(
     defaultVariant
