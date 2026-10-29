@@ -14,11 +14,9 @@ import {
 
 type Row = {
     day: string;
-
     websiteSales: number;
     manualSales: number;
     totalSales: number;
-
     websiteOrders: number;
     manualOrders: number;
     totalOrders: number;
@@ -41,108 +39,65 @@ export default function AdminSalesOrdersBreakdownChart({
     };
 
     return (
-        <div className="bg-white rounded-xl shadow-md p-5 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+        <div className="bg-white p-4 sm:p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-3">
                 <div>
-                    <h2 className="text-base sm:text-lg font-semibold text-gray-800">
+                    <h2 className="text-sm font-bold text-gray-900">
                         {title}
                     </h2>
-                    <p className="text-xs text-gray-500 mt-0.5">
+                    <p className="text-[11px] text-gray-500">
                         Sales (bar) • Orders (line)
                     </p>
                 </div>
             </div>
 
-            <ResponsiveContainer width="100%" height={320}>
+            <ResponsiveContainer width="100%" height={300}>
                 <ComposedChart data={data} margin={{ top: 6, right: 10, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
 
                     <XAxis
                         dataKey="day"
-                        tick={{ fontSize: 12 }}
+                        tick={{ fontSize: 11 }}
                         axisLine={false}
                         tickLine={false}
+                        stroke="#9ca3af"
                     />
 
-                    {/* ✅ Single axis (Sales) */}
                     <YAxis
-                        tick={{ fontSize: 12 }}
+                        tick={{ fontSize: 11 }}
                         tickFormatter={salesTick}
                         axisLine={false}
                         tickLine={false}
+                        stroke="#9ca3af"
                     />
 
                     <Tooltip
-                        contentStyle={{
-                            backgroundColor: "#fff",
-                            border: "1px solid #e5e7eb",
-                            borderRadius: "12px",
-                            padding: "10px 12px",
-                            color: "#111827",
-                            boxShadow: "0 10px 25px rgba(0,0,0,.08)",
-                        }}
-                        labelStyle={{ fontWeight: 600, marginBottom: 6 }}
-                        formatter={(value: any, name: any, props: any) => {
-                            const v = Number(value || 0);
-
-                            if (name === "Sales") return [formatBDT(v), "Sales"];
-                            if (name === "Orders") return [v, "Orders"];
-
-                            return [v, name];
-                        }}
-                        labelFormatter={(label) => `Day: ${label}`}
-                        // ✅ clean tooltip: add breakdown lines without showing them on chart
                         content={({ active, payload, label }) => {
                             if (!active || !payload?.length) return null;
-
                             const row = payload[0]?.payload as Row;
 
                             return (
-                                <div
-                                    style={{
-                                        background: "#fff",
-                                        border: "1px solid #e5e7eb",
-                                        borderRadius: 12,
-                                        padding: "10px 12px",
-                                        boxShadow: "0 10px 25px rgba(0,0,0,.08)",
-                                        minWidth: 220,
-                                    }}
-                                >
-                                    <div style={{ fontWeight: 700, marginBottom: 8 }}>
+                                <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-md min-w-[200px] text-xs space-y-2">
+                                    <div className="font-bold text-gray-900 pb-1 border-b border-gray-100">
                                         Day: {label}
                                     </div>
-
-                                    <div style={{ fontSize: 12, display: "grid", gap: 6 }}>
-                                        <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                            <span style={{ color: "#6b7280" }}>Total Sales</span>
-                                            <span style={{ fontWeight: 600 }}>{formatBDT(row.totalSales)}</span>
+                                    <div className="space-y-1 text-gray-600">
+                                        <div className="flex justify-between font-semibold text-gray-900">
+                                            <span>Total Sales</span>
+                                            <span>{formatBDT(row.totalSales)}</span>
                                         </div>
-
-                                        <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                            <span style={{ color: "#6b7280" }}>Website Sales</span>
+                                        <div className="flex justify-between text-[11px]">
+                                            <span>Website Sales</span>
                                             <span>{formatBDT(row.websiteSales)}</span>
                                         </div>
-
-                                        <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                            <span style={{ color: "#6b7280" }}>Manual Sales</span>
+                                        <div className="flex justify-between text-[11px]">
+                                            <span>Manual Sales</span>
                                             <span>{formatBDT(row.manualSales)}</span>
                                         </div>
-
-                                        <hr style={{ border: 0, borderTop: "1px solid #f3f4f6", margin: "6px 0" }} />
-
-                                        <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                            <span style={{ color: "#6b7280" }}>Total Orders</span>
-                                            <span style={{ fontWeight: 700 }}>{row.totalOrders}</span>
-                                        </div>
-
-                                        <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                            <span style={{ color: "#6b7280" }}>Website Orders</span>
-                                            <span>{row.websiteOrders}</span>
-                                        </div>
-
-                                        <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                            <span style={{ color: "#6b7280" }}>Manual Orders</span>
-                                            <span>{row.manualOrders}</span>
+                                        <hr className="border-gray-100 my-1" />
+                                        <div className="flex justify-between font-semibold text-gray-900">
+                                            <span>Total Orders</span>
+                                            <span>{row.totalOrders}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -150,20 +105,20 @@ export default function AdminSalesOrdersBreakdownChart({
                         }}
                     />
 
-                    {/* ✅ Clean visuals: just total sales bar */}
                     <Bar
                         dataKey="totalSales"
                         name="Sales"
-                        radius={[8, 8, 0, 0]}
-                        maxBarSize={42}
+                        fill="#FB923C"
+                        radius={[6, 6, 0, 0]}
+                        maxBarSize={36}
                     />
 
-                    {/* ✅ Orders line (same axis, but still readable) */}
                     <Line
                         type="monotone"
                         dataKey="totalOrders"
                         name="Orders"
-                        strokeWidth={2.5}
+                        stroke="#111827"
+                        strokeWidth={2}
                         dot={{ r: 3 }}
                         activeDot={{ r: 5 }}
                     />

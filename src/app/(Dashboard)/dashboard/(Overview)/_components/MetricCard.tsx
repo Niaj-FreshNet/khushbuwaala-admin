@@ -7,28 +7,26 @@ interface MetricCardProps {
     label: string;
     value: string | number;
     circleColor: string;
-    key: number;
 }
 
 const MetricCard: React.FC<MetricCardProps> = ({ label, value, circleColor }) => {
     return (
-        <div className="bg-white p-6 rounded-xl shadow-md flex items-center justify-between gap-4">
-            {/* Label and Value */}
-            <div className="flex flex-col">
-                <h3 className="text-sm font-medium text-gray-500 mb-4">{label}</h3>
-                <p className="text-2xl font-semibold text-gray-800">{value}</p>
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between gap-3">
+            <div className="flex flex-col min-w-0">
+                <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider truncate mb-1">{label}</h3>
+                <p className="text-lg sm:text-xl font-black text-gray-900 tracking-tight">{value}</p>
             </div>
-            {/* Colored Circle with Icon */}
             <div
-                className="w-12 h-12 rounded-full flex items-center justify-center"
+                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-2xs"
                 style={{ backgroundColor: circleColor }}
             >
                 <Image
                     src="/images/vector.png"
                     alt={`${label} icon`}
-                    width={24}
-                    height={24}
-                    className="text-white" />
+                    width={20}
+                    height={20}
+                    className="brightness-0 invert opacity-90"
+                />
             </div>
         </div>
     );

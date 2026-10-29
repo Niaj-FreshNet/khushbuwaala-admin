@@ -233,7 +233,7 @@ export default function SideBar({
       <div
         className={cn(
           "hidden lg:flex flex-col h-screen shadow-md transition-all duration-300 ease-in-out",
-          isShort ? "w-20" : "w-72",
+          isShort ? "w-14" : "w-46",
           dark ? "bg-gray-900 text-white" : "bg-white text-gray-900"
         )}
       >

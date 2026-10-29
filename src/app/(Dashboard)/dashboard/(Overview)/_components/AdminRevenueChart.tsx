@@ -36,28 +36,29 @@ const AdminRevenueChart: React.FC<RevenueChartProps> = ({
     const data = weeklyData?.length > 0 ? weeklyData : [];
 
     return (
-        <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
-                <div className="flex space-x-4">
-                    <span className="text-sm font-medium text-gray-700 flex items-center">
-                        <span className="inline-block w-4 h-4 bg-orange-400 rounded-full mr-1"></span>
+        <div className="bg-white p-4 sm:p-5">
+            <div className="flex justify-between items-center mb-3">
+                <h2 className="text-sm font-bold text-gray-900">{title}</h2>
+                <div className="flex space-x-3 text-xs">
+                    <span className="font-semibold text-gray-700 flex items-center">
+                        <span className="inline-block w-3 h-3 bg-amber-500 rounded-full mr-1" />
                         Sales
                     </span>
-                    <span className="text-sm font-medium text-gray-700 flex items-center">
-                        <span className="inline-block w-4 h-4 border-2 bg-black border-dashed border-black rounded-full mr-1"></span>
+                    <span className="font-semibold text-gray-700 flex items-center">
+                        <span className="inline-block w-3 h-3 bg-black rounded-full mr-1" />
                         Orders
                     </span>
                 </div>
             </div>
 
-            <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={data} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="day" tick={{ fontSize: 12 }} />
+            <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                    <XAxis dataKey="day" tick={{ fontSize: 11 }} stroke="#9ca3af" />
                     <YAxis
                         tickFormatter={formatCurrency}
-                        tick={{ fontSize: 12 }}
+                        tick={{ fontSize: 11 }}
+                        stroke="#9ca3af"
                         domain={[0, "dataMax + 500"]}
                     />
                     <Tooltip
@@ -65,15 +66,17 @@ const AdminRevenueChart: React.FC<RevenueChartProps> = ({
                             backgroundColor: "#fff",
                             border: "1px solid #e5e7eb",
                             borderRadius: "8px",
-                            padding: "8px 12px",
-                            color: "#000",
+                            padding: "8px 10px",
+                            color: "#111827",
+                            fontSize: "12px",
+                            boxShadow: "0 4px 12px rgba(0,0,0,.05)",
                         }}
-                        itemStyle={{ color: "#000" }}
+                        itemStyle={{ color: "#111827" }}
                         formatter={(value: number, name: string) => [
                             <span key="value" className="font-bold">
                                 {name === "sales" ? `${value} BDT` : value}
                             </span>,
-                            <span key="label">{name === "sales" ? "Sales" : "Orders"}</span>,
+                            <span key="label" className="text-gray-500 capitalize">{name === "sales" ? "Sales" : "Orders"}</span>,
                         ]}
                         labelFormatter={(label) => `Day: ${label}`}
                     />
@@ -81,20 +84,20 @@ const AdminRevenueChart: React.FC<RevenueChartProps> = ({
                         type="monotone"
                         dataKey="sales"
                         name="sales"
-                        stroke="#FFA500"
-                        strokeWidth={2}
-                        dot={{ r: 4 }}
-                        activeDot={{ r: 6, stroke: "#fff", strokeWidth: 2, fill: "#FFA500" }}
+                        stroke="#F59E0B"
+                        strokeWidth={2.5}
+                        dot={{ r: 3 }}
+                        activeDot={{ r: 5, stroke: "#fff", strokeWidth: 2, fill: "#F59E0B" }}
                     />
                     <Line
                         type="monotone"
                         dataKey="orders"
                         name="orders"
-                        stroke="#000000"
+                        stroke="#111827"
                         strokeWidth={2}
-                        strokeDasharray="5 5"
-                        dot={{ r: 4 }}
-                        activeDot={{ r: 6, stroke: "#fff", strokeWidth: 2, fill: "#000000" }}
+                        strokeDasharray="4 4"
+                        dot={{ r: 3 }}
+                        activeDot={{ r: 5, stroke: "#fff", strokeWidth: 2, fill: "#111827" }}
                     />
                 </LineChart>
             </ResponsiveContainer>
