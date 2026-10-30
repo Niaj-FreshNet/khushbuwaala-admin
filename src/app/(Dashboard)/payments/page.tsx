@@ -116,7 +116,7 @@ export default function PaymentManagementPage() {
                                                 {payment.order?.id ? (
                                                     <Link
                                                         target="_blank"
-                                                        href={`/dashboard/orders/${payment.order.id}`}
+                                                        href={`//orders/${payment.order.id}`}
                                                         className="text-blue-600 hover:underline"
                                                     >
                                                         #{payment.order.invoice}
@@ -149,7 +149,7 @@ export default function PaymentManagementPage() {
                                             <TableCell className="text-right pr-4">
                                                 {payment.order?.id && (
                                                     <Button asChild variant="outline" size="sm" className="h-8 text-xs">
-                                                        <Link href={`/dashboard/orders/${payment.order.id}`} target="_blank">
+                                                        <Link href={`//orders/${payment.order.id}`} target="_blank">
                                                             View Order
                                                         </Link>
                                                     </Button>

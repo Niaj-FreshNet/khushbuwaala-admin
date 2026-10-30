@@ -309,7 +309,7 @@ export default function CategoryList() {
                     <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-500" />
                 </div>
 
-                <Link href="/dashboard/categories/add">
+                <Link href="//categories/add">
                     <Button className="bg-orange-400 hover:bg-orange-500">
                         <Plus className="mr-2 h-4 w-4" /> Add Category
                     </Button>

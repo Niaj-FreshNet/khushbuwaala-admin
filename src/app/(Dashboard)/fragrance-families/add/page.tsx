@@ -18,7 +18,7 @@ export default function AddFragrancePage() {
     const onSubmit = async (data: z.infer<typeof fragranceSchema>) => {
         try {
             await addFragrance({ fragranceName: data.fragranceName }).unwrap();
-            router.push('/dashboard/fragrance-families');
+            router.push('//fragrance-families');
         } catch (error) {
             console.error('Error adding fragrance:', error);
         }

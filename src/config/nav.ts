@@ -12,17 +12,17 @@ import { RiDashboardFill } from 'react-icons/ri';
 export const navLink = [
   {
     name: "My Profile",
-    href: "/dashboard",
+    href: "/",
     icon: RiDashboardFill,
   },
   {
     name: "Order History",
-    href: "/dashboard/order-list",
+    href: "//order-list",
     icon: LuCalendarDays,
   },
   {
     name: "Password Change",
-    href: "/dashboard/password",
+    href: "//password",
     icon: CiSettings,
   }
 ];

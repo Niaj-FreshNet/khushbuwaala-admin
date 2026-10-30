@@ -105,7 +105,7 @@ export default function DiscountList() {
           <h1 className="text-2xl font-bold text-gray-800">
             Discounts & Promotions
           </h1>
-          <Link href="/dashboard/discounts/add">
+          <Link href="//discounts/add">
             <Button className="bg-orange-500 hover:bg-orange-600 text-white">
               <Plus className="w-4 h-4 mr-2" /> Add Discount
             </Button>
@@ -262,7 +262,7 @@ export default function DiscountList() {
                     {/* Actions (ONLY place to navigate) */}
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Link href={`/dashboard/discounts/${d.id}`}>
+                        <Link href={`//discounts/${d.id}`}>
                           <Button
                             size="icon"
                             variant="ghost"

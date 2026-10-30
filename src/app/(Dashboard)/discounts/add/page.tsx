@@ -347,7 +347,7 @@ export default function DiscountFormPage() {
         toast.success("Discount created successfully");
       }
 
-      router.push("/dashboard/discounts");
+      router.push("//discounts");
     } catch (error: any) {
       toast.error(error?.data?.message || "Failed to save discount");
     }

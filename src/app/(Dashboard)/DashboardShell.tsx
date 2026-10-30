@@ -2,12 +2,13 @@
 "use client";
 
 import BreadCrumb from "@/components/Shared/Dashboard/BreadCrumb";
-import SideBar from "@/components/Shared/Dashboard/Sidebar";
 import TopBar from "@/components/Shared/Dashboard/TopBar";
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/redux/store/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import Cookies from "js-cookie";
+import SideBar from "@/components/Shared/Dashboard/Sidebar";
 
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
     const [isOpen, setIsOpen] = useState(false); // mobile sidebar
@@ -15,6 +16,9 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     const navRef = useRef<HTMLDivElement>(null);
 
     const { user, isLoading } = useAuth();
+
+    // Check if token exists client-side to prevent false "not logged in" flashes
+    const hasToken = typeof window !== "undefined" && (Boolean(localStorage.getItem("accessToken")) || Boolean(Cookies.get("accessToken")));
 
     // Close on outside click
     useEffect(() => {
@@ -81,8 +85,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
                         {/* content card */}
                         <div className="shadow-sm">
-                            {/* ✅ keep skeleton time OK (isLoading true), but after that show clear not logged in */}
-                            {isLoading ? (
+                            {isLoading || (hasToken && !user) ? (
                                 <div className="py-10 text-center">
                                     <p className="text-gray-500">Checking session...</p>
                                 </div>
@@ -104,7 +107,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                                             Go to Login
                                         </Link>
                                         <Link
-                                            href="/"
+                                            href="/dashboard"
                                             className={cn(
                                                 "inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium",
                                                 "border border-gray-200 bg-white text-gray-900 hover:bg-gray-50"

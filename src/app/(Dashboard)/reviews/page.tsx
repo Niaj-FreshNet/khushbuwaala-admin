@@ -194,7 +194,7 @@ const ReviewList = () => {
                     variant="outline"
                     disabled={meta.page === 1}
                     onClick={() =>
-                      router.push(`/dashboard/reviews?page=${meta.page - 1}`)
+                      router.push(`//reviews?page=${meta.page - 1}`)
                     }
                     className="border-[#FB923C] text-[#FB923C]"
                   >
@@ -204,7 +204,7 @@ const ReviewList = () => {
                     variant="outline"
                     disabled={meta.page >= meta.totalPage}
                     onClick={() =>
-                      router.push(`/dashboard/reviews?page=${meta.page + 1}`)
+                      router.push(`//reviews?page=${meta.page + 1}`)
                     }
                     className="border-[#FB923C] text-[#FB923C]"
                   >

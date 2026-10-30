@@ -18,10 +18,6 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["@radix-ui/react-icons", "lucide-react"], // ✅ helps bundle
   },
-
-  async redirects() {
-    return [{ source: "/products/:slug", destination: "/product/:slug", permanent: true }];
-  },
 };
 
 export default nextConfig;

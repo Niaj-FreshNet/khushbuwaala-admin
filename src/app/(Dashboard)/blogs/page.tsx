@@ -277,7 +277,7 @@ const BlogList = () => {
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
-    router.push(`/dashboard/blogs?page=${newPage}`);
+    router.push(`//blogs?page=${newPage}`);
   };
 
   return (
@@ -297,7 +297,7 @@ const BlogList = () => {
 
           <Button
             className="bg-emerald-700 hover:bg-emerald-800 text-white gap-1.5 shadow-sm"
-            onClick={() => router.push('/dashboard/blogs/add')}
+            onClick={() => router.push('//blogs/add')}
           >
             <Plus className="w-4 h-4" /> Add New Blog
           </Button>

@@ -269,7 +269,7 @@ export default function Page() {
         if (typeof window !== "undefined" && window.history.length > 1) {
             router.back();
         } else {
-            router.replace("/dashboard/orders");
+            router.replace("//orders");
         }
     };
 

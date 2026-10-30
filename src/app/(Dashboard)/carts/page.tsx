@@ -426,7 +426,7 @@ export default function AdminAllCartsPage() {
                           {renderStatusBadge(item.status)}
                           {item.order?.invoice && (
                             <Link
-                              href={`/dashboard/orders/${item.order.id}`}
+                              href={`//orders/${item.order.id}`}
                               className="inline-flex items-center gap-1 text-xs text-blue-600 font-bold hover:underline"
                             >
                               Invoice #{item.order.invoice}
@@ -567,7 +567,7 @@ export default function AdminAllCartsPage() {
                     <span className="font-bold text-emerald-900 text-sm">Invoice #{inspectItem.order.invoice}</span>
                   </div>
                   <Button asChild size="sm" variant="outline" className="bg-white border-emerald-300 text-emerald-700 h-7 text-xs px-2.5 font-bold">
-                    <Link href={`/dashboard/orders/${inspectItem.order.id}`} className="flex items-center gap-1">
+                    <Link href={`//orders/${inspectItem.order.id}`} className="flex items-center gap-1">
                       View Order <ExternalLink className="h-3 w-3" />
                     </Link>
                   </Button>

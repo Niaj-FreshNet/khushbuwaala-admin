@@ -121,7 +121,7 @@ const ProductList = () => {
           </div>
           <Button
             className="bg-[#FB923C] hover:bg-[#ff8a29]"
-            onClick={() => router.push('/dashboard/products/add')}
+            onClick={() => router.push('//products/add')}
           >
             <Plus className="w-4 h-4 mr-2" /> Add Product
           </Button>
@@ -248,7 +248,7 @@ const ProductList = () => {
                             variant="ghost"
                             size="icon"
                             onClick={() =>
-                              router.push(`/dashboard/products/${product.slug}`)
+                              router.push(`//products/${product.slug}`)
                             }
                           >
                             <Eye className="w-4 h-4" />

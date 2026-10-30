@@ -1,4 +1,4 @@
-// middleware.ts
+// File: src/middleware.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtDecode } from "jwt-decode";
@@ -8,11 +8,12 @@ interface DecodedToken {
   exp: number;
 }
 
-export function proxy(request: NextRequest) {
+// ✅ Must be named `middleware` (Next.js searches for this specific export)
+export function middleware(request: NextRequest) {
   const token = request.cookies.get("access_token")?.value;
   const currentPath = request.nextUrl.pathname;
 
-  // If visiting login or root
+  // 1. If visiting login or root and already authenticated with a valid token
   if (currentPath === "/login" || currentPath === "/") {
     if (token) {
       try {
@@ -20,20 +21,20 @@ export function proxy(request: NextRequest) {
 
         // Check token validity
         if (userInfo.exp && userInfo.exp * 1000 >= Date.now()) {
-          if (userInfo.role?.toUpperCase() === 'ADMIN' || userInfo.role?.toUpperCase() === 'SUPER_ADMIN') {
+          const role = userInfo.role?.toUpperCase();
+          if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
             return NextResponse.redirect(new URL('/dashboard', request.url));
           }
         }
       } catch {
-        // Invalid token, allow to access login
         return NextResponse.next();
       }
     }
     return NextResponse.next();
   }
 
-  // Protect /dashboard/admin routes
-  if (currentPath.startsWith("/dashboard/admin")) {
+  // 2. Protect dashboard or admin routes from logged-out users
+  if (currentPath.startsWith("/dashboard") || currentPath.startsWith("/admin")) {
     if (!token) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
@@ -41,12 +42,13 @@ export function proxy(request: NextRequest) {
     try {
       const userInfo = jwtDecode<DecodedToken>(token);
 
-      // Token expired → redirect login
+      // Token expired -> redirect to login
       if (userInfo.exp && userInfo.exp * 1000 < Date.now()) {
         return NextResponse.redirect(new URL("/login", request.url));
       }
 
-      if (userInfo.role?.toUpperCase() !== "ADMIN") {
+      const role = userInfo.role?.toUpperCase();
+      if (role !== "ADMIN" && role !== "SUPER_ADMIN") {
         return NextResponse.redirect(new URL("/login", request.url));
       }
     } catch {
@@ -58,5 +60,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/login", "/dashboard/:path*"],
+  matcher: ["/", "/login", "/dashboard/:path*", "/admin/:path*"],
 };

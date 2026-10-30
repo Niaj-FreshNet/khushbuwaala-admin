@@ -21,6 +21,7 @@ import {
   TrendingUp,
   ClipboardList,
   CreditCard,
+  LucideListOrdered,
 } from "lucide-react";
 
 import { MdCategory } from "react-icons/md";
@@ -44,7 +45,7 @@ export const navLinks: NavLink[] = [
   // ================= DASHBOARD =================
   {
     name: "Overview",
-    href: "/dashboard",
+    href: "/",
     icon: LayoutDashboard,
     roles: ["ADMIN", "SUPER_ADMIN"],
   },
@@ -58,13 +59,13 @@ export const navLinks: NavLink[] = [
     subItems: [
       {
         name: "Add Product",
-        href: "/dashboard/products/add",
+        href: "/products/add",
         icon: Plus,
         roles: ["ADMIN", "SUPER_ADMIN"],
       },
       {
         name: "Product List",
-        href: "/dashboard/products",
+        href: "/products",
         icon: List,
         roles: ["ADMIN", "SUPER_ADMIN"],
       },
@@ -80,37 +81,37 @@ export const navLinks: NavLink[] = [
     subItems: [
       {
         name: "Add Category",
-        href: "/dashboard/categories/add",
+        href: "/categories/add",
         icon: Plus,
         roles: ["ADMIN", "SUPER_ADMIN"],
       },
       {
         name: "Category List",
-        href: "/dashboard/categories",
+        href: "/categories",
         icon: Tags,
         roles: ["ADMIN", "SUPER_ADMIN"],
       },
       {
         name: "Add Fragrance Family",
-        href: "/dashboard/fragrance-families/add",
+        href: "/fragrance-families/add",
         icon: Plus,
         roles: ["ADMIN", "SUPER_ADMIN"],
       },
       {
         name: "Fragrance Families List",
-        href: "/dashboard/fragrance-families",
+        href: "/fragrance-families",
         icon: GiPerfumeBottle,
         roles: ["ADMIN", "SUPER_ADMIN"],
       },
       {
         name: "Add Material",
-        href: "/dashboard/materials/add",
+        href: "/materials/add",
         icon: Plus,
         roles: ["ADMIN", "SUPER_ADMIN"],
       },
       {
         name: "Materials List",
-        href: "/dashboard/materials",
+        href: "/materials",
         icon: Boxes,
         roles: ["ADMIN", "SUPER_ADMIN"],
       },
@@ -120,7 +121,14 @@ export const navLinks: NavLink[] = [
   // ================= ORDERS =================
   {
     name: "Orders",
-    href: "/dashboard/orders",
+    href: "/orders",
+    icon: LucideListOrdered,
+    roles: ["ADMIN", "SUPER_ADMIN"],
+  },
+
+  {
+    name: "Carts",
+    href: "/carts",
     icon: ShoppingCart,
     roles: ["ADMIN", "SUPER_ADMIN"],
   },
@@ -134,19 +142,19 @@ export const navLinks: NavLink[] = [
     subItems: [
       {
         name: "Add Sales",
-        href: "/dashboard/sales/add-sales",
+        href: "/sales/add-sales",
         icon: Plus,
         roles: ["SALESMAN", "ADMIN", "SUPER_ADMIN"],
       },
       {
         name: "Bulk Sales",
-        href: "/dashboard/sales/bulk-sales",
+        href: "/sales/bulk-sales",
         icon: ClipboardList,
         roles: ["SALESMAN", "ADMIN", "SUPER_ADMIN"],
       },
       {
         name: "Sale List",
-        href: "/dashboard/sales",
+        href: "/sales",
         icon: List,
         roles: ["SALESMAN", "ADMIN", "SUPER_ADMIN"],
       },
@@ -162,13 +170,13 @@ export const navLinks: NavLink[] = [
     subItems: [
       {
         name: "Add Expense",
-        href: "/dashboard/expense/add",
+        href: "/expense/add",
         icon: Plus,
         roles: ["ADMIN", "SUPER_ADMIN"],
       },
       {
         name: "Expense List",
-        href: "/dashboard/expense",
+        href: "/expense",
         icon: List,
         roles: ["ADMIN", "SUPER_ADMIN"],
       },
@@ -184,19 +192,19 @@ export const navLinks: NavLink[] = [
     subItems: [
       {
         name: "Add Stock",
-        href: "/dashboard/stock/add",
+        href: "/stock/add",
         icon: Plus,
         roles: ["ADMIN", "SUPER_ADMIN"],
       },
       {
         name: "Stock Management",
-        href: "/dashboard/stock",
+        href: "/stock",
         icon: Boxes,
         roles: ["ADMIN", "SUPER_ADMIN"],
       },
       {
         name: "Low Stock Alerts",
-        href: "/dashboard/stock/low-stock-alertz",
+        href: "/stock/low-stock-alertz",
         icon: GoReport,
         roles: ["ADMIN", "SUPER_ADMIN"],
       },
@@ -212,13 +220,13 @@ export const navLinks: NavLink[] = [
     subItems: [
       {
         name: "Add Discount",
-        href: "/dashboard/discounts/add",
+        href: "/discounts/add",
         icon: Plus,
         roles: ["ADMIN", "SUPER_ADMIN"],
       },
       {
         name: "Discounts & Promotions",
-        href: "/dashboard/discounts",
+        href: "/discounts",
         icon: Tags,
         roles: ["ADMIN", "SUPER_ADMIN"],
       },
@@ -234,13 +242,13 @@ export const navLinks: NavLink[] = [
     subItems: [
       {
         name: "Add Blog",
-        href: "/dashboard/blogs/add",
+        href: "/blogs/add",
         icon: Plus,
         roles: ["ADMIN", "SUPER_ADMIN"],
       },
       {
         name: "All Blogs",
-        href: "/dashboard/blogs",
+        href: "/blogs",
         icon: BookOpen,
         roles: ["ADMIN", "SUPER_ADMIN"],
       },
@@ -250,7 +258,7 @@ export const navLinks: NavLink[] = [
   // ================= PEOPLE =================
   {
     name: "Reviews",
-    href: "/dashboard/reviews",
+    href: "/reviews",
     icon: Users,
     roles: ["ADMIN", "SUPER_ADMIN"],
   },
@@ -263,13 +271,13 @@ export const navLinks: NavLink[] = [
   //   subItems: [
   //     {
   //       name: "Add Supplier",
-  //       href: "/dashboard/suppliers/add",
+  //       href: "/suppliers/add",
   //       icon: Plus,
   //       roles: ["ADMIN", "SUPER_ADMIN"],
   //     },
   //     {
   //       name: "Suppliers List",
-  //       href: "/dashboard/suppliers",
+  //       href: "/suppliers",
   //       icon: List,
   //       roles: ["ADMIN", "SUPER_ADMIN"],
   //     },
@@ -279,28 +287,21 @@ export const navLinks: NavLink[] = [
   // ================= ANALYTICS =================
   // {
   //   name: "Analytics",
-  //   href: "/dashboard/analytics",
+  //   href: "/analytics",
   //   icon: TrendingUp,
   //   roles: ["SUPER_ADMIN"],
   // },
 
   {
-    name: "Carts",
-    href: "/dashboard/carts",
-    icon: ShoppingCart,
-    roles: ["ADMIN", "SUPER_ADMIN"],
-  },
-
-  {
     name: "Payments",
-    href: "/dashboard/payments",
+    href: "/payments",
     icon: CreditCard,
     roles: ["ADMIN", "SUPER_ADMIN"],
   },
 
   {
     name: "Customers",
-    href: "/dashboard/customer-list",
+    href: "/customer-list",
     icon: Users,
     roles: ["SUPER_ADMIN"],
   },
@@ -308,13 +309,13 @@ export const navLinks: NavLink[] = [
   // ================= ACCOUNT =================
   // {
   //   name: "Profile",
-  //   href: "/dashboard/admin-profile",
+  //   href: "/admin-profile",
   //   icon: Settings,
   //   roles: ["SUPER_ADMIN"],
   // },
   // {
   //   name: "Passwords Change",
-  //   href: "/dashboard/admin-passwords",
+  //   href: "/admin-passwords",
   //   icon: UserCog,
   //   roles: ["SUPER_ADMIN"],
   // },
@@ -326,21 +327,21 @@ export const navLinks: NavLink[] = [
   //   icon: Users,
   //   roles: ["SUPER_ADMIN"],
   //   subItems: [
-  //     { name: "Add Investor", href: "/dashboard/investors/add", icon: Plus, roles: ["SUPER_ADMIN"] },
-  //     { name: "Investors List", href: "/dashboard/investors", icon: List, roles: ["SUPER_ADMIN"] },
+  //     { name: "Add Investor", href: "/investors/add", icon: Plus, roles: ["SUPER_ADMIN"] },
+  //     { name: "Investors List", href: "/investors", icon: List, roles: ["SUPER_ADMIN"] },
   //   ],
   // },
 
   // {
   //   name: "Financial Overview",
-  //   href: "/dashboard/financial-overview",
+  //   href: "/financial-overview",
   //   icon: Calculator,
   //   roles: ["SUPER_ADMIN"],
   // },
 
   // {
   //   name: "Ledger",
-  //   href: "/dashboard/ledger",
+  //   href: "/ledger",
   //   icon: BookOpen,
   //   roles: ["SUPER_ADMIN"],
   // },
@@ -351,9 +352,9 @@ export const navLinks: NavLink[] = [
   //   icon: UserCog,
   //   roles: ["SUPER_ADMIN"],
   //   subItems: [
-  //     { name: "Add User", href: "/dashboard/users/add", icon: Plus, roles: ["SUPER_ADMIN"] },
-  //     { name: "Users List", href: "/dashboard/users", icon: Users, roles: ["SUPER_ADMIN"] },
-  //     { name: "Assign Roles", href: "/dashboard/assign-roles", icon: Settings, roles: ["SUPER_ADMIN"] },
+  //     { name: "Add User", href: "/users/add", icon: Plus, roles: ["SUPER_ADMIN"] },
+  //     { name: "Users List", href: "/users", icon: Users, roles: ["SUPER_ADMIN"] },
+  //     { name: "Assign Roles", href: "/assign-roles", icon: Settings, roles: ["SUPER_ADMIN"] },
   //   ],
   // },
 ];

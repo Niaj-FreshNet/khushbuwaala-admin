@@ -161,7 +161,7 @@ const AddBlogClient = () => {
       setContent('');
       setImageFile(null);
       setImagePreview(null);
-      router.push('/dashboard/blogs');
+      router.push('//blogs');
     } catch (error) {
       toast.error('Failed to add blog');
     }
@@ -295,7 +295,7 @@ const AddBlogClient = () => {
                     setContent('');
                     setImageFile(null);
                     setImagePreview(null);
-                    router.push('/dashboard/blogs');
+                    router.push('//blogs');
                   }}
                 >
                   Cancel

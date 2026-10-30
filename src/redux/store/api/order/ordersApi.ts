@@ -136,6 +136,18 @@ export type DashboardMetrics = {
   totalSales: number;
 };
 
+export type WeeklySalesRow = {
+  day: string;
+  sales: number;
+  orders: number;
+};
+
+export type MonthlySalesRow = {
+  date: string;
+  sales: number;
+  orders: number;
+};
+
 export const orderApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     createOrder: builder.mutation<IOrderResponse, IOrderPayload>({
@@ -219,7 +231,7 @@ export const orderApi = baseApi.injectEndpoints({
     }),
 
     getWeeklySalesOverview: builder.query<
-      ApiResponse<{ day: string; sales: number; orders: number }[]>,
+      ApiResponse<WeeklySalesRow[]>,
       { type?: "all" | "website" | "manual" } | void
     >({
       query: (arg) => ({
@@ -229,8 +241,18 @@ export const orderApi = baseApi.injectEndpoints({
       providesTags: ["Order"],
     }),
 
-    trackOrders: builder.query<ApiResponse<any[]>, string>({
-      query: (query) => `/order/track/${encodeURIComponent(query)}`,
+    getMonthlySalesOverview: builder.query<
+      ApiResponse<{ date: string; sales: number; orders: number }[]>,
+      { type?: "all" | "website" | "manual"; year?: number; month?: number } | void
+    >({
+      query: (arg) => ({
+        url: "/order/dashboard/monthly-sales",
+        params: {
+          type: arg?.type || "all",
+          ...(arg?.year ? { year: arg.year } : {}),
+          ...(arg?.month ? { month: arg.month } : {}),
+        },
+      }),
       providesTags: ["Order"],
     }),
 
@@ -259,6 +281,7 @@ export const {
   useGetMyOrderByIdQuery,
   useGetDashboardMetricsQuery,
   useGetWeeklySalesOverviewQuery,
+  useGetMonthlySalesOverviewQuery,
   useLazyTrackOrdersQuery,
   useDeleteOrderMutation,
 } = orderApi

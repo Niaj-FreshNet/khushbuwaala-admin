@@ -148,7 +148,7 @@ const AddProductPage = () => {
       await createProduct(payload).unwrap();
       toast.success('Product added successfully!');
       setImagePreviews([]);
-      // router.push('/dashboard/products');
+      // router.push('//products');
       return true;
     } catch (error) {
       console.error(error);

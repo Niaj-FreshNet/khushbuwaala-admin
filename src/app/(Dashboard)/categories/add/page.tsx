@@ -92,7 +92,7 @@ export default function AddCategoryPage() {
             formData.append('unit', String(data.unit).trim());
 
             await addCategory(formData).unwrap();
-            router.push('/dashboard/categories');
+            router.push('//categories');
         } catch (error) {
             console.error('Error adding category:', error);
             toast.error("Failed to add category");

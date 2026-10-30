@@ -24,7 +24,7 @@ const MetricCard: React.FC<MetricCardProps> = ({ label, value, circleColor }) =>
                 style={{ backgroundColor: circleColor }}
             >
                 <Image
-                    src="/images/vector.png"
+                    src="/vector.png"
                     alt={`${label} icon`}
                     width={24}
                     height={24}

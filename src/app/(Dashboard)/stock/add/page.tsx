@@ -40,7 +40,7 @@ const AddStockPage = () => {
         reason: values.reason,
       }).unwrap();
       toast.success('Stock added successfully!');
-      router.push('/dashboard/stock');
+      router.push('//stock');
     } catch (error) {
       console.error('Failed to add stock:', error);
       toast.error('Failed to add stock');

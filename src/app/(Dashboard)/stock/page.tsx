@@ -31,11 +31,11 @@ const StockManagementPage = () => {
   const meta = data?.meta;
 
   const handleViewLogs = (productId: string) => {
-    router.push(`/dashboard/stock/logs/${productId}`);
+    router.push(`//stock/logs/${productId}`);
   };
 
   const handleAddStock = (productId: string) => {
-    router.push(`/dashboard/stock/add?productId=${productId}`);
+    router.push(`//stock/add?productId=${productId}`);
   };
 
   return (
@@ -77,7 +77,7 @@ const StockManagementPage = () => {
           </Select>
           <Button
             className="bg-[#FB923C] hover:bg-[#ff8a29] text-white"
-            onClick={() => router.push('/dashboard/stock/add')}
+            onClick={() => router.push('//stock/add')}
           >
             <Plus className="w-4 h-4 mr-2" /> Add Stock
           </Button>

@@ -34,7 +34,7 @@ const StockLogsPage = () => {
           <Button
             variant="outline"
             className="border-[#FB923C] text-[#FB923C]"
-            onClick={() => router.push('/dashboard/stock')}
+            onClick={() => router.push('//stock')}
           >
             <ArrowLeft className="w-4 h-4 mr-2" /> Back to Stock
           </Button>

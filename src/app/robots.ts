@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
         rules: {
             userAgent: "*",
             allow: "/",
-            disallow: ["/dashboard", "/api"],
+            disallow: ["/", "/api"],
         },
         sitemap: "https://khushbuwaala.com/sitemap.xml",
     };

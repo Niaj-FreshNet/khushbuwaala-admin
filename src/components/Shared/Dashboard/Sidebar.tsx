@@ -81,33 +81,18 @@ export default function SideBar({
 
   const LoggedOutNav = () => (
     <div className="h-full p-4 flex flex-col">
-      <div className={cn("rounded-xl border p-4", dark ? "border-white/10 bg-white/5" : "border-gray-200 bg-white")}>
-        <div className="flex items-start gap-3">
-          <ShieldAlert className={cn("h-5 w-5 mt-0.5", dark ? "text-yellow-300" : "text-yellow-600")} />
-          <div className="space-y-1">
-            <h3 className={cn("text-sm font-semibold", dark ? "text-white" : "text-gray-900")}>
-              You’re not logged in
-            </h3>
-            <p className={cn("text-xs leading-relaxed", dark ? "text-gray-300" : "text-gray-600")}>
-              Please login to access the dashboard.
-            </p>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => router.push("/login")}
-          className={cn(
-            "mt-4 w-full inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition",
-            dark ? "bg-white text-gray-900 hover:bg-white/90" : "bg-gray-900 text-white hover:bg-gray-800"
-          )}
-        >
-          <LogIn className="h-4 w-4" />
-          Login
-        </button>
+      <div className="space-y-4">
+        {navLinks.map((link, idx) => (
+          <MainNavLink
+            key={idx}
+            link={link}
+            isShort={isShort}
+            additionalRoutes={additionalRoutes}
+            setIsShort={setIsShort}
+            dark={dark}
+          />
+        ))}
       </div>
-
-      <div className="mt-auto" />
     </div>
   );
 
@@ -130,7 +115,7 @@ export default function SideBar({
         <div
           className={cn(
             "hidden lg:flex flex-col h-screen shadow-md transition-all duration-300 ease-in-out",
-            isShort ? "w-20" : "w-72",
+            isShort ? "w-14" : "w-46",
             dark ? "bg-gray-900 text-white" : "bg-white text-gray-900"
           )}
         >
@@ -159,7 +144,7 @@ export default function SideBar({
         <div
           className={cn(
             "hidden lg:flex flex-col h-screen shadow-md transition-all duration-300 ease-in-out",
-            isShort ? "w-20" : "w-72",
+            isShort ? "w-14" : "w-46",
             dark ? "bg-gray-900 text-white" : "bg-white text-gray-900"
           )}
         >
@@ -189,12 +174,14 @@ export default function SideBar({
       await logoutApi({}).unwrap();
       dispatch(logout());
       toast.success("Logged out successfully!");
-      router.push("/login");
+
+      // Force hard reload to clear Next.js router cache and middleware state
+      window.location.href = "/login";
     } catch (error) {
       console.error("Logout API failed:", error);
       toast.error("Failed to log out. Please try again.");
     }
-  };
+};
 
   return (
     <div ref={navRef}>

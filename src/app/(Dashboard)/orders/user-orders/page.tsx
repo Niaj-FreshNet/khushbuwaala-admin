@@ -121,7 +121,7 @@ const UserOrderDetails = () => {
     <div className="p-6 bg-gray-50 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-semibold text-[#FB923C]">Order Details</h2>
-        <Button variant="ghost" size="icon" onClick={() => router.push('/dashboard/order-list')}>
+        <Button variant="ghost" size="icon" onClick={() => router.push('//order-list')}>
           <X className="w-4 h-4" />
         </Button>
       </div>

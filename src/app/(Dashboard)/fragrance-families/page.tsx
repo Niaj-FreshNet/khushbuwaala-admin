@@ -98,7 +98,7 @@ export default function FragranceList() {
                     />
                     <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-500" />
                 </div>
-                <Link href="/dashboard/fragrance-families/add">
+                <Link href="//fragrance-families/add">
                     <Button className="bg-orange-400 hover:bg-orange-500">
                         <Plus className="mr-2 h-4 w-4" /> Add Fragrance
                     </Button>

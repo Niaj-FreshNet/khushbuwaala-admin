@@ -47,7 +47,7 @@ import {
     useGetOrderByIdQuery,
     useUpdateOrderStatusMutation,
 } from "@/redux/store/api/order/ordersApi";
-import OrderInvoice from "../../orders/_components/OrderInvoice";
+import OrderInvoice from "../orders/_components/OrderInvoice";
 
 type SortField = "orderTime" | "amount" | "status" | "invoice";
 type SortOrder = "asc" | "desc";
@@ -327,7 +327,7 @@ export default function RecentOrderList() {
 
                                         {/* Invoice */}
                                         <TableCell className="font-bold align-top py-3 text-sm">
-                                            <Link href={`/dashboard/orders/${order.id}`} className="text-blue-600 font-semibold hover:underline">
+                                            <Link href={`//orders/${order.id}`} className="text-blue-600 font-semibold hover:underline">
                                                 #{order.invoice}
                                             </Link>
                                         </TableCell>
@@ -365,7 +365,7 @@ export default function RecentOrderList() {
                                                 </span>
                                             </div>
                                             <div className="text-xs text-gray-600 font-semibold mt-0.5">
-                                                District: <span className="text-gray-900">{order.shipping?.district || "N/A"}</span>
+                                                <span className="text-gray-900">{order.shipping?.district || "N/A"}</span>
                                             </div>
                                             {order.additionalNotes && (
                                                 <div className="text-[11px] bg-amber-50 text-amber-900 border border-amber-200 rounded px-1.5 py-0.5 mt-1 flex items-center gap-1 truncate font-medium" title={order.additionalNotes}>
@@ -376,7 +376,7 @@ export default function RecentOrderList() {
                                         </TableCell>
 
                                         {/* Ordered Products */}
-                                        <TableCell className="align-top py-2.5 max-w-[240px]">
+                                        <TableCell className="align-top py-2.5 max-w-60">
                                             {orderItems.length > 0 ? (
                                                 <div className="space-y-1">
                                                     {orderItems.map((item: any, iIdx: number) => {

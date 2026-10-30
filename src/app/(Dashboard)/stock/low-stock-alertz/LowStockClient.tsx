@@ -45,7 +45,7 @@ export default function LowStockAlertPageClient() {
   );
 
   const handleAddStock = (productId: string) => {
-    router.push(`/dashboard/stock/add?productId=${productId}`);
+    router.push(`//stock/add?productId=${productId}`);
   };
 
   return (

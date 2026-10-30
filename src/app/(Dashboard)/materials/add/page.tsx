@@ -18,7 +18,7 @@ export default function AddMaterialPage() {
     const onSubmit = async (data: z.infer<typeof materialSchema>) => {
         try {
             await addMaterial({ materialName: data.materialName }).unwrap();
-            router.push('/dashboard/materials');
+            router.push('//materials');
         } catch (error) {
             console.error('Error adding material:', error);
         }

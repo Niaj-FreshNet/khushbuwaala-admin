@@ -876,7 +876,7 @@ const OrderList = () => {
 
                   return (
                     <TableRow key={order.id} className={`hover:bg-gray-50/85 transition-colors ${isSelected ? "bg-orange-50/40" : ""}`}>
-                      <TableCell className="text-center py-3">
+                      <TableCell className="text-center align-top py-3">
                         <button onClick={() => toggleSelectOrder(order.id)} className="inline-flex items-center text-gray-400 hover:text-gray-900">
                           {isSelected ? <CheckSquare className="w-4 h-4 text-[#FB923C]" /> : <Square className="w-4 h-4" />}
                         </button>
@@ -884,7 +884,7 @@ const OrderList = () => {
 
                       {/* Increased font for Invoice */}
                       <TableCell className="font-bold align-top py-3 text-sm">
-                        <Link target="_blank" href={`/dashboard/orders/${order.id}`} className="text-blue-600 hover:underline">
+                        <Link target="_blank" href={`//orders/${order.id}`} className="text-blue-600 hover:underline">
                           #{order.invoice}
                         </Link>
                       </TableCell>
@@ -922,7 +922,7 @@ const OrderList = () => {
                           </span>
                         </div>
                         <div className="text-xs text-gray-600 font-semibold mt-0.5">
-                          District: <span className="text-gray-900">{order.shipping?.district || "N/A"}</span>
+                          <span className="text-gray-900">{order.shipping?.district || "N/A"}</span>
                         </div>
                         {order.additionalNotes && (
                           <div className="text-[11px] bg-amber-50 text-amber-900 border border-amber-200 rounded px-1.5 py-0.5 mt-1 flex items-center gap-1 truncate font-medium" title={order.additionalNotes}>
@@ -1020,7 +1020,7 @@ const OrderList = () => {
                         </Badge>
                       </TableCell>
 
-                      <TableCell className="text-right pr-3 align-top py-2.5">
+                      <TableCell className="text-right pr-3 align-top py-2">
                         <div className="flex justify-end gap-1">
                           <Button
                             variant="ghost"
