@@ -125,7 +125,7 @@ const SalesInvoice: React.FC<InvoiceProps> = ({ sale, visible, onClose }) => {
                         </div>
                         <div className="company-details text-sm text-gray-700">
                             <p>G/138, Eastern Banabithi Shopping Complex, South Banasree, Khilgaon, Dhaka-1219</p>
-                            <p>Phone: +880 1566-395807</p>
+                            <p>Phone: +880 1777-152588</p>
                             <p>Email: khushbuwaala@gmail.com</p>
                         </div>
                     </div>

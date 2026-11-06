@@ -294,7 +294,7 @@ export default function OrderInvoiceModal({
                   G/138, Eastern Banabithi Shopping Complex, South Banasree, Dhaka-1219
                 </p>
                 <p className="text-[11px] text-gray-600 leading-snug">
-                  Phone: +880 1566-395807 | Email: khushbuwaala@gmail.com
+                  Phone: +880 1777-152588 | Email: khushbuwaala@gmail.com
                 </p>
               </div>
 

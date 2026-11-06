@@ -131,7 +131,7 @@ const InvoiceDocument = forwardRef<HTMLDivElement, Props>(
                   Shop G/138, Eastern Banabithi Shopping Complex, South Banasree
                 </div>
                 <div>Khilgaon, Dhaka-1219, Bangladesh</div>
-                <div>Phone: +880 1566-395807 | Email: khushbuwaala@gmail.com</div>
+                <div>Phone: +880 1777-152588 | Email: khushbuwaala@gmail.com</div>
               </div>
             </div>
 

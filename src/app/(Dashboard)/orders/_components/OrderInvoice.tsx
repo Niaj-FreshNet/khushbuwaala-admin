@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
@@ -62,20 +62,7 @@ export default function OrderInvoice({ order, visible, onClose }: OrderInvoicePr
     const invoiceRef = useRef<HTMLDivElement>(null);
     const [isDownloading, setIsDownloading] = useState(false);
 
-    // If order is not loaded yet or doesn't match, we can show a clean mini loader inside the dialog
-    if (!order && visible) {
-        return (
-            <Dialog open={visible} onOpenChange={onClose}>
-                <DialogContent className="max-w-md w-[90vw] p-8 flex flex-col items-center justify-center bg-white rounded-2xl">
-                    <Loader2 className="w-8 h-8 animate-spin text-[#FB923C] mb-2" />
-                    <p className="text-sm text-gray-500 font-medium">Loading invoice details...</p>
-                </DialogContent>
-            </Dialog>
-        );
-    }
-
-    if (!order) return null;
-
+    // 1. ALL HOOKS CALLED UNCONDITIONALLY AT THE TOP
     const invoiceNo = order?.invoice
         ? String(order.invoice)
         : `ORD-${String(order?.id || "").slice(-6).toUpperCase()}`;
@@ -118,7 +105,6 @@ export default function OrderInvoice({ order, visible, onClose }: OrderInvoicePr
             let unitOriginal = Number(it.originalPrice ?? it.variant?.price ?? it.price ?? 0);
             let unitSold = Number(it.price ?? unitOriginal);
 
-            // Legacy fallback for historical orders
             const hasExplicitSavedPrices = it.originalPrice !== undefined && it.originalPrice !== null;
             if (!hasExplicitSavedPrices && totalOrderDiscount > 0) {
                 const nameLower = String(it.product?.name || it.name || "").toLowerCase();
@@ -274,7 +260,19 @@ export default function OrderInvoice({ order, visible, onClose }: OrderInvoicePr
         }
     };
 
-    if (!order) return null;
+    // 2. CONDITIONAL RETURNS SAFELY PLACED AFTER ALL HOOKS
+    if (!visible) return null;
+
+    if (!order) {
+        return (
+            <Dialog open={visible} onOpenChange={onClose}>
+                <DialogContent className="max-w-md w-[90vw] p-8 flex flex-col items-center justify-center bg-white rounded-2xl">
+                    <Loader2 className="w-8 h-8 animate-spin text-[#FB923C] mb-2" />
+                    <p className="text-sm text-gray-500 font-medium">Loading invoice details...</p>
+                </DialogContent>
+            </Dialog>
+        );
+    }
 
     return (
         <Dialog open={visible} onOpenChange={onClose}>
@@ -285,7 +283,7 @@ export default function OrderInvoice({ order, visible, onClose }: OrderInvoicePr
                         <span className="text-base font-semibold text-gray-800">Order Invoice</span>
                         <div className="flex gap-2">
                             <Button asChild variant="outline" size="sm" className="h-8 text-xs">
-                                <Link href={`/orders/invoice/${order.id}`} target="_blank">
+                                <Link href={`https://khushbuwaala.com/orders/invoice/${order.id}`} target="_blank">
                                     Full Page View
                                 </Link>
                             </Button>
@@ -314,7 +312,7 @@ export default function OrderInvoice({ order, visible, onClose }: OrderInvoicePr
                 {/* Invoice Body */}
                 <div className="p-4 sm:p-5 flex-1 overflow-y-auto bg-white text-gray-900">
                     <div ref={invoiceRef} className="w-full bg-white text-gray-900 space-y-2.5">
-                        {/* Header */}
+                        {/* Header Details */}
                         <div className="flex justify-between items-start border-b-2 border-green-700 pb-2">
                             <div>
                                 <h1 className="text-xl sm:text-2xl font-black text-green-700 leading-none mb-1">
@@ -324,7 +322,7 @@ export default function OrderInvoice({ order, visible, onClose }: OrderInvoicePr
                                     G/138, Eastern Banabithi Shopping Complex, South Banasree, Dhaka-1219
                                 </p>
                                 <p className="text-[11px] text-gray-600 leading-snug">
-                                    Phone: +880 1566-395807 | Email: khushbuwaala@gmail.com
+                                    Phone: +880 1777-152588 | Email: khushbuwaala@gmail.com
                                 </p>
                             </div>
 
@@ -367,8 +365,8 @@ export default function OrderInvoice({ order, visible, onClose }: OrderInvoicePr
                                     <span className="text-gray-500">Payment:</span>
                                     <span
                                         className={`px-2 py-0.5 rounded text-[10px] font-bold border ${order.isPaid
-                                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                                : "bg-rose-50 text-rose-700 border-rose-200"
+                                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                            : "bg-rose-50 text-rose-700 border-rose-200"
                                             }`}
                                     >
                                         {order.isPaid ? "PAID" : "DUE"}

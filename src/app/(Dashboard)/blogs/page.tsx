@@ -277,7 +277,7 @@ const BlogList = () => {
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
-    router.push(`//blogs?page=${newPage}`);
+    router.push(`/blogs?page=${newPage}`);
   };
 
   return (

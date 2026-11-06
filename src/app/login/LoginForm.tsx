@@ -55,17 +55,23 @@ export default function LoginForm() {
                 return;
             }
 
-            // Set cookies with proper configuration
+            // Set cookies with domain config for admin.khushbuwaala.com and proper flags
             localStorage.setItem('accessToken', accessToken);
-            Cookies.set('accessToken', accessToken, { path: '/' });
+            Cookies.set('accessToken', accessToken, {
+                path: '/',
+                domain: window.location.hostname.includes('khushbuwaala.com') ? '.khushbuwaala.com' : undefined,
+                secure: window.location.protocol === 'https:',
+                sameSite: 'lax'
+            });
 
             dispatch(setUser({ user: decoded, accessToken }));
 
             toast.success('Welcome back, Admin!', { duration: 1000 });
 
-            // Force redirection exclusively to dashboard since this is the admin panel portal
-            const targetPath = redirect || '/dashboard';
-            window.location.href = targetPath;
+            // Use Next.js client-side navigation + refresh instead of window.location.href
+            const targetPath = redirect || '/';
+            router.push(targetPath);
+            router.refresh();
 
         } catch (error: any) {
             toast.error(

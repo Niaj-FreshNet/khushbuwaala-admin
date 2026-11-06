@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import { ArrowLeft, Loader2, Receipt, Save, ChevronDown, ChevronUp, Trash2, Plus, Search, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Loader2, Receipt, Save, ChevronDown, ChevronUp, Trash2, Plus, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -145,6 +145,13 @@ export default function Page() {
         }, 0);
     }, [editableItems]);
 
+    // Computed grand total including shipping and discount
+    const calculatedGrandTotal = useMemo(() => {
+        const shipping = normalizeNumber(form?.shippingCost);
+        const discount = normalizeNumber(form?.discountAmount);
+        return Math.max(0, computedItemsTotal + shipping - discount);
+    }, [computedItemsTotal, form?.shippingCost, form?.discountAmount]);
+
     const setField = <K extends keyof IUpdateOrderPayload>(key: K, value: IUpdateOrderPayload[K]) => {
         setForm((prev) => {
             if (!prev) return prev;
@@ -256,7 +263,6 @@ export default function Page() {
         if (!orderId) return;
 
         try {
-            // Mapping Shipped/Returned to appropriate backend parameters if needed, or passing isPaid boolean
             const isPaidBool = next === "PAID";
             await updatePayment({ id: orderId, isPaid: isPaidBool }).unwrap();
             refetch();
@@ -269,7 +275,7 @@ export default function Page() {
         if (typeof window !== "undefined" && window.history.length > 1) {
             router.back();
         } else {
-            router.replace("//orders");
+            router.replace("/orders");
         }
     };
 
@@ -284,12 +290,12 @@ export default function Page() {
 
     if (isError) {
         return (
-            <div className="p-6 max-w-4xl mx-auto space-y-4">
+            <div className="p-4 max-w-4xl mx-auto space-y-3">
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" onClick={handleBack}>
+                    <Button variant="outline" size="sm" onClick={handleBack}>
                         <ArrowLeft className="w-4 h-4 mr-2" /> Back
                     </Button>
-                    <Button onClick={() => refetch()} className="bg-orange-500 hover:bg-orange-600 text-white">
+                    <Button onClick={() => refetch()} size="sm" className="bg-orange-500 hover:bg-orange-600 text-white">
                         Retry
                     </Button>
                 </div>
@@ -297,60 +303,59 @@ export default function Page() {
         );
     }
 
-    if (!order) return <div className="p-10 text-center">Order not found</div>;
+    if (!order) return <div className="p-10 text-center text-xs">Order not found</div>;
 
     return (
-        <div className="p-4 max-w-5xl mx-auto space-y-4 text-sm relative">
+        <div className="p-3 max-w-5xl mx-auto space-y-3 text-sm relative">
             {/* Global Saving / Fetching Indicator Overlay Banner */}
             {(saving || updatingStatus || updatingPayment || isFetching) && (
-                <div className="fixed top-4 right-4 z-50 bg-gray-900/90 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2.5 backdrop-blur-xs animate-in fade-in slide-in-from-top-4">
-                    <Loader2 className="w-4 h-4 animate-spin text-orange-400" />
-                    <span className="text-xs font-medium">
-                        {saving ? "Saving changes..." : updatingStatus ? "Updating status..." : updatingPayment ? "Updating payment..." : "Syncing..."}
+                <div className="fixed top-3 right-3 z-50 bg-gray-900/90 text-white px-3 py-1.5 rounded-full shadow-lg flex items-center gap-2 backdrop-blur-xs animate-in fade-in">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-orange-400" />
+                    <span className="text-[11px] font-medium">
+                        {saving ? "Saving..." : updatingStatus ? "Updating status..." : updatingPayment ? "Updating payment..." : "Syncing..."}
                     </span>
                 </div>
             )}
 
             {/* Top Minimal Header */}
-            <div className="flex items-center justify-between bg-white p-3 rounded-lg border shadow-xs">
+            <div className="flex items-center justify-between bg-white p-2.5 rounded-lg border shadow-xs">
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={handleBack}>
-                        <ArrowLeft className="w-4 h-4 mr-1.5" /> Back
+                    <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleBack}>
+                        <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Back
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => setShowInvoice(true)} className="border-orange-300 text-orange-600 hover:bg-orange-50">
-                        <Receipt className="w-4 h-4 mr-1.5" /> Invoice
+                    <Button variant="outline" size="sm" onClick={() => setShowInvoice(true)} className="h-8 text-xs border-orange-300 text-orange-600 hover:bg-orange-50">
+                        <Receipt className="w-3.5 h-3.5 mr-1" /> Invoice
                     </Button>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                     <span className="text-xs text-gray-500 font-medium">Invoice #{order.invoice}</span>
                     {dirty && (
                         <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">
-                            Unsaved Changes
+                            Unsaved
                         </span>
                     )}
                     <Button
                         onClick={handleSaveAll}
                         disabled={!dirty || saving}
                         size="sm"
-                        className={`text-white gap-1.5 cursor-pointer transition-all ${dirty ? "bg-orange-500 hover:bg-orange-600 shadow-sm" : "bg-gray-400 cursor-not-allowed"
-                            }`}
+                        className={`h-8 text-xs gap-1.5 cursor-pointer transition-all ${dirty ? "bg-orange-500 hover:bg-orange-600 text-white shadow-sm" : "bg-gray-200 text-gray-500 cursor-not-allowed"}`}
                     >
-                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                         Save Changes
                     </Button>
                 </div>
             </div>
 
-            {/* Compact Quick Details & Status Bar with explicit loading feedback */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-white p-3 rounded-lg border shadow-xs">
+            {/* Quick Details & Status Bar */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5 bg-white p-3 rounded-lg border shadow-xs">
                 <div>
-                    <label className="text-xs text-gray-500 font-medium mb-1 flex items-center justify-between">
+                    <label className="text-[11px] text-gray-500 font-medium mb-1 flex items-center justify-between">
                         <span>Order Status</span>
                         {updatingStatus && <Loader2 className="w-3 h-3 animate-spin text-orange-500" />}
                     </label>
                     <Select value={statusValue} onValueChange={onStatusChange} disabled={updatingStatus}>
-                        <SelectTrigger className="h-9 text-xs">
+                        <SelectTrigger className="h-8 text-xs">
                             <SelectValue placeholder="Status" />
                         </SelectTrigger>
                         <SelectContent>
@@ -362,12 +367,12 @@ export default function Page() {
                 </div>
 
                 <div>
-                    <label className="text-xs text-gray-500 font-medium mb-1 flex items-center justify-between">
+                    <label className="text-[11px] text-gray-500 font-medium mb-1 flex items-center justify-between">
                         <span>Payment Status</span>
                         {updatingPayment && <Loader2 className="w-3 h-3 animate-spin text-orange-500" />}
                     </label>
                     <Select value={paymentValue} onValueChange={onPaymentChange} disabled={updatingPayment}>
-                        <SelectTrigger className="h-9 text-xs">
+                        <SelectTrigger className="h-8 text-xs">
                             <SelectValue placeholder="Payment" />
                         </SelectTrigger>
                         <SelectContent>
@@ -380,9 +385,9 @@ export default function Page() {
                 </div>
 
                 <div>
-                    <label className="text-xs text-gray-500 font-medium mb-1 block">Payment Method</label>
+                    <label className="text-[11px] text-gray-500 font-medium mb-1 block">Payment Method</label>
                     <Select value={(form.method ?? "") as any} onValueChange={(val) => setField("method", val as any)}>
-                        <SelectTrigger className="h-9 text-xs border-orange-300">
+                        <SelectTrigger className="h-8 text-xs border-orange-300">
                             <SelectValue placeholder="Method" />
                         </SelectTrigger>
                         <SelectContent>
@@ -395,21 +400,22 @@ export default function Page() {
 
                 <div>
                     <div className="flex items-center justify-between mb-1">
-                        <label className="text-xs text-gray-500 font-medium">Final Amount (BDT)</label>
+                        <label className="text-[11px] text-gray-500 font-medium">Final Amount (BDT)</label>
                         <button
                             type="button"
-                            className="text-[10px] text-orange-600 hover:underline font-medium"
+                            className="text-[10px] text-orange-600 hover:underline font-semibold"
                             onClick={() => {
-                                setAmountInput(computedItemsTotal);
+                                setAmountInput(calculatedGrandTotal);
                                 setDirty(true);
                             }}
+                            title="Sync: Subtotal + Shipping - Discount"
                         >
-                            Sync Total ({computedItemsTotal})
+                            Sync Total ({calculatedGrandTotal})
                         </button>
                     </div>
                     <Input
                         type="number"
-                        className="h-9 text-xs font-semibold"
+                        className="h-8 text-xs font-semibold"
                         value={String(amountInput)}
                         onChange={(e) => {
                             setAmountInput(normalizeNumber(e.target.value));
@@ -420,9 +426,9 @@ export default function Page() {
             </div>
 
             {/* Financial adjustments row */}
-            <div className="grid grid-cols-3 gap-3 bg-white p-3 rounded-lg border shadow-xs">
+            <div className="grid grid-cols-3 gap-2.5 bg-white p-3 rounded-lg border shadow-xs">
                 <div>
-                    <label className="text-xs text-gray-500 font-medium mb-1 block">Shipping Cost</label>
+                    <label className="text-[11px] text-gray-500 font-medium mb-1 block">Shipping Cost</label>
                     <Input
                         type="number"
                         className="h-8 text-xs"
@@ -431,7 +437,7 @@ export default function Page() {
                     />
                 </div>
                 <div>
-                    <label className="text-xs text-gray-500 font-medium mb-1 block">Discount Amount</label>
+                    <label className="text-[11px] text-gray-500 font-medium mb-1 block">Discount Amount</label>
                     <Input
                         type="number"
                         className="h-8 text-xs"
@@ -440,7 +446,7 @@ export default function Page() {
                     />
                 </div>
                 <div>
-                    <label className="text-xs text-gray-500 font-medium mb-1 block">Coupon Code</label>
+                    <label className="text-[11px] text-gray-500 font-medium mb-1 block">Coupon Code</label>
                     <Input
                         className="h-8 text-xs"
                         value={form.coupon ?? ""}
@@ -450,17 +456,17 @@ export default function Page() {
                 </div>
             </div>
 
-            {/* Compact Order Items Card */}
+            {/* Order Items Card */}
             <Card className="shadow-xs">
-                <CardHeader className="py-3 px-4 flex flex-row items-center justify-between border-b">
-                    <CardTitle className="text-sm font-semibold">Order Items ({editableItems.length})</CardTitle>
-                    <Button variant="outline" size="sm" onClick={() => setIsProductModalOpen(true)} className="h-8 text-xs gap-1.5 border-orange-400 text-orange-600 hover:bg-orange-50">
+                <CardHeader className="py-2.5 px-3.5 flex flex-row items-center justify-between border-b">
+                    <CardTitle className="text-xs font-semibold">Order Items ({editableItems.length}) - Subtotal: {computedItemsTotal} BDT</CardTitle>
+                    <Button variant="outline" size="sm" onClick={() => setIsProductModalOpen(true)} className="h-7 text-xs gap-1 border-orange-400 text-orange-600 hover:bg-orange-50">
                         <Plus className="w-3.5 h-3.5" /> Add Product
                     </Button>
                 </CardHeader>
-                <CardContent className="p-3 space-y-2.5">
+                <CardContent className="p-2.5 space-y-2">
                     {editableItems.length === 0 ? (
-                        <p className="text-xs text-gray-500 text-center py-6">No items in this order.</p>
+                        <p className="text-xs text-gray-500 text-center py-4">No items in this order.</p>
                     ) : (
                         editableItems.map((item) => {
                             const qty = item.quantity ?? 1;
@@ -468,41 +474,41 @@ export default function Page() {
                             const lineTotal = price * normalizeNumber(qty);
 
                             return (
-                                <div key={item.id} className="flex items-center gap-3 border p-2.5 rounded-md bg-gray-50/50">
+                                <div key={item.id} className="flex items-center gap-2.5 border p-2 rounded-md bg-gray-50/50">
                                     <Image
                                         src={item.product?.primaryImage || "/placeholder.png"}
                                         alt={item.product?.name || "Product"}
-                                        width={44}
-                                        height={44}
+                                        width={38}
+                                        height={38}
                                         className="rounded object-cover border"
                                     />
 
                                     <div className="flex-1 min-w-0">
                                         <p className="font-medium text-xs text-gray-900 truncate">{item.product?.name || "Product Item"}</p>
                                         <div className="flex items-center gap-2 mt-1">
-                                            <div className="w-16">
-                                                <span className="text-[10px] text-gray-400 block">Size</span>
+                                            <div className="w-14">
+                                                <span className="text-[9px] text-gray-400 block">Size</span>
                                                 <Input
                                                     type="number"
-                                                    className="h-7 text-xs px-1.5"
+                                                    className="h-6 text-xs px-1"
                                                     value={String(item.size ?? "")}
                                                     onChange={(e) => handleItemFieldChange(item.id, "size", e.target.value)}
                                                 />
                                             </div>
-                                            <div className="w-16">
-                                                <span className="text-[10px] text-gray-400 block">Unit</span>
+                                            <div className="w-14">
+                                                <span className="text-[9px] text-gray-400 block">Unit</span>
                                                 <Input
                                                     type="text"
-                                                    className="h-7 text-xs px-1.5"
+                                                    className="h-6 text-xs px-1"
                                                     value={String(item.unit ?? "")}
                                                     onChange={(e) => handleItemFieldChange(item.id, "unit", e.target.value)}
                                                 />
                                             </div>
                                             <div className="w-20">
-                                                <span className="text-[10px] text-gray-400 block">Price</span>
+                                                <span className="text-[9px] text-gray-400 block">Price</span>
                                                 <Input
                                                     type="number"
-                                                    className="h-7 text-xs px-1.5"
+                                                    className="h-6 text-xs px-1"
                                                     value={String(item.price ?? "")}
                                                     onChange={(e) => handleItemFieldChange(item.id, "price", e.target.value)}
                                                 />
@@ -510,27 +516,27 @@ export default function Page() {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-16 text-center">
-                                            <span className="text-[10px] text-gray-400 block mb-1">Qty</span>
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-14 text-center">
+                                            <span className="text-[9px] text-gray-400 block mb-0.5">Qty</span>
                                             <Input
                                                 type="number"
                                                 min={1}
-                                                className="h-7 text-xs text-center px-1"
+                                                className="h-6 text-xs text-center px-1"
                                                 value={String(qty)}
                                                 onChange={(e) => handleItemFieldChange(item.id, "quantity", e.target.value)}
                                             />
                                         </div>
 
-                                        <div className="w-20 text-right">
-                                            <span className="text-[10px] text-gray-400 block">Total</span>
-                                            <span className="text-xs font-semibold text-gray-800">{lineTotal} BDT</span>
+                                        <div className="w-18 text-right">
+                                            <span className="text-[9px] text-gray-400 block">Total</span>
+                                            <span className="text-xs font-semibold text-gray-800">{lineTotal}</span>
                                         </div>
 
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                            className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50"
                                             onClick={() => handleRemoveItem(item.id)}
                                         >
                                             <Trash2 className="w-3.5 h-3.5" />
@@ -543,32 +549,32 @@ export default function Page() {
                 </CardContent>
             </Card>
 
-            {/* Minimal Collapsible Advanced Section */}
+            {/* Collapsible Advanced Section */}
             <Card className="shadow-xs">
-                <CardHeader className="py-2.5 px-4 flex flex-row items-center justify-between cursor-pointer" onClick={() => setShowAdvanced((p) => !p)}>
+                <CardHeader className="py-2 px-3 flex flex-row items-center justify-between cursor-pointer" onClick={() => setShowAdvanced((p) => !p)}>
                     <CardTitle className="text-xs font-semibold text-gray-600">Customer, Shipping & Billing Details</CardTitle>
-                    <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
-                        {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                    <Button variant="ghost" size="sm" className="h-6 text-xs gap-1">
+                        {showAdvanced ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                         {showAdvanced ? "Hide" : "Expand"}
                     </Button>
                 </CardHeader>
 
                 {showAdvanced && (
-                    <CardContent className="p-4 space-y-4 border-t text-xs">
+                    <CardContent className="p-3 space-y-3 border-t text-xs">
                         <div>
                             <label className="text-gray-500 font-medium mb-1 block">Additional Notes</label>
                             <Textarea
                                 value={form.additionalNotes ?? ""}
                                 onChange={(e) => setField("additionalNotes", e.target.value)}
-                                className="h-16 text-xs resize-none"
+                                className="h-14 text-xs resize-none"
                             />
                         </div>
 
                         <Separator />
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {/* Shipping */}
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                                 <h4 className="font-semibold text-gray-700">Shipping Address</h4>
                                 <div className="grid grid-cols-2 gap-2">
                                     <Input placeholder="Name" className="h-7 text-xs" value={form.shipping?.name ?? ""} onChange={(e) => setAddressField("shipping", "name", e.target.value)} />
@@ -582,7 +588,7 @@ export default function Page() {
                             </div>
 
                             {/* Billing */}
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                                 <h4 className="font-semibold text-gray-700">Billing Address</h4>
                                 <div className="grid grid-cols-2 gap-2">
                                     <Input placeholder="Name" className="h-7 text-xs" value={form.billing?.name ?? ""} onChange={(e) => setAddressField("billing", "name", e.target.value)} />
@@ -601,42 +607,42 @@ export default function Page() {
 
             {/* Product Picker Modal */}
             {isProductModalOpen && (
-                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-3">
                     <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[80vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
                         <div className="p-3 border-b flex items-center justify-between">
-                            <h3 className="font-semibold text-sm">Select Product to Add</h3>
-                            <Button variant="ghost" size="sm" onClick={() => setIsProductModalOpen(false)} className="h-7 w-7 p-0">✕</Button>
+                            <h3 className="font-semibold text-xs">Select Product to Add</h3>
+                            <Button variant="ghost" size="sm" onClick={() => setIsProductModalOpen(false)} className="h-6 w-6 p-0">✕</Button>
                         </div>
-                        <div className="p-3 border-b bg-gray-50">
+                        <div className="p-2.5 border-b bg-gray-50">
                             <div className="relative">
-                                <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-gray-400" />
+                                <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-gray-400" />
                                 <Input
                                     placeholder="Search catalog products..."
-                                    className="pl-8 h-8 text-xs bg-white"
+                                    className="pl-8 h-7 text-xs bg-white"
                                     value={productSearchTerm}
                                     onChange={(e) => setProductSearchTerm(e.target.value)}
                                 />
                             </div>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                        <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5">
                             {loadingProducts ? (
-                                <div className="flex flex-col items-center justify-center py-10 gap-2">
-                                    <Loader2 className="animate-spin w-5 h-5 text-orange-500" />
-                                    <p className="text-xs text-gray-400">Loading catalog...</p>
+                                <div className="flex flex-col items-center justify-center py-8 gap-2">
+                                    <Loader2 className="animate-spin w-4 h-4 text-orange-500" />
+                                    <p className="text-[11px] text-gray-400">Loading catalog...</p>
                                 </div>
                             ) : productList.length === 0 ? (
-                                <p className="text-xs text-gray-500 text-center py-6">No products found.</p>
+                                <p className="text-xs text-gray-500 text-center py-4">No products found.</p>
                             ) : (
                                 productList.map((prod: any) => (
                                     <div
                                         key={prod.id}
                                         onClick={() => handleSelectProductToAdd(prod)}
-                                        className="flex items-center gap-3 p-2 rounded border hover:bg-orange-50 hover:border-orange-200 cursor-pointer transition-colors"
+                                        className="flex items-center gap-2.5 p-1.5 rounded border hover:bg-orange-50 hover:border-orange-200 cursor-pointer transition-colors"
                                     >
-                                        <Image src={prod.primaryImage || "/placeholder.png"} alt={prod.name} width={36} height={36} className="rounded object-cover" />
-                                        <div className="flex-1">
-                                            <p className="text-xs font-semibold text-gray-800">{prod.name}</p>
-                                            <p className="text-[10px] text-gray-500">Variants available: {prod.variants?.length || 0}</p>
+                                        <Image src={prod.primaryImage || "/placeholder.png"} alt={prod.name} width={32} height={32} className="rounded object-cover" />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-semibold text-gray-800 truncate">{prod.name}</p>
+                                            <p className="text-[10px] text-gray-500">Variants: {prod.variants?.length || 0}</p>
                                         </div>
                                         <span className="text-xs font-medium text-orange-600">Select</span>
                                     </div>

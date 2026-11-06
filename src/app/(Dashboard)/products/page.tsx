@@ -248,7 +248,7 @@ const ProductList = () => {
                             variant="ghost"
                             size="icon"
                             onClick={() =>
-                              router.push(`//products/${product.slug}`)
+                              router.push(`/products/${product.slug}`)
                             }
                           >
                             <Eye className="w-4 h-4" />

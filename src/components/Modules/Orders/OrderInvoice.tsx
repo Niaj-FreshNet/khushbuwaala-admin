@@ -198,7 +198,7 @@ export const OrderInvoice = forwardRef<HTMLDivElement, OrderInvoiceProps>(
                                 <p className="text-sm text-gray-700">
                                     G/138, Eastern Banabithi Shopping Complex <br /> South Banasree, Khilgaon, Dhaka-1219
                                 </p>
-                                <p className="text-sm text-gray-700">+880 1566-395807</p>
+                                <p className="text-sm text-gray-700">+880 1777-152588</p>
                                 <p className="text-sm text-gray-700">khushbuwaala@gmail.com</p>
                             </CardContent>
                         </Card>

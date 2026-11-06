@@ -31,11 +31,11 @@ const StockManagementPage = () => {
   const meta = data?.meta;
 
   const handleViewLogs = (productId: string) => {
-    router.push(`//stock/logs/${productId}`);
+    router.push(`/stock/logs/${productId}`);
   };
 
   const handleAddStock = (productId: string) => {
-    router.push(`//stock/add?productId=${productId}`);
+    router.push(`/stock/add?productId=${productId}`);
   };
 
   return (

@@ -262,7 +262,7 @@ export default function DiscountList() {
                     {/* Actions (ONLY place to navigate) */}
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Link href={`//discounts/${d.id}`}>
+                        <Link href={`/discounts/${d.id}`}>
                           <Button
                             size="icon"
                             variant="ghost"
