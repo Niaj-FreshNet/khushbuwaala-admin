@@ -48,7 +48,6 @@ export default function FormWrapper({
     try {
       const result = await onSubmit(data);
       if (result !== false) {
-        // toast.success(successMessage);
         if (resetOnSuccess) methods.reset();
       }
     } catch (error: any) {
@@ -72,21 +71,23 @@ export default function FormWrapper({
     <FormProvider {...methods}>
       <form
         onSubmit={methods.handleSubmit(handleSubmit)}
-        className={cn('space-y-6', className)}
+        className={cn('w-full h-fit space-y-4 pb-2', className)}
         noValidate
         encType="multipart/form-data"
       >
         {children}
 
-        <div className="flex justify-end gap-4 pt-4">
+        {/* Action bar embedded tightly right after form elements to eradicate trailing empty space */}
+        <div className="flex items-center justify-end gap-2.5 pt-3 mt-2 border-t border-gray-100">
           {showResetButton && (
             <Button
               type="button"
               variant="outline"
+              size="sm"
               onClick={handleReset}
               disabled={isSubmitting}
               className={cn(
-                'border-orange-400 text-orange-500 hover:bg-orange-50',
+                'border-gray-300 text-gray-700 hover:bg-gray-100 text-xs h-8 px-4 font-semibold shadow-2xs',
                 resetButtonClassName
               )}
             >
@@ -96,17 +97,18 @@ export default function FormWrapper({
 
           <Button
             type="submit"
+            size="sm"
             disabled={isSubmitting}
             className={cn(
-              'bg-orange-500 hover:bg-orange-600 text-white transition-colors duration-200',
+              'bg-[#FB923C] hover:bg-[#ff8a29] text-white text-xs font-bold h-8 px-5 transition-colors duration-200 shadow-2xs',
               isSubmitting && 'opacity-70 cursor-not-allowed',
               submitButtonClassName
             )}
           >
             {isSubmitting ? (
-              <span className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Submitting...
+              <span className="flex items-center gap-1.5">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Processing...
               </span>
             ) : (
               submitButtonText

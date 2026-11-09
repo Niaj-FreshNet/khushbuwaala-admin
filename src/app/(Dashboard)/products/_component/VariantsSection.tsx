@@ -19,48 +19,10 @@ interface FormValues {
 export const VariantsSection = ({ selectedSizes }: Props) => {
   const form = useFormContext<FormValues>();
 
-  // ✅ Hooks must be top-level
   const productName = useWatch({ control: form.control, name: "name" });
   const variants = useWatch({ control: form.control, name: "variants" }) || [];
-  const categoryUnit = useWatch({ control: form.control, name: "variants.0.unit" }) || "";
 
-  // ✅ Sync sizes <-> variants
-  useEffect(() => {
-    const existingVariants = form.getValues("variants") || [];
-
-    // Add new sizes
-    const newVariants = selectedSizes
-      .filter((size) => !existingVariants.some((v) => String(v.size) === String(size)))
-      .map((size) => ({
-        size,
-        price: 111,
-        unit: categoryUnit || existingVariants.find(v => v.unit)?.unit || "", // ✅ dynamic unit
-        sku: "",
-      }));
-
-    let next = existingVariants;
-
-    if (newVariants.length > 0) {
-      next = [...next, ...newVariants];
-    }
-
-    // Remove unselected sizes
-    const filtered = next.filter((v) => selectedSizes.includes(String(v.size)));
-
-    // Only set if changed (avoid loops)
-    const changed =
-      filtered.length !== existingVariants.length ||
-      filtered.some((v, i) =>
-        String(v.size) !== String(existingVariants[i]?.size) ||
-        String(v.unit || "") !== String(existingVariants[i]?.unit || "")
-      );
-
-    if (changed) {
-      form.setValue("variants", filtered, { shouldDirty: true, shouldValidate: true });
-    }
-  }, [selectedSizes, categoryUnit, form]);
-
-  // ✅ Auto-generate SKU
+  // Auto-generate SKUs when name, size, or unit changes
   useEffect(() => {
     const existing = form.getValues("variants") || [];
 
@@ -69,21 +31,16 @@ export const VariantsSection = ({ selectedSizes }: Props) => {
         productName?.trim().replace(/\s+/g, "").toUpperCase() || "PRODUCT";
 
       const sizePart = variant.size ? String(variant.size).toUpperCase() : "SIZE";
-
-      // ✅ use categoryUnit if variant.unit missing
-      const resolvedUnit = String(variant.unit || categoryUnit || "").trim();
-      const unitPart = resolvedUnit ? resolvedUnit.toUpperCase() : "UNIT";
-
-      const skuWithDash = `KWP-${namePart}-${sizePart}-${unitPart}`;
+      const resolvedUnit = String(variant.unit || "ML").trim().toUpperCase();
+      const skuWithDash = `KWP-${namePart}-${sizePart}-${resolvedUnit}`;
 
       return {
         ...variant,
-        unit: resolvedUnit,       // ✅ keep dynamic unit
+        unit: resolvedUnit,
         sku: skuWithDash,
       };
     });
 
-    // Avoid infinite set loop
     const changed =
       updated.length !== existing.length ||
       updated.some((v, i) => v.sku !== existing[i]?.sku || v.unit !== existing[i]?.unit);
@@ -91,46 +48,51 @@ export const VariantsSection = ({ selectedSizes }: Props) => {
     if (changed) {
       form.setValue("variants", updated, { shouldDirty: true });
     }
-  }, [productName, categoryUnit, variants.map(v => `${v.size}-${v.unit}`).join("|"), form]);
+  }, [productName, variants.map(v => `${v.size}-${v.unit}`).join("|"), form]);
+
+  if (variants.length === 0) {
+    return (
+      <div className="text-center py-6 border border-dashed border-gray-300 rounded-lg text-gray-400 text-xs">
+        No variants configured. Click &quot;Add New Variant Row&quot; below to start.
+      </div>
+    );
+  }
 
   return (
-    <div>
+    <div className="space-y-3">
       {variants.map((variant, index) => (
-        <div key={variant.id || index} className="border border-[#FB923C] rounded-lg p-4 mb-4">
-          <div className="flex justify-end mb-2">
+        <div key={variant.id || index} className="border border-gray-200/80 bg-gray-50/60 rounded-xl p-3.5 shadow-2xs relative">
+          <div className="absolute top-3 right-3">
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               size="icon"
+              className="h-7 w-7 text-gray-400 hover:text-red-600 hover:bg-red-50"
               onClick={() => {
                 const allVariants = form.getValues("variants") || [];
                 form.setValue("variants", allVariants.filter((_, i) => i !== index), { shouldDirty: true });
               }}
+              title="Remove Variant"
             >
               <X className="w-4 h-4" />
             </Button>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {/* Size */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pr-8 sm:pr-0">
+            {/* Fully Editable Size */}
             <FormInput
               name={`variants.${index}.size`}
-              label="Size"
-              type="select"
-              options={selectedSizes.map((size) => ({
-                value: size,
-                label: `${size} ${variant.unit || categoryUnit || ""}`.trim(),
-              }))}
-              inputClassName="border-[#FB923C]"
-              placeholder="Select Size"
+              label="Size Value"
+              placeholder="e.g. 50"
+              inputClassName="border-gray-300 text-xs h-9 bg-white"
             />
 
-            {/* Price */}
+            {/* Fully Editable Price */}
             <FormInput
               name={`variants.${index}.price`}
-              label="Price"
+              label="Price (BDT)"
               type="number"
-              inputClassName="border-[#FB923C]"
+              inputClassName="border-gray-300 text-xs h-9 bg-white"
               value={variant.price}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                 const value = e.target.value === "" ? 0 : Number(e.target.value);
@@ -140,21 +102,28 @@ export const VariantsSection = ({ selectedSizes }: Props) => {
               }}
             />
 
-            {/* Unit (read-only display) */}
+            {/* Fully Editable Unit (e.g. ML, GM, PCS, OZ) */}
             <FormInput
               name={`variants.${index}.unit`}
               label="Unit"
-              placeholder=""
-              inputClassName="border-[#FB923C] bg-gray-50 text-gray-600 cursor-not-allowed"
+              placeholder="ML / GM"
+              inputClassName="border-gray-300 text-xs h-9 bg-white uppercase"
+              value={variant.unit}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                const value = e.target.value.toUpperCase();
+                const allVariants = form.getValues("variants") || [];
+                allVariants[index].unit = value;
+                form.setValue("variants", allVariants, { shouldDirty: true });
+              }}
             />
 
-            {/* SKU */}
-            <div>
-              <label className="text-sm font-medium text-gray-700">SKU</label>
+            {/* Auto SKU display */}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-gray-700">Auto SKU Code</label>
               <input
                 value={variant.sku ? variant.sku.replace(/-/g, "") : ""}
                 readOnly
-                className="w-full border border-[#FB923C] rounded-md px-3 py-2 text-gray-600 bg-gray-50 cursor-not-allowed"
+                className="w-full border border-gray-300 rounded-md px-3 h-9 text-xs text-gray-500 bg-gray-100 cursor-not-allowed truncate"
               />
             </div>
           </div>

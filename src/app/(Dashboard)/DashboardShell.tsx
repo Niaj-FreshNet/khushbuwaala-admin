@@ -52,7 +52,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     }, []);
 
     return (
-        <div className="flex w-full h-dvh overflow-hidden bg-gray-50">
+        <div className="min-h-screen w-full bg-gray-50 relative">
             {/* Backdrop for mobile drawer */}
             <div
                 onClick={() => setIsOpen(false)}
@@ -63,7 +63,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                 aria-hidden="true"
             />
 
-            {/* Sidebar */}
+            {/* Sidebar (Fixed to screen left) */}
             <SideBar
                 dark
                 setIsShort={setIsShort}
@@ -73,54 +73,57 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                 navRef={navRef}
             />
 
-            {/* Main */}
-            <div className="flex flex-col flex-1 min-w-0 h-full">
+            {/* Main Content Container - Dynamic left margin based on sidebar state (w-14 = 3.5rem -> ml-14, w-46 -> ml-46) */}
+            <div
+                className={cn(
+                    "flex flex-col min-w-0 transition-all duration-300 ease-in-out",
+                    isShort ? "lg:ml-14" : "lg:ml-46"
+                )}
+            >
                 {/* Top bar */}
                 <TopBar dark setIsOpen={setIsOpen} isOpen={isOpen} />
 
-                {/* Scroll area */}
-                <main className="flex-1 min-h-0 overflow-y-auto">
-                    <div className="p-2">
-                        <BreadCrumb />
+                {/* Page Content */}
+                <main className="flex-1 min-w-0 bg-gray-50/70 p-2 sm:p-4">
+                    <BreadCrumb />
 
-                        {/* content card */}
-                        <div className="shadow-sm">
-                            {isLoading || (hasToken && !user) ? (
-                                <div className="py-10 text-center">
-                                    <p className="text-gray-500">Checking session...</p>
-                                </div>
-                            ) : !user ? (
-                                <div className="py-10 text-center">
-                                    <h2 className="text-lg font-semibold text-gray-900">You’re not logged in</h2>
-                                    <p className="text-gray-600 mt-1">
-                                        Please login to access the dashboard.
-                                    </p>
+                    {/* content card */}
+                    <div className="shadow-sm mt-4">
+                        {isLoading || (hasToken && !user) ? (
+                            <div className="py-10 text-center">
+                                <p className="text-gray-500">Checking session...</p>
+                            </div>
+                        ) : !user ? (
+                            <div className="py-10 text-center">
+                                <h2 className="text-lg font-semibold text-gray-900">You’re not logged in</h2>
+                                <p className="text-gray-600 mt-1">
+                                    Please login to access the dashboard.
+                                </p>
 
-                                    <div className="mt-5 flex items-center justify-center gap-2">
-                                        <Link
-                                            href="/login"
-                                            className={cn(
-                                                "inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium",
-                                                "bg-gray-900 text-white hover:bg-gray-800"
-                                            )}
-                                        >
-                                            Go to Login
-                                        </Link>
-                                        <Link
-                                            href="/dashboard"
-                                            className={cn(
-                                                "inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium",
-                                                "border border-gray-200 bg-white text-gray-900 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            Back to Home
-                                        </Link>
-                                    </div>
+                                <div className="mt-5 flex items-center justify-center gap-2">
+                                    <Link
+                                        href="/login"
+                                        className={cn(
+                                            "inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium",
+                                            "bg-gray-900 text-white hover:bg-gray-800"
+                                        )}
+                                    >
+                                        Go to Login
+                                    </Link>
+                                    <Link
+                                        href="/dashboard"
+                                        className={cn(
+                                            "inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium",
+                                            "border border-gray-200 bg-white text-gray-900 hover:bg-gray-50"
+                                        )}
+                                    >
+                                        Back to Home
+                                    </Link>
                                 </div>
-                            ) : (
-                                children
-                            )}
-                        </div>
+                            </div>
+                        ) : (
+                            children
+                        )}
                     </div>
                 </main>
             </div>

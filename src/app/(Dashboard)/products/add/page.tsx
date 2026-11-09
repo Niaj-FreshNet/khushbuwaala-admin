@@ -1,8 +1,9 @@
-'use client';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+"use client";
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { useGetAllCategoriesAdminQuery } from '@/redux/store/api/category/categoryApi';
 import { useGetAllMaterialsQuery } from '@/redux/store/api/material/materialApi';
 import { useGetAllFragrancesQuery } from '@/redux/store/api/fragrance/fragranceApi';
@@ -11,7 +12,6 @@ import { toast } from 'sonner';
 import { Category } from '@/types/category.types';
 import { Material } from '@/types/material.types';
 import { Fragrance } from '@/types/fragrance.types';
-import { Button } from '@/components/ui/button';
 import FormWrapper from '@/components/ReusableUI/FormWrapper';
 import FormInput from '@/components/ReusableUI/FormInput';
 import { useFormContext } from 'react-hook-form';
@@ -21,8 +21,11 @@ import SizesCheckboxes from '../_component/SizesCheckboxes';
 import { VariantsSection } from '../_component/VariantsSection';
 import AddVariantButton from '../_component/AddVariantButton';
 import { PublishedSwitch } from '../_component/PublishedSwitch';
+import { RichDescriptionEditor } from '../_component/RichDescriptionEditor';
 import { VariantForForm } from '@/types/product.types';
 import { uploadToCloudinary } from '@/lib/helper/uploadToCloudinary';
+import { ImagePlus, X, Sparkles, Layers, Info, Sliders, ShieldCheck } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface FormValues {
   name: string;
@@ -76,7 +79,7 @@ const AddProductPage = () => {
     materialIds: [],
     fragranceIds: [],
     published: true,
-    variants: [{ size: '', price: 0, stock: 0, sku: '', unit: '' }],
+    variants: [{ id: 'default-1', size: '3', price: 480, stock: 10, sku: 'KWP-PRODUCT-3-ML', unit: 'ML' }],
     primaryImage: [],
     otherImages: [],
     origin: '',
@@ -91,17 +94,24 @@ const AddProductPage = () => {
   };
 
   const handleSubmit = async (values: FormValues) => {
-    if (values.primaryImage.length === 0) {
-      toast.error('Please upload at least one image.');
-      return;
+    if (!values.name?.trim()) {
+      toast.error('Product name is required.');
+      return false;
     }
-    if (values.variants.length === 0) {
-      toast.error('Please add at least one variant.');
-      return;
+    if (!values.categoryId) {
+      toast.error('Please select a product category.');
+      return false;
+    }
+    if (!values.primaryImage || (Array.isArray(values.primaryImage) && values.primaryImage.length === 0)) {
+      toast.error('Please upload a primary thumbnail image.');
+      return false;
+    }
+    if (!values.variants || values.variants.length === 0) {
+      toast.error('Please add at least one product variant.');
+      return false;
     }
 
     try {
-      // 🧠 Upload primary image first
       const primaryFile = Array.isArray(values.primaryImage)
         ? values.primaryImage[0]
         : values.primaryImage;
@@ -114,7 +124,6 @@ const AddProductPage = () => {
         'khushbuwaala_images/products'
       );
 
-      // 🧠 Upload other images next
       const otherFiles = Array.isArray(values.otherImages)
         ? values.otherImages
         : [values.otherImages];
@@ -129,279 +138,314 @@ const AddProductPage = () => {
         ...values,
         primaryImage: primaryImageUrl,
         otherImages: otherImageUrls,
-        tags: values.tags.split(',').map(t => t.trim()).filter(Boolean),
-        accords: values.accords.split(',').map(a => a.trim()).filter(Boolean),
-        bestFor: values.bestFor?.split(',').map(b => b.trim()).filter(Boolean),
+        tags: values.tags ? values.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+        accords: values.accords ? values.accords.split(',').map(a => a.trim()).filter(Boolean) : [],
+        bestFor: values.bestFor ? values.bestFor.split(',').map(b => b.trim()).filter(Boolean) : [],
         perfumeNotes: {
-          top: values.perfumeNotes.top.split(',').map(n => n.trim()).filter(Boolean),
-          middle: values.perfumeNotes.middle.split(',').map(n => n.trim()).filter(Boolean),
-          base: values.perfumeNotes.base.split(',').map(n => n.trim()).filter(Boolean),
+          top: values.perfumeNotes?.top ? values.perfumeNotes.top.split(',').map(n => n.trim()).filter(Boolean) : [],
+          middle: values.perfumeNotes?.middle ? values.perfumeNotes.middle.split(',').map(n => n.trim()).filter(Boolean) : [],
+          base: values.perfumeNotes?.base ? values.perfumeNotes.base.split(',').map(n => n.trim()).filter(Boolean) : [],
         },
         variants: values.variants.map(v => ({
-          sku: v.sku,
+          sku: v.sku || `KWP-${values.name.replace(/\s+/g, "").toUpperCase()}-${v.size}-${v.unit}`,
           size: Number(v.size),
-          unit: v.unit.toUpperCase(),
+          unit: (v.unit || 'ML').toUpperCase(),
           price: Number(v.price),
         })),
       };
 
       await createProduct(payload).unwrap();
-      toast.success('Product added successfully!');
+      toast.success('Product published successfully!');
       setImagePreviews([]);
-      // router.push('//products');
+      router.push('/products');
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error('Image upload or product creation failed.');
+      toast.error(error?.data?.message || 'Product creation failed. Check fields and images.');
       return false;
     }
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-7xl">
-      <Card className="border-none shadow-none">
-        <CardHeader>
-          <CardTitle className="text-2xl font-semibold text-gray-900">Add Product</CardTitle>
-        </CardHeader>
-        <CardContent>
+    <div className="w-full space-y-3 pb-8">
+      {/* Compact Header Bar */}
+      <div className="bg-white px-4 py-2.5 rounded-xl border border-gray-200/80 shadow-2xs flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 bg-orange-50 rounded-lg text-[#FB923C] border border-orange-100">
+            <Sparkles className="w-4 h-4" />
+          </div>
+          <div>
+            <h1 className="text-xs sm:text-sm font-bold text-gray-900 leading-tight">Add New Product</h1>
+            <p className="text-[10px] text-gray-500">Configure catalog details, fragrance profiles, and inventory settings.</p>
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => router.push('/products')}
+          className="text-xs font-semibold h-7 border-gray-300 hover:bg-gray-50"
+        >
+          Cancel & Return
+        </Button>
+      </div>
+
+      <Card className="border border-gray-200/80 shadow-2xs bg-white rounded-xl">
+        <CardContent className="p-3 sm:p-4">
           <FormWrapper
             defaultValues={defaultValues}
             onSubmit={handleSubmit}
-            submitButtonText="Add Product"
-            submitButtonClassName="bg-[#FB923C] hover:bg-[#ff8a29]"
-            errorMessage='Failed to add product. Please try again.'
-            resetButtonText="Cancel"
-            resetButtonClassName="border-[#FB923C] text-[#FB923C]"
-            resetOnSuccess={true}
+            submitButtonText="Save & Publish Product"
+            submitButtonClassName="bg-[#FB923C] hover:bg-[#ff8a29] text-xs font-bold h-8 px-5 shadow-2xs"
+            errorMessage="Please resolve validation errors."
+            showResetButton={false}
           >
-            {/* Category Sizes */}
             <CategorySizesUpdater categories={categories} setSelectedSizes={setSelectedSizes} />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormInput name="name" label="Name" placeholder="Product Name" inputClassName="border-[#FB923C]" />
-              <FormInput
-                name="categoryId"
-                label="Category"
-                type="select"
-                options={categories.map(cat => ({ value: cat.id, label: cat.categoryName }))}
-                inputClassName="border-[#FB923C]"
-              />
-              <FormCheckboxGroup
-                name="fragranceIds"
-                label="Fragrance-family"
-                options={fragrances.map(f => ({ label: f.fragranceName, value: f.id }))}
-              />
-              <FormCheckboxGroup
-                name="materialIds"
-                label="Materials"
-                options={materials.map(m => ({ label: m.materialName, value: m.id }))}
-              />
-              <FormInput name="brand" label="Brand" placeholder="Brand" inputClassName="border-[#FB923C]" />
-              <FormInput name="origin" label="Origin" placeholder="e.g. France, Middle East" inputClassName="border-[#FB923C]" />
-              <FormInput
-                name="gender"
-                label="Gender"
-                type="select"
-                options={[
-                  { value: 'MALE', label: 'Male' },
-                  { value: 'FEMALE', label: 'Female' },
-                  { value: 'UNISEX', label: 'Unisex' },
-                ]}
-                inputClassName="border-[#FB923C]"
-              />
-              <FormInput
-                name="performance"
-                label="Performance"
-                type="select"
-                options={[
-                  { value: 'POOR', label: 'Poor' },
-                  { value: 'WEAK', label: 'Weak' },
-                  { value: 'MODERATE', label: 'Moderate' },
-                  { value: 'GOOD', label: 'Good' },
-                  { value: 'EXCELLENT', label: 'Excellent' },
-                  { value: 'BEAST_MODE', label: 'Beast Mode' },
-                ]}
-                inputClassName="border-[#FB923C]"
-              />
-              <FormInput
-                name="longevity"
-                label="Longevity"
-                type="select"
-                options={[
-                  { value: 'VERY_WEAK', label: 'Very Weak' },
-                  { value: 'WEAK', label: 'Weak' },
-                  { value: 'MODERATE', label: 'Moderate' },
-                  { value: 'LONG_LASTING', label: 'Long Lasting' },
-                  { value: 'ETERNAL', label: 'Eternal' },
-                ]}
-                inputClassName="border-[#FB923C]"
-              />
-              <FormInput
-                name="projection"
-                label="Projection"
-                type="select"
-                options={[
-                  { value: 'INTIMATE', label: 'Intimate' },
-                  { value: 'CLOSE', label: 'Close' },
-                  { value: 'MODERATE', label: 'Moderate' },
-                  { value: 'STRONG', label: 'Strong' },
-                  { value: 'NUCLEAR', label: 'Nuclear' },
-                ]}
-                inputClassName="border-[#FB923C]"
-              />
-              <FormInput
-                name="sillage"
-                label="Sillage"
-                type="select"
-                options={[
-                  { value: 'SOFT', label: 'Soft' },
-                  { value: 'MODERATE', label: 'Moderate' },
-                  { value: 'HEAVY', label: 'Heavy' },
-                  { value: 'ENORMOUS', label: 'Enormous' },
-                ]}
-                inputClassName="border-[#FB923C]"
-              />
-              <FormInput name="bestFor" label="Best For" placeholder="e.g. Office, Party" inputClassName="border-[#FB923C]" />
-              <FormInput name="accords" label="Accords" placeholder="e.g. floral, luxury, unisex" inputClassName="border-[#FB923C]" />
-              <FormInput name="tags" label="Tags" placeholder="e.g. floral, luxury, unisex" inputClassName="border-[#FB923C]" />
-            </div>
+            <div className="space-y-3 text-xs">
 
-            <FormInput
-              name="description"
-              label="Description"
-              type="textarea"
-              rows={10}
-              maxLength={2000}
-              showCount
-              helperText="Supports line breaks, bullets and detailed formatting."
-              placeholder={`Write a rich description...\n\n• Long lasting\n• Strong projection\n• Best for: Office, Evening`}
-              inputClassName="border-[#FB923C]"
-            />
-
-            {/* Perfume Notes */}
-            <Card className="border-[#FB923C]">
-              <CardHeader>
-                <CardTitle>Perfume Notes</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormInput name="perfumeNotes.top" label="Top Notes" placeholder="e.g. bergamot, lemon" inputClassName="border-[#FB923C]" />
-                <FormInput name="perfumeNotes.middle" label="Middle Notes" placeholder="e.g. jasmine, rose" inputClassName="border-[#FB923C]" />
-                <FormInput name="perfumeNotes.base" label="Base Notes" placeholder="e.g. sandalwood, musk" inputClassName="border-[#FB923C]" />
-              </CardContent>
-            </Card>
-
-
-            {/* Product Images */}
-            <Card className="border-[#FB923C]">
-              <CardHeader>
-                <CardTitle>Product Images</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Primary Image */}
-                <div>
+              {/* SECTION 1: General Info */}
+              <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-200/60 space-y-2">
+                <div className="flex items-center gap-1.5 border-b border-gray-200/80 pb-1.5">
+                  <Info className="w-3.5 h-3.5 text-[#FB923C]" />
+                  <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wide">1. General Information</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  <FormInput name="name" label="Product Name" placeholder="e.g. Royal Oudh" required inputClassName="border-gray-300 text-xs h-8 bg-white" />
                   <FormInput
-                    name="primaryImage"
-                    label="Primary Image"
-                    type="file"
-                    inputClassName="border-[#FB923C]"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const previewUrl = URL.createObjectURL(file);
-                        setImagePreviews((prev) => [previewUrl, ...prev.slice(1)]);
-                      }
-                    }}
+                    name="categoryId"
+                    label="Category"
+                    type="select"
+                    required
+                    options={categories.map(cat => ({ value: cat.id, label: cat.categoryName }))}
+                    inputClassName="border-gray-300 text-xs h-8 bg-white"
                   />
-                  {imagePreviews[0] && (
-                    <div className="mt-3 w-24 h-24 border border-[#FB923C] rounded overflow-hidden">
-                      <img
-                        src={imagePreviews[0]}
-                        alt="Primary Preview"
-                        className="w-full h-full object-cover"
+                  <FormInput name="brand" label="Brand" placeholder="e.g. Khushbuwaala" inputClassName="border-gray-300 text-xs h-8 bg-white" />
+                  <FormInput name="origin" label="Origin Country" placeholder="e.g. France, UAE" inputClassName="border-gray-300 text-xs h-8 bg-white" />
+                  <FormInput
+                    name="gender"
+                    label="Gender Target"
+                    type="select"
+                    options={[
+                      { value: 'MALE', label: 'Male' },
+                      { value: 'FEMALE', label: 'Female' },
+                      { value: 'UNISEX', label: 'Unisex' },
+                    ]}
+                    inputClassName="border-gray-300 text-xs h-8 bg-white"
+                  />
+                  <FormInput name="supplier" label="Supplier" placeholder="Supplier name" inputClassName="border-gray-300 text-xs h-8 bg-white" />
+                </div>
+              </div>
+
+              {/* GRID CONTAINER FOR COMPACTNESS: Classifications & Performance */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                {/* SECTION 2: Classifications */}
+                <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-200/60 flex flex-col justify-between space-y-2">
+                  <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wide border-b border-gray-200/80 pb-1.5 flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-[#FB923C]" /> 2. Classifications & Families
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1">
+                    <div className="border border-gray-200/80 p-2 rounded-lg bg-white shadow-2xs max-h-48 overflow-y-auto">
+                      <FormCheckboxGroup
+                        name="fragranceIds"
+                        label="Fragrance Families"
+                        options={fragrances.map(f => ({ label: f.fragranceName, value: f.id }))}
                       />
                     </div>
-                  )}
-                </div>
-
-                {/* Other Images */}
-                <div>
-                  <FormInput
-                    name="otherImages"
-                    label="Other Images"
-                    type="file"
-                    inputClassName="border-[#FB923C]"
-                    multiple
-                    onChange={(e) => {
-                      const files = Array.from(e.target.files || []);
-                      const previews = files.map((file) => URL.createObjectURL(file));
-                      setImagePreviews((prev) => [prev[0], ...previews]); // keep primary first
-                    }}
-                  />
-
-                  {imagePreviews.slice(1).length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      {imagePreviews.slice(1).map((preview, index) => (
-                        <div
-                          key={index}
-                          className="relative w-20 h-20 rounded border border-[#FB923C] overflow-hidden"
-                        >
-                          <img
-                            src={preview}
-                            alt={`Other preview ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                          <Button
-                            type='button'
-                            variant="outline"
-                            size="icon"
-                            className="absolute top-2 right-4 -translate-y-1/2 translate-x-1/2"
-                            onClick={() => {
-                              const form = useFormContext<FormValues>();
-                              const otherImages = form.getValues("otherImages");
-                              // adjust the array removing that image
-                              otherImages.splice(index + 1, 1);
-                              form.setValue("otherImages", otherImages);
-                              setImagePreviews((prev) =>
-                                prev.filter((_, i) => i !== index + 1)
-                              );
-                            }}
-                          >
-                            x
-                          </Button>
-                        </div>
-                      ))}
+                    <div className="border border-gray-200/80 p-2 rounded-lg bg-white shadow-2xs max-h-48 overflow-y-auto">
+                      <FormCheckboxGroup
+                        name="materialIds"
+                        label="Materials / Ingredients"
+                        options={materials.map(m => ({ label: m.materialName, value: m.id }))}
+                      />
                     </div>
-                  )}
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
 
+                {/* SECTION 3: Performance & Attributes */}
+                <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-200/60 space-y-2">
+                  <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wide border-b border-gray-200/80 pb-1.5 flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-[#FB923C]" /> 3. Performance & Attributes
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    <FormInput
+                      name="performance"
+                      label="Performance"
+                      type="select"
+                      options={[
+                        { value: 'POOR', label: 'Poor' },
+                        { value: 'WEAK', label: 'Weak' },
+                        { value: 'MODERATE', label: 'Moderate' },
+                        { value: 'GOOD', label: 'Good' },
+                        { value: 'EXCELLENT', label: 'Excellent' },
+                        { value: 'BEAST_MODE', label: 'Beast Mode' },
+                      ]}
+                      inputClassName="border-gray-300 text-xs h-8 bg-white"
+                    />
+                    <FormInput
+                      name="longevity"
+                      label="Longevity"
+                      type="select"
+                      options={[
+                        { value: 'VERY_WEAK', label: 'Very Weak' },
+                        { value: 'WEAK', label: 'Weak' },
+                        { value: 'MODERATE', label: 'Moderate' },
+                        { value: 'LONG_LASTING', label: 'Long Lasting' },
+                        { value: 'ETERNAL', label: 'Eternal' },
+                      ]}
+                      inputClassName="border-gray-300 text-xs h-8 bg-white"
+                    />
+                    <FormInput
+                      name="projection"
+                      label="Projection"
+                      type="select"
+                      options={[
+                        { value: 'INTIMATE', label: 'Intimate' },
+                        { value: 'CLOSE', label: 'Close' },
+                        { value: 'MODERATE', label: 'Moderate' },
+                        { value: 'STRONG', label: 'Strong' },
+                        { value: 'NUCLEAR', label: 'Nuclear' },
+                      ]}
+                      inputClassName="border-gray-300 text-xs h-8 bg-white"
+                    />
+                    <FormInput
+                      name="sillage"
+                      label="Sillage"
+                      type="select"
+                      options={[
+                        { value: 'SOFT', label: 'Soft' },
+                        { value: 'MODERATE', label: 'Moderate' },
+                        { value: 'HEAVY', label: 'Heavy' },
+                        { value: 'ENORMOUS', label: 'Enormous' },
+                      ]}
+                      inputClassName="border-gray-300 text-xs h-8 bg-white"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-0.5">
+                    <FormInput name="bestFor" label="Best For" placeholder="e.g. Office, Evening" inputClassName="border-gray-300 text-xs h-8 bg-white" />
+                    <FormInput name="accords" label="Accords" placeholder="e.g. floral, woody" inputClassName="border-gray-300 text-xs h-8 bg-white" />
+                    <FormInput name="tags" label="Tags" placeholder="e.g. luxury, gift" inputClassName="border-gray-300 text-xs h-8 bg-white" />
+                  </div>
+                </div>
+              </div>
 
-            <FormInput name="videoUrl" label="Video URL" placeholder="Optional video link" inputClassName="border-[#FB923C]" />
+              {/* SECTION 4 & 5: Rich Description & Pyramid Notes Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-200/60 space-y-1">
+                  <RichDescriptionEditor name="description" label="4. Description & Rich Story" rows={3} />
+                </div>
+                <div className="border border-orange-200/80 rounded-xl p-3 bg-orange-50/10 space-y-2 flex flex-col justify-between">
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-gray-900">5. Fragrance Pyramid Notes</h4>
+                  <div className="grid grid-cols-1 gap-2">
+                    <FormInput name="perfumeNotes.top" label="Top Notes" placeholder="e.g. Bergamot, Lemon" inputClassName="border-gray-300 text-xs h-8 bg-white" />
+                    <FormInput name="perfumeNotes.middle" label="Middle Notes" placeholder="e.g. Jasmine, Rose" inputClassName="border-gray-300 text-xs h-8 bg-white" />
+                    <FormInput name="perfumeNotes.base" label="Base Notes" placeholder="e.g. Sandalwood, Musk" inputClassName="border-gray-300 text-xs h-8 bg-white" />
+                  </div>
+                </div>
+              </div>
 
-            {/* Variants */}
-            <Card className="border-[#FB923C]">
-              <CardHeader className="flex items-center justify-between">
-                <CardTitle>Variants</CardTitle>
-                <SizesCheckboxes selectedSizes={selectedSizes} />
-              </CardHeader>
-              <CardContent>
+              {/* SECTION 6: Images & Media */}
+              <div className="border border-gray-200/80 rounded-xl p-3 space-y-2.5 bg-white shadow-2xs">
+                <h4 className="font-bold text-xs uppercase tracking-wider text-gray-900 flex items-center gap-1.5 border-b border-gray-100 pb-1.5">
+                  <ImagePlus className="w-4 h-4 text-[#FB923C]" /> 6. Product Media & Imagery
+                </h4>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
+                  <div className="space-y-1.5">
+                    <FormInput
+                      name="primaryImage"
+                      label="Primary Thumbnail Image"
+                      type="file"
+                      required
+                      inputClassName="border-gray-300 text-xs"
+                      onChange={(e: any) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const previewUrl = URL.createObjectURL(file);
+                          setImagePreviews((prev) => [previewUrl, ...prev.slice(1)]);
+                        }
+                      }}
+                    />
+                    {imagePreviews[0] && (
+                      <div className="relative w-12 h-12 border-2 border-[#FB923C] rounded-lg overflow-hidden shadow-2xs bg-gray-100">
+                        <img src={imagePreviews[0]} alt="Primary Preview" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5 md:col-span-2">
+                    <FormInput
+                      name="otherImages"
+                      label="Gallery Images (Multiple)"
+                      type="file"
+                      inputClassName="border-gray-300 text-xs"
+                      multiple
+                      onChange={(e: any) => {
+                        const files = Array.from(e.target.files || []);
+                        const previews = files.map((file: any) => URL.createObjectURL(file));
+                        setImagePreviews((prev) => [prev[0] || '', ...previews]);
+                      }}
+                    />
+                    {imagePreviews.slice(1).length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {imagePreviews.slice(1).map((preview, index) => (
+                          <div key={index} className="relative w-11 h-11 rounded-lg border border-gray-300 overflow-hidden shadow-2xs bg-gray-100">
+                            <img src={preview} alt="Gallery item" className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              className="absolute top-0.5 right-0.5 bg-red-600 text-white rounded-full p-0.5 w-3.5 h-3.5 flex items-center justify-center text-[9px] leading-none"
+                              onClick={() => {
+                                const form = useFormContext<FormValues>();
+                                const otherImages = form.getValues("otherImages") || [];
+                                if (Array.isArray(otherImages)) {
+                                  otherImages.splice(index, 1);
+                                  form.setValue("otherImages", otherImages);
+                                }
+                                setImagePreviews((prev) => prev.filter((_, i) => i !== index + 1));
+                              }}
+                            >
+                              <X className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="pt-1">
+                  <FormInput name="videoUrl" label="Video URL Link (Optional)" placeholder="https://youtube.com/..." inputClassName="border-gray-300 text-xs h-8" />
+                </div>
+              </div>
+
+              {/* SECTION 7: Variants & Stock Pricing */}
+              <div className="border border-orange-200/80 rounded-xl p-3 bg-white space-y-2.5 shadow-2xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-1.5">
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-gray-900 flex items-center gap-1.5">
+                    <Layers className="w-4 h-4 text-[#FB923C]" /> 7. Variants, Sizes & Pricing
+                  </h4>
+                  <SizesCheckboxes selectedSizes={selectedSizes} />
+                </div>
+
                 <VariantsSection selectedSizes={selectedSizes} />
-                <div className="flex flex-wrap gap-2">
+
+                <div className="pt-1">
                   <AddVariantButton selectedSizes={selectedSizes} />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <FormInput name="stock" label="Stock" placeholder="Stock Quantity" type="number" inputClassName="border-[#FB923C]" />
-              <FormInput name="supplier" label="Supplier" placeholder="Product Supplier" inputClassName="border-[#FB923C]" />
-              <PublishedSwitch />
+              {/* SECTION 8: Final Inventory & Publish State */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2.5 border-t border-gray-200/80 items-center bg-gray-50/40 p-3 rounded-xl">
+                <FormInput name="stock" label="Total Store Stock Count" placeholder="0" type="number" inputClassName="border-gray-300 text-xs h-8 bg-white" />
+                <div className="flex flex-col justify-end pb-0 sm:col-span-2 items-center sm:justify-start">
+                  <PublishedSwitch />
+                </div>
+              </div>
+
             </div>
           </FormWrapper>
         </CardContent>
       </Card>
-    </div >
+    </div>
   );
 };
 

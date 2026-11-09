@@ -217,11 +217,11 @@ export default function RecentOrderList() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
                 <div>
                     <h2 className="text-base font-bold text-gray-900 leading-tight">Recent Orders</h2>
-                    <p className="text-xs text-gray-500">Overview of latest store activities and fulfillment status (Read-Only).</p>
+                    <p className="text-xs text-gray-500">Website Orders Only</p>
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <div className="relative w-full sm:w-[260px]">
+                    <div className="relative w-full sm:w-65">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                         <Input
                             placeholder="Search invoice, name, phone..."
@@ -370,7 +370,7 @@ export default function RecentOrderList() {
 
                                         {/* Invoice */}
                                         <TableCell className="font-bold align-top py-3 text-sm">
-                                            <div className="flex flex-col gap-0.5">
+                                            <div className="flex flex-col gap-1">
                                                 <div>
                                                     <Link href={`/orders/${order.id}`} className="text-blue-600 font-semibold hover:underline">
                                                         #{order.invoice}
@@ -378,36 +378,52 @@ export default function RecentOrderList() {
                                                 </div>
                                                 <div>
                                                     {order.consignmentId ? (
-                                                        <Link target="_blank" href={`${order.trackingLink}`} className="text-[10px] text-emerald-700 border border-emerald-200 px-1 py-0.2 rounded font-mono truncate max-w-30 inline-flex items-center" title={order.trackingCode}>
-                                                            {order.consignmentId}
-                                                            <ArrowUpRight className="w-3 h-3 inline-block ml-0.5" />
+                                                        <Link
+                                                            target="_blank"
+                                                            href={`${order.trackingLink}`}
+                                                            className="text-[10px] text-emerald-700 border border-emerald-200 bg-emerald-50/50 px-1.5 py-0.5 rounded font-mono truncate max-w-30 inline-flex items-center gap-0.5 hover:bg-emerald-100 transition-colors"
+                                                            title={`Tracking Code: ${order.trackingCode || "N/A"}`}
+                                                        >
+                                                            <span>{order.consignmentId}</span>
+                                                            <ArrowUpRight className="w-3 h-3 shrink-0" />
                                                         </Link>
-                                                    ) : null}
+                                                    ) : (
+                                                        null)}
                                                 </div>
                                             </div>
                                         </TableCell>
 
                                         {/* Order Time */}
-                                        <TableCell className="text-gray-600 text-[11px] whitespace-nowrap align-top py-3 font-medium">
-                                            {order.orderTime
-                                                ? new Date(order.orderTime).toLocaleString("en-GB", {
-                                                    day: "2-digit",
-                                                    month: "short",
-                                                    year: "numeric",
-                                                    hour: "numeric",
-                                                    minute: "2-digit",
-                                                    hour12: true,
-                                                })
-                                                : "N/A"}
+                                        <TableCell className="text-gray-600 text-xs whitespace-nowrap align-top py-2.5 font-medium">
+                                            {order.orderTime ? (
+                                                <>
+                                                    <div className="font-semibold text-gray-900">
+                                                        {new Date(order.orderTime).toLocaleDateString("en-GB", {
+                                                            day: "2-digit",
+                                                            month: "short",
+                                                            year: "numeric",
+                                                        })}
+                                                    </div>
+                                                    <div className="text-[11px] text-gray-500">
+                                                        {new Date(order.orderTime).toLocaleTimeString("en-GB", {
+                                                            hour: "numeric",
+                                                            minute: "2-digit",
+                                                            hour12: true,
+                                                        })}
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                "N/A"
+                                            )}
                                         </TableCell>
 
                                         {/* Customer */}
                                         <TableCell className="text-gray-900 align-top py-3 max-w-[170px]">
-                                            <div className="font-bold text-[13px] truncate text-gray-900" title={order?.customer?.name || order?.name || "Guest"}>
+                                            <div className="font-bold text-xs truncate text-gray-900" title={order?.customer?.name || order?.name || "Guest"}>
                                                 {order?.customer?.name || order?.name || "Guest"}
                                             </div>
                                             <div className="flex items-center gap-1.5 mt-0.5">
-                                                <span className="text-xs text-gray-700 font-semibold truncate">
+                                                <span className="text-[13px] text-gray-700 font-semibold truncate">
                                                     {order?.customer?.phone || order?.shipping?.phone || "No phone"}
                                                 </span>
                                                 {(order?.customer?.phone || order?.shipping?.phone) && (
@@ -510,7 +526,7 @@ export default function RecentOrderList() {
                                                 {methodLabel(order.method)}
                                             </div>
                                             <div className="text-[10px] text-gray-500">
-                                                {shipping > 0 ? `(+${shipping} ship)` : "Free Shipping"}
+                                                {shipping > 0 ? null : "Free Shipping"}
                                             </div>
                                         </TableCell>
 

@@ -7,16 +7,25 @@ import RecentOrderList from "./RecentOrderList";
 import { useGetDashboardMetricsQuery } from "@/redux/store/api/order/ordersApi";
 import BestSelling from "./BestSelling";
 import MetricCard from "./MetricCard";
+import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 type DashboardType = "all" | "website" | "manual";
 
 export default function AdminDashboardClient() {
     const [type, setType] = useState<DashboardType>("all");
 
-    const { data, isLoading, isError } = useGetDashboardMetricsQuery(
+    const { data, isLoading, isError, refetch, isFetching } = useGetDashboardMetricsQuery(
         { type },
         { refetchOnMountOrArgChange: true }
     );
+
+    const handleManualRefresh = () => {
+        refetch();
+        toast.success("Dashboard refreshed successfully!", { duration: 1000 });
+    };
 
     const metrics = [
         { label: "Today Orders", value: data?.data?.todayOrders ?? 0, circleColor: "#FF8C38" },
@@ -27,26 +36,40 @@ export default function AdminDashboardClient() {
 
     return (
         <div className="space-y-2">
-            {/* Filter Tabs */}
-            <div className="flex flex-wrap gap-2">
-                {[
-                    { key: "all", label: "All" },
-                    { key: "website", label: "Website Orders" },
-                    { key: "manual", label: "Manual Sales" },
-                ].map((t) => (
-                    <button
-                        key={t.key}
-                        type="button"
-                        onClick={() => setType(t.key as DashboardType)}
-                        className={`px-4 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                            type === t.key 
-                                ? "bg-[#1b382b] text-white border-[#1b382b] shadow-sm" 
-                                : "bg-white text-stone-600 border-stone-200 hover:bg-stone-50"
-                        }`}
-                    >
-                        {t.label}
-                    </button>
-                ))}
+            {/* Filter Tabs & Refresh Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white px-3 py-2 rounded-xl border border-stone-200 shadow-2xs">
+                <div className="flex flex-wrap gap-1.5">
+                    {[
+                        { key: "all", label: "All" },
+                        { key: "website", label: "Website Orders" },
+                        { key: "manual", label: "Manual Sales" },
+                    ].map((t) => (
+                        <button
+                            key={t.key}
+                            type="button"
+                            onClick={() => setType(t.key as DashboardType)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                                type === t.key 
+                                    ? "bg-[#1b382b] text-white border-[#1b382b] shadow-sm" 
+                                    : "bg-white text-stone-600 border-stone-200 hover:bg-stone-50"
+                            }`}
+                        >
+                            {t.label}
+                        </button>
+                    ))}
+                </div>
+
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleManualRefresh}
+                    disabled={isFetching}
+                    className="bg-white border-stone-300 text-stone-700 hover:bg-stone-50 h-7 text-xs px-2.5 flex items-center gap-1.5 shadow-2xs self-start sm:self-auto"
+                    title="Refresh Dashboard"
+                >
+                    <RefreshCw className={cn("w-3 h-3 text-stone-600", isFetching && "animate-spin text-[#FB923C]")} />
+                    <span>Refresh</span>
+                </Button>
             </div>
 
             {/* Metrics Section with individual skeleton loading */}

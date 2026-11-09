@@ -24,7 +24,7 @@ export default function CategorySizesUpdater({ categories, setSelectedSizes }: P
     name: 'categoryId',
   });
 
-  const prevKeyRef = useRef<string>(''); // sizes+unit snapshot key
+  const prevKeyRef = useRef<string>('');
 
   useEffect(() => {
     if (!selectedCategoryId) {
@@ -39,9 +39,8 @@ export default function CategorySizesUpdater({ categories, setSelectedSizes }: P
     const category = categories.find((c) => c.id === selectedCategoryId);
 
     const sizes = (category?.sizes || []).map((s: any) => String(s).trim());
-    const unit = category?.unit ? String(category.unit).trim() : ''; // ✅ dynamic unit
+    const unit = category?.unit ? String(category.unit).trim() : '';
 
-    // create a key so we don't rerun unnecessarily
     const key = `${sizes.join('|')}__${unit}`;
     if (prevKeyRef.current === key) return;
     prevKeyRef.current = key;
@@ -50,7 +49,6 @@ export default function CategorySizesUpdater({ categories, setSelectedSizes }: P
 
     const existingVariants = form.getValues('variants') || [];
 
-    // ✅ Build variants strictly from category sizes, preserve existing price/sku etc
     const nextVariants: VariantForForm[] = sizes.map((size) => {
       const found = existingVariants.find((v) => String(v.size) === size);
       return {
@@ -59,11 +57,10 @@ export default function CategorySizesUpdater({ categories, setSelectedSizes }: P
         price: found?.price ?? 0,
         stock: found?.stock ?? 0,
         size,
-        unit: unit || found?.unit || '', // ✅ category unit wins
+        unit: unit || found?.unit || '',
       };
     });
 
-    // also remove variants that are not in the selected category sizes
     queueMicrotask(() => {
       form.setValue('variants', nextVariants, { shouldDirty: true });
     });

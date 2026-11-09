@@ -23,15 +23,15 @@ interface FormValues {
 }
 
 export default function AddVariantButton({ selectedSizes }: Props) {
-  const form = useFormContext<FormValues>(); // ✅ inside provider
+  const form = useFormContext<FormValues>();
   return (
     <Button
       type="button"
       variant="outline"
-      className="w-full border-[#FB923C] text-[#FB923C] hover:bg-[#FFF7ED]"
+      className="w-full border-dashed border-2 border-[#FB923C] text-[#FB923C] hover:bg-orange-50/50 text-xs sm:text-sm font-semibold h-10 shadow-2xs"
       onClick={() => {
         const variants = form.getValues('variants') || [];
-        const unitFromCategory = variants[0]?.unit || ''; // ✅ already synced by CategorySizesUpdater
+        const unitFromCategory = variants[0]?.unit || '';
 
         form.setValue('variants', [
           ...variants,
@@ -39,7 +39,7 @@ export default function AddVariantButton({ selectedSizes }: Props) {
         ]);
       }}
     >
-      <Plus className="w-4 h-4 mr-2" /> Add Variant
+      <Plus className="w-4 h-4 mr-1.5" /> Add New Variant Row
     </Button>
   );
 }

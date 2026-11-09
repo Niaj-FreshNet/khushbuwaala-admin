@@ -33,7 +33,7 @@ export default function SideBar({
 }: SideBarProps) {
   const dispatch = useDispatch();
   const router = useRouter();
-  const { user, isLoading } = useAuth(); // ✅ from your hook
+  const { user, isLoading } = useAuth();
   const [logoutApi] = useLogoutMutation();
 
   // Skeleton Loader for Nav + SubItems
@@ -96,7 +96,7 @@ export default function SideBar({
     </div>
   );
 
-  // ✅ 1) Loading time → Skeleton (good)
+  // 1) Loading time → Skeleton
   if (isLoading) {
     return (
       <div ref={navRef}>
@@ -114,7 +114,7 @@ export default function SideBar({
         {/* Desktop Skeleton */}
         <div
           className={cn(
-            "hidden lg:flex flex-col h-screen shadow-md transition-all duration-300 ease-in-out",
+            "hidden lg:flex flex-col h-screen shadow-md transition-all duration-300 ease-in-out fixed top-0 left-0 z-30",
             isShort ? "w-14" : "w-46",
             dark ? "bg-gray-900 text-white" : "bg-white text-gray-900"
           )}
@@ -125,7 +125,7 @@ export default function SideBar({
     );
   }
 
-  // ✅ 2) After loading → if no user, show "not logged in"
+  // 2) After loading → if no user, show "not logged in"
   if (!user) {
     return (
       <div ref={navRef}>
@@ -143,7 +143,7 @@ export default function SideBar({
         {/* Desktop */}
         <div
           className={cn(
-            "hidden lg:flex flex-col h-screen shadow-md transition-all duration-300 ease-in-out",
+            "hidden lg:flex flex-col h-screen shadow-md transition-all duration-300 ease-in-out fixed top-0 left-0 z-30",
             isShort ? "w-14" : "w-46",
             dark ? "bg-gray-900 text-white" : "bg-white text-gray-900"
           )}
@@ -154,7 +154,7 @@ export default function SideBar({
     );
   }
 
-  // ✅ 3) Logged in → normal sidebar
+  // 3) Logged in → normal sidebar
   const role: UserRole | undefined = user?.role;
 
   const filteredNavLinks = navLinks
@@ -174,14 +174,12 @@ export default function SideBar({
       await logoutApi({}).unwrap();
       dispatch(logout());
       toast.success("Logged out successfully!");
-
-      // Force hard reload to clear Next.js router cache and middleware state
       window.location.href = "/login";
     } catch (error) {
       console.error("Logout API failed:", error);
       toast.error("Failed to log out. Please try again.");
     }
-};
+  };
 
   return (
     <div ref={navRef}>
@@ -219,7 +217,7 @@ export default function SideBar({
       {/* Desktop Sidebar */}
       <div
         className={cn(
-          "hidden lg:flex flex-col h-screen shadow-md transition-all duration-300 ease-in-out",
+          "hidden lg:flex flex-col h-screen shadow-md transition-all duration-300 ease-in-out fixed top-0 left-0 z-30",
           isShort ? "w-14" : "w-46",
           dark ? "bg-gray-900 text-white" : "bg-white text-gray-900"
         )}
