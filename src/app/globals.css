@@ -807,3 +807,18 @@
     }
   }
 }
+
+/* In globals.css */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #334155;
+  /* slate-700 */
+  border-radius: 10px;
+}

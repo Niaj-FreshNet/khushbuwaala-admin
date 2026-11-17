@@ -13,18 +13,18 @@ import {
   Newspaper,
   Users,
   Calculator,
-  Settings,
-  UserCog,
   Wallet,
   BookOpen,
   Boxes,
-  TrendingUp,
   ClipboardList,
   CreditCard,
   LucideListOrdered,
+  BadgeDollarSign,
+  Store,
+  Users2
 } from "lucide-react";
 
-import { MdCategory } from "react-icons/md";
+import { MdCategory, MdReviews } from "react-icons/md";
 import { GiPerfumeBottle } from "react-icons/gi";
 import { GoReport } from "react-icons/go";
 
@@ -50,94 +50,11 @@ export const navLinks: NavLink[] = [
     roles: ["ADMIN", "SUPER_ADMIN"],
   },
 
-  // ================= PRODUCTS =================
-  {
-    name: "Products",
-    href: "#",
-    icon: Package,
-    roles: ["ADMIN", "SUPER_ADMIN"],
-    subItems: [
-      {
-        name: "Add Product",
-        href: "/products/add",
-        icon: Plus,
-        roles: ["ADMIN", "SUPER_ADMIN"],
-      },
-      {
-        name: "Product List",
-        href: "/products",
-        icon: List,
-        roles: ["ADMIN", "SUPER_ADMIN"],
-      },
-    ],
-  },
-
-  // ================= CATEGORIES =================
-  {
-    name: "Categories",
-    href: "#",
-    icon: MdCategory,
-    roles: ["ADMIN", "SUPER_ADMIN"],
-    subItems: [
-      {
-        name: "Add Category",
-        href: "/categories/add",
-        icon: Plus,
-        roles: ["ADMIN", "SUPER_ADMIN"],
-      },
-      {
-        name: "Category List",
-        href: "/categories",
-        icon: Tags,
-        roles: ["ADMIN", "SUPER_ADMIN"],
-      },
-      {
-        name: "Add Fragrance Family",
-        href: "/fragrance-families/add",
-        icon: Plus,
-        roles: ["ADMIN", "SUPER_ADMIN"],
-      },
-      {
-        name: "Fragrance Families List",
-        href: "/fragrance-families",
-        icon: GiPerfumeBottle,
-        roles: ["ADMIN", "SUPER_ADMIN"],
-      },
-      {
-        name: "Add Material",
-        href: "/materials/add",
-        icon: Plus,
-        roles: ["ADMIN", "SUPER_ADMIN"],
-      },
-      {
-        name: "Materials List",
-        href: "/materials",
-        icon: Boxes,
-        roles: ["ADMIN", "SUPER_ADMIN"],
-      },
-    ],
-  },
-
-  // ================= ORDERS =================
-  {
-    name: "Orders",
-    href: "/orders",
-    icon: LucideListOrdered,
-    roles: ["ADMIN", "SUPER_ADMIN"],
-  },
-
-  {
-    name: "Carts",
-    href: "/carts",
-    icon: ShoppingCart,
-    roles: ["ADMIN", "SUPER_ADMIN"],
-  },
-
-  // ================= MANUAL SALES =================
+  // ================= POS & SALES =================
   {
     name: "Manual Sales",
     href: "#",
-    icon: Receipt,
+    icon: Store,
     roles: ["SALESMAN", "ADMIN", "SUPER_ADMIN"],
     subItems: [
       {
@@ -161,7 +78,89 @@ export const navLinks: NavLink[] = [
     ],
   },
 
-  // ================= EXPENSE =================
+  // ================= ORDERS =================
+  {
+    name: "Orders",
+    href: "/orders",
+    icon: LucideListOrdered,
+    roles: ["ADMIN", "SUPER_ADMIN"],
+  },
+  {
+    name: "Carts",
+    href: "/carts",
+    icon: ShoppingCart,
+    roles: ["ADMIN", "SUPER_ADMIN"],
+  },
+
+  // ================= CATALOG =================
+  {
+    name: "Products",
+    href: "/products",
+    icon: Package,
+    roles: ["ADMIN", "SUPER_ADMIN"],
+  },
+  {
+    name: "Categories",
+    href: "/categories",
+    icon: MdCategory,
+    roles: ["ADMIN", "SUPER_ADMIN"],
+    subItems: [
+      {
+        name: "Category List",
+        href: "/categories",
+        icon: Tags,
+        roles: ["ADMIN", "SUPER_ADMIN"],
+      },
+      {
+        name: "Fragrance Families",
+        href: "/fragrance-families",
+        icon: GiPerfumeBottle,
+        roles: ["ADMIN", "SUPER_ADMIN"],
+      },
+      {
+        name: "Materials",
+        href: "/materials",
+        icon: Boxes,
+        roles: ["ADMIN", "SUPER_ADMIN"],
+      },
+    ],
+  },
+
+  // ================= INVENTORY =================
+  {
+    name: "Inventory",
+    href: "/stock",
+    icon: Warehouse,
+    roles: ["ADMIN", "SUPER_ADMIN"],
+    subItems: [
+      {
+        name: "Stock Management",
+        href: "/stock",
+        icon: Boxes,
+        roles: ["ADMIN", "SUPER_ADMIN"],
+      },
+      {
+        name: "Low Stock Alerts",
+        href: "/stock/low-stock-alertz",
+        icon: GoReport,
+        roles: ["ADMIN", "SUPER_ADMIN"],
+      },
+    ],
+  },
+
+  // ================= FINANCIALS =================
+  {
+    name: "Finance",
+    href: "/finance",
+    icon: Calculator,
+    roles: ["SUPER_ADMIN"],
+  },
+  {
+    name: "Payments",
+    href: "/payments",
+    icon: CreditCard,
+    roles: ["ADMIN", "SUPER_ADMIN"],
+  },
   {
     name: "Expenses",
     href: "#",
@@ -182,58 +181,28 @@ export const navLinks: NavLink[] = [
       },
     ],
   },
-
-  // ================= INVENTORY =================
-  {
-    name: "Inventory",
-    href: "#",
-    icon: Warehouse,
-    roles: ["ADMIN", "SUPER_ADMIN"],
-    subItems: [
-      {
-        name: "Add Stock",
-        href: "/stock/add",
-        icon: Plus,
-        roles: ["ADMIN", "SUPER_ADMIN"],
-      },
-      {
-        name: "Stock Management",
-        href: "/stock",
-        icon: Boxes,
-        roles: ["ADMIN", "SUPER_ADMIN"],
-      },
-      {
-        name: "Low Stock Alerts",
-        href: "/stock/low-stock-alertz",
-        icon: GoReport,
-        roles: ["ADMIN", "SUPER_ADMIN"],
-      },
-    ],
-  },
-
-  // ================= DISCOUNTS =================
   {
     name: "Discounts",
-    href: "#",
-    icon: Percent,
+    href: "/discounts",
+    icon: BadgeDollarSign,
     roles: ["ADMIN", "SUPER_ADMIN"],
-    subItems: [
-      {
-        name: "Add Discount",
-        href: "/discounts/add",
-        icon: Plus,
-        roles: ["ADMIN", "SUPER_ADMIN"],
-      },
-      {
-        name: "Discounts & Promotions",
-        href: "/discounts",
-        icon: Tags,
-        roles: ["ADMIN", "SUPER_ADMIN"],
-      },
-    ],
   },
 
-  // ================= BLOG =================
+  // ================= CRM / CUSTOMERS =================
+  {
+    name: "Customers",
+    href: "/customer-list",
+    icon: Users2,
+    roles: ["SUPER_ADMIN"],
+  },
+  {
+    name: "Reviews",
+    href: "/reviews",
+    icon: MdReviews,
+    roles: ["ADMIN", "SUPER_ADMIN"],
+  },
+
+  // ================= CONTENT =================
   {
     name: "Blogs",
     href: "#",
@@ -253,108 +222,16 @@ export const navLinks: NavLink[] = [
         roles: ["ADMIN", "SUPER_ADMIN"],
       },
     ],
+
+    //   name: "User Management",
+    //   href: "#",
+    //   icon: UserCog,
+    //   roles: ["SUPER_ADMIN"],
+    //   subItems: [
+    //     { name: "Add User", href: "/users/add", icon: Plus, roles: ["SUPER_ADMIN"] },
+    //     { name: "Users List", href: "/users", icon: Users, roles: ["SUPER_ADMIN"] },
+    //     { name: "Assign Roles", href: "/assign-roles", icon: Settings, roles: ["SUPER_ADMIN"] },
+    //   ],
+    // },
   },
-
-  // ================= PEOPLE =================
-  {
-    name: "Reviews",
-    href: "/reviews",
-    icon: Users,
-    roles: ["ADMIN", "SUPER_ADMIN"],
-  },
-
-  // {
-  //   name: "Suppliers",
-  //   href: "#",
-  //   icon: Users,
-  //   roles: ["ADMIN", "SUPER_ADMIN"],
-  //   subItems: [
-  //     {
-  //       name: "Add Supplier",
-  //       href: "/suppliers/add",
-  //       icon: Plus,
-  //       roles: ["ADMIN", "SUPER_ADMIN"],
-  //     },
-  //     {
-  //       name: "Suppliers List",
-  //       href: "/suppliers",
-  //       icon: List,
-  //       roles: ["ADMIN", "SUPER_ADMIN"],
-  //     },
-  //   ],
-  // },
-
-  // ================= ANALYTICS =================
-  // {
-  //   name: "Analytics",
-  //   href: "/analytics",
-  //   icon: TrendingUp,
-  //   roles: ["SUPER_ADMIN"],
-  // },
-
-  {
-    name: "Payments",
-    href: "/payments",
-    icon: CreditCard,
-    roles: ["ADMIN", "SUPER_ADMIN"],
-  },
-
-  {
-    name: "Customers",
-    href: "/customer-list",
-    icon: Users,
-    roles: ["SUPER_ADMIN"],
-  },
-
-  // ================= ACCOUNT =================
-  // {
-  //   name: "Profile",
-  //   href: "/admin-profile",
-  //   icon: Settings,
-  //   roles: ["SUPER_ADMIN"],
-  // },
-  // {
-  //   name: "Passwords Change",
-  //   href: "/admin-passwords",
-  //   icon: UserCog,
-  //   roles: ["SUPER_ADMIN"],
-  // },
-
-  // ================= FINANCE =================
-  // {
-  //   name: "Investors",
-  //   href: "#",
-  //   icon: Users,
-  //   roles: ["SUPER_ADMIN"],
-  //   subItems: [
-  //     { name: "Add Investor", href: "/investors/add", icon: Plus, roles: ["SUPER_ADMIN"] },
-  //     { name: "Investors List", href: "/investors", icon: List, roles: ["SUPER_ADMIN"] },
-  //   ],
-  // },
-
-  // {
-  //   name: "Financial Overview",
-  //   href: "/financial-overview",
-  //   icon: Calculator,
-  //   roles: ["SUPER_ADMIN"],
-  // },
-
-  // {
-  //   name: "Ledger",
-  //   href: "/ledger",
-  //   icon: BookOpen,
-  //   roles: ["SUPER_ADMIN"],
-  // },
-
-  // {
-  //   name: "User Management",
-  //   href: "#",
-  //   icon: UserCog,
-  //   roles: ["SUPER_ADMIN"],
-  //   subItems: [
-  //     { name: "Add User", href: "/users/add", icon: Plus, roles: ["SUPER_ADMIN"] },
-  //     { name: "Users List", href: "/users", icon: Users, roles: ["SUPER_ADMIN"] },
-  //     { name: "Assign Roles", href: "/assign-roles", icon: Settings, roles: ["SUPER_ADMIN"] },
-  //   ],
-  // },
 ];

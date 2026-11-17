@@ -100,7 +100,7 @@ export default function FormWrapper({
             size="sm"
             disabled={isSubmitting}
             className={cn(
-              'bg-[#FB923C] hover:bg-[#ff8a29] text-white text-xs font-bold h-8 px-5 transition-colors duration-200 shadow-2xs',
+              'bg-green-700 hover:bg-green-800 text-white text-xs font-bold h-8 px-5 transition-colors duration-200 shadow-2xs',
               isSubmitting && 'opacity-70 cursor-not-allowed',
               submitButtonClassName
             )}

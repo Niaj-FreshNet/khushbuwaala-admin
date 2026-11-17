@@ -17,12 +17,12 @@ export const navLink = [
   },
   {
     name: "Order History",
-    href: "//order-list",
+    href: "/order-list",
     icon: LuCalendarDays,
   },
   {
     name: "Password Change",
-    href: "//password",
+    href: "/password",
     icon: CiSettings,
   }
 ];

@@ -1,7 +1,9 @@
+// File: components/OrderList.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { IOrderData } from "@/redux/store/api/order/ordersApi";
 import {
   Table,
   TableBody,
@@ -38,6 +40,7 @@ import {
   Truck,
   RefreshCw,
   ArrowUpRight,
+  Filter,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
@@ -71,6 +74,10 @@ import {
   useDeleteOrderMutation,
 } from "@/redux/store/api/order/ordersApi";
 import { useSendOrderToSteadfastMutation } from "@/redux/store/api/steadfast/steadfastApi";
+import { useAuth } from "@/redux/store/hooks/useAuth";
+import { useBackfillHistoricalCostsMutation } from "@/redux/store/api/finance/financeApi";
+import EditOrderModal from "./_components/EditOrderModal";
+import OrderProfitEditorModal from "../sales/_components/OrderProfitEditorModal";
 
 interface OrderItem {
   id?: string;
@@ -82,23 +89,6 @@ interface OrderItem {
   qty?: number;
   price?: number;
   amount?: number;
-}
-
-interface Order {
-  id: string;
-  orderTime: string;
-  invoice: string;
-  customer: { name: string; phone?: string; email?: string } | null;
-  shipping?: { name?: string; phone?: string; address?: string; district?: string };
-  method: string;
-  amount: number;
-  shippingCost?: number;
-  additionalNotes?: string;
-  status: string;
-  isPaid: boolean;
-  items?: OrderItem[];
-  orderItems?: OrderItem[];
-  cartItems?: OrderItem[];
 }
 
 type SortField = "orderTime" | "amount" | "status";
@@ -153,7 +143,7 @@ function ProductPicker({
         <Button
           variant="outline"
           className={cn(
-            "w-full justify-between bg-white text-left font-normal truncate h-7 text-[11px] px-2 transition-colors",
+            "w-full justify-between bg-white text-left font-normal truncate h-8 text-xs px-2 transition-colors",
             value ? "border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30" : "border-gray-300 text-gray-700"
           )}
         >
@@ -212,6 +202,9 @@ function ProductPicker({
 }
 
 const OrderList = () => {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === "SUPER_ADMIN";
+
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebouncedValue(searchTerm, 350);
 
@@ -223,6 +216,7 @@ const OrderList = () => {
   const [method, setMethod] = useState<(typeof METHOD_OPTIONS)[number]["value"]>("ALL");
   const [activeTab, setActiveTab] = useState<"all" | "pending_online">("all");
 
+  const [showFilters, setShowFilters] = useState(false);
   const [datePreset, setDatePreset] = useState<string>("THIS_MONTH");
 
   const [dateFrom, setDateFrom] = useState<string>(() => {
@@ -261,43 +255,54 @@ const OrderList = () => {
   const [productQ, setProductQ] = useState<string>("");
   const [selectedProductName, setSelectedProductName] = useState<string>("");
 
+  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // ✅ Profit Editor Modal State
+  const [profitEditorOrder, setProfitEditorOrder] = useState<any | null>(null);
+  const [isProfitEditorVisible, setIsProfitEditorVisible] = useState(false);
+
   const handleDatePresetChange = (preset: string) => {
     setDatePreset(preset);
     const now = new Date();
 
-    const toLocalDateString = (d: Date) => {
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`;
-    };
+    const toLocalDateString = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-    if (preset === "TODAY") {
+    if (preset === 'TODAY') {
       const todayStr = toLocalDateString(now);
       setDateFrom(todayStr);
       setDateTo(todayStr);
-    } else if (preset === "YESTERDAY") {
+    } else if (preset === 'YESTERDAY') {
       const yest = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-      const yestStr = toLocalDateString(yest);
-      setDateFrom(yestStr);
-      setDateTo(yestStr);
-    } else if (preset === "LAST_7_DAYS") {
-      const past = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+      setDateFrom(toLocalDateString(yest));
+      setDateTo(toLocalDateString(yest));
+    } else if (preset === 'LAST_7_DAYS') {
+      const past = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
       setDateFrom(toLocalDateString(past));
       setDateTo(toLocalDateString(now));
-    } else if (preset === "THIS_MONTH") {
+    } else if (preset === 'THIS_MONTH') {
       const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
       setDateFrom(toLocalDateString(firstDay));
       setDateTo(toLocalDateString(now));
-    } else if (preset === "LAST_MONTH") {
+    } else if (preset === 'LAST_MONTH') {
       const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
       setDateFrom(toLocalDateString(firstDayLastMonth));
       setDateTo(toLocalDateString(lastDayLastMonth));
+    } else if (preset === 'LAST_3_MONTHS') {
+      const past = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+      setDateFrom(toLocalDateString(past));
+      setDateTo(toLocalDateString(now));
+    } else if (preset === 'THIS_YEAR') {
+      const firstDay = new Date(now.getFullYear(), 0, 1);
+      setDateFrom(toLocalDateString(firstDay));
+      setDateTo(toLocalDateString(now));
     } else {
-      setDateFrom("");
-      setDateTo("");
+      setDateFrom('');
+      setDateTo('');
     }
+
     setPage(1);
   };
 
@@ -326,19 +331,31 @@ const OrderList = () => {
     return args;
   }, [debouncedSearch, page, limit, status, payment, method, activeTab, dateFrom, dateTo, productId]);
 
-  const summaryQueryArgs = useMemo(() => {
-    const args = { ...queryArgs };
-    delete args.page;
-    args.limit = 10000;
-    return args;
-  }, [queryArgs]);
-
   const { data, isLoading, isFetching, refetch } = useGetAllOrdersQuery(queryArgs);
-  const { data: summaryData, refetch: refetchSummary } = useGetAllOrdersQuery(summaryQueryArgs);
+
+  // ✅ Enhanced Backfill Hook (Supports manual selection & filtered list sync)
+  const [backfillCosts, { isLoading: isBackfilling }] = useBackfillHistoricalCostsMutation();
+
+  const handleBackfill = async () => {
+    try {
+      const payload: { orderIds?: string[] } = {};
+
+      if (selectedOrderIds.length > 0) {
+        payload.orderIds = selectedOrderIds;
+      } else if (sortedOrders.length > 0) {
+        payload.orderIds = sortedOrders.map((o) => o.id);
+      }
+
+      const res = await backfillCosts(payload).unwrap();
+      toast.success(res?.message || "Profits synced successfully!");
+      refetch();
+    } catch (e: any) {
+      toast.error(e?.data?.message || "Failed to sync profits");
+    }
+  };
 
   const handleManualRefresh = () => {
     refetch();
-    refetchSummary();
     toast.success("Orders data refreshed successfully!", { duration: 1000 });
   };
 
@@ -349,11 +366,11 @@ const OrderList = () => {
   const [updatePaymentStatus] = useUpdatePaymentStatusMutation();
   const [deleteOrder, { isLoading: isDeleting }] = useDeleteOrderMutation();
 
-  const [sendToSteadfast, { isLoading: isSendingCourier }] = useSendOrderToSteadfastMutation();
+  const [sendToSteadfast] = useSendOrderToSteadfastMutation();
   const [sendingOrderId, setSendingOrderId] = useState<string | null>(null);
 
   const { data: invoiceData } = useGetOrderByIdQuery(invoiceOrderId || "", { skip: !invoiceOrderId });
-  const invoiceOrder: Order | undefined = invoiceData?.data;
+  const invoiceOrder: IOrderData | undefined = invoiceData?.data;
 
   useEffect(() => {
     if (invoiceOrder && isInvoiceVisible) {
@@ -372,9 +389,8 @@ const OrderList = () => {
     }, 50);
   };
 
-  const allOrders: Order[] = useMemo(() => data?.data?.data || [], [data]);
-  const allFilteredOrders: Order[] = useMemo(() => summaryData?.data?.data || allOrders, [summaryData, allOrders]);
-  const meta = data?.data?.meta;
+  const allOrders: any[] = useMemo(() => (data as any)?.data || [], [data]);
+  const meta = (data as any)?.meta;
 
   const sortedOrders = useMemo(() => {
     const sorted = [...allOrders];
@@ -401,57 +417,26 @@ const OrderList = () => {
   }, [allOrders, sortField, sortOrder]);
 
   const summaryMetrics = useMemo(() => {
-    const totalCount = meta?.total || allFilteredOrders.length;
-    let totalCodAmount = 0;
-    let totalBillAmount = 0;
-    let totalRcvAmount = 0;
-    let paidCount = 0;
-    let dueCount = 0;
+    return (data as any)?.summary || {
+      totalCount: meta?.total || 0,
+      totalValidCount: 0,
+      totalCodAmount: 0,
+      totalBillAmount: 0,
+      totalRcvAmount: 0,
+      paidCount: 0,
+      dueCount: 0,
+    };
+  }, [data, meta]);
 
-    allFilteredOrders.forEach((order) => {
-      const orderStatus = String(order.status || "").toUpperCase();
-      const isCanceledOrReturned = orderStatus === "CANCELED" || orderStatus === "RETURNED";
-
-      const orderItems = order.items || order.orderItems || order.cartItems || [];
-      const shipping = Number(order.shippingCost || 0);
-      const itemsSubtotal = orderItems.reduce((acc, it) => acc + (Number(it.price || 0) * Number(it.quantity || it.qty || 1)), 0);
-      const productBill = itemsSubtotal > 0 ? itemsSubtotal : Math.max(0, Number(order.amount || 0) - shipping);
-
-      const districtLower = String(order.shipping?.district || "").toLowerCase();
-      const isDhaka = districtLower.includes("dhaka");
-      const courierDeliveryCharge = shipping > 0 ? shipping : (isDhaka ? 55 : 115);
-
-      const isShippingIncludedInCod = shipping > 0;
-      const effectiveDeliveryDeduction = isShippingIncludedInCod ? 0 : courierDeliveryCharge;
-
-      const isCod = String(order.method || "").toLowerCase().includes("cash") || String(order.method || "").toLowerCase().includes("cod");
-      const codCharge = isCod ? Math.round(productBill * 0.01) : 0;
-
-      const codOrTotalAmount = Number(order.amount || 0);
-
-      // Ignore canceled or returned from total bills and total COD sum
-      if (!isCanceledOrReturned) {
-        totalCodAmount += codOrTotalAmount;
-        totalBillAmount += productBill;
-      }
-
-      let receivable = 0;
-      if (orderStatus === "DELIVERED" || orderStatus === "COMPLETED") {
-        receivable = Math.max(0, productBill - effectiveDeliveryDeduction - codCharge);
-      } else if (orderStatus === "CANCELED") {
-        receivable = 0;
-      } else if (orderStatus === "RETURNED") {
-        receivable = -courierDeliveryCharge;
-      }
-
-      totalRcvAmount += receivable;
-
-      if (order.isPaid) paidCount++;
-      else dueCount++;
-    });
-
-    return { totalCount, totalCodAmount, totalBillAmount, totalRcvAmount, paidCount, dueCount };
-  }, [allFilteredOrders, meta]);
+  // ✅ Net Profit Sum for Filtered Orders
+  const filteredNetProfit = useMemo(() => {
+    if (!isSuperAdmin) return 0;
+    return sortedOrders.reduce((sum, order) => {
+      const orderItemCosts = order.orderItemCosts || [];
+      const orderProfit = orderItemCosts.reduce((itemSum: number, ic: any) => itemSum + Number(ic.profit || 0), 0);
+      return sum + orderProfit;
+    }, 0);
+  }, [sortedOrders, isSuperAdmin]);
 
   const toggleSort = (field: SortField) => {
     if (field === sortField) setSortOrder(sortOrder === "asc" ? "desc" : "asc");
@@ -666,18 +651,18 @@ const OrderList = () => {
   };
 
   return (
-    <div className="w-full min-h-screen bg-gray-50/40 px-1 pt-0 pb-1 sm:px-2 sm:pt-0 sm:pb-2 space-y-1 mt-0">
+    <div className="w-full min-h-screen bg-gray-50/40 px-2 py-2 sm:px-3 sm:py-3 space-y-2">
       {/* Top Header & Navigation Bar */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-2xs">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-white px-3 py-2 rounded-xl border border-gray-200 shadow-xs">
+        <div className="flex items-center justify-between sm:justify-start gap-3">
           <div>
-            <h1 className="text-sm font-bold tracking-tight text-gray-900 leading-tight">Order Management</h1>
-            <p className="text-[10px] text-gray-500">Website orders only</p>
+            <h1 className="text-sm sm:text-base font-bold tracking-tight text-gray-900 leading-tight">Order Management</h1>
+            <p className="text-[11px] text-gray-500">Website orders overview</p>
           </div>
-          <div className="flex items-center gap-1 border-l pl-2.5 border-gray-200">
+          <div className="flex items-center gap-1 border-l pl-2 sm:pl-3 border-gray-200">
             <button
               onClick={() => { setActiveTab("all"); setPage(1); }}
-              className={`px-2 py-0.5 text-[11px] font-semibold rounded transition-all ${activeTab === "all"
+              className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${activeTab === "all"
                 ? "bg-orange-50 text-[#FB923C] border border-orange-200 shadow-2xs"
                 : "text-gray-600 hover:bg-gray-100"
                 }`}
@@ -686,288 +671,353 @@ const OrderList = () => {
             </button>
             <button
               onClick={() => { setActiveTab("pending_online"); setPage(1); }}
-              className={`px-2 py-0.5 text-[11px] font-semibold rounded transition-all flex items-center gap-1 ${activeTab === "pending_online"
+              className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all flex items-center gap-1 ${activeTab === "pending_online"
                 ? "bg-orange-50 text-[#FB923C] border border-orange-200 shadow-2xs"
                 : "text-gray-600 hover:bg-gray-100"
                 }`}
             >
-              <AlertCircle className="w-3 h-3 text-amber-500" /> Pending Online
+              <AlertCircle className="w-3.5 h-3.5 text-amber-500" /> Pending Online
             </button>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          {selectedOrderIds.length > 0 && (
+        <div className="flex items-center justify-between sm:justify-end gap-2 pt-1 sm:pt-0 border-t sm:border-t-0 border-gray-100">
+
+          <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
+
+            {/* 🔒 SUPER ADMIN ONLY: Sync Old Profits Button */}
+            {isSuperAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBackfill}
+                disabled={isBackfilling}
+                className="bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100 h-7 text-xs px-2.5 flex items-center gap-1 shadow-xs"
+                title="Calculate missing profits for old orders"
+              >
+                {isBackfilling ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <TrendingUp className="w-3.5 h-3.5" />
+                )}
+                <span className="hidden xs:inline">
+                  {selectedOrderIds.length > 0 ? `Sync Selected (${selectedOrderIds.length})` : "Sync Old Profits"}
+                </span>
+              </Button>
+            )}
+
+            {selectedOrderIds.length > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setIsBulkDeleteModalOpen(true)}
+                className="bg-rose-600 hover:bg-rose-700 text-white h-7 text-xs px-2.5 flex items-center gap-1 shadow-xs"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Delete ({selectedOrderIds.length})
+              </Button>
+            )}
+
             <Button
-              variant="destructive"
+              variant={showFilters ? "default" : "outline"}
               size="sm"
-              onClick={() => setIsBulkDeleteModalOpen(true)}
-              className="bg-rose-600 hover:bg-rose-700 text-white h-6 text-[11px] px-2 flex items-center gap-1 shadow-2xs"
+              onClick={() => setShowFilters(!showFilters)}
+              className={cn(
+                "h-7 text-xs px-2.5 flex items-center gap-1 transition-colors",
+                showFilters ? "bg-[#1b382b] hover:bg-[#254b3a] text-white" : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+              )}
             >
-              <Trash2 className="w-3 h-3" /> Delete ({selectedOrderIds.length})
+              <Filter className="w-3.5 h-3.5" />
+              <span>{showFilters ? "Hide Filters" : "Show Filters"}</span>
+              {activeChips.length > 0 && (
+                <span className="ml-0.5 px-1.5 py-0.2 bg-orange-500 text-white rounded-full text-[9px] font-bold">
+                  {activeChips.length}
+                </span>
+              )}
             </Button>
-          )}
 
-          {/* Quick Refresh Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleManualRefresh}
-            disabled={isFetching}
-            className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50 h-6 text-[11px] px-2 flex items-center gap-1"
-            title="Refresh Data"
-          >
-            <RefreshCw className={cn("w-3 h-3 text-gray-600", isFetching && "animate-spin text-[#FB923C]")} />
-            <span>Refresh</span>
-          </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleManualRefresh}
+              disabled={isFetching}
+              className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50 h-7 text-xs px-2.5 flex items-center gap-1"
+              title="Refresh Data"
+            >
+              <RefreshCw className={cn("w-3.5 h-3.5 text-gray-600", isFetching && "animate-spin text-[#FB923C]")} />
+              <span className="hidden xs:inline">Refresh</span>
+            </Button>
 
-          <Button variant="outline" size="sm" className="bg-white shadow-2xs border-gray-300 h-6 text-[11px] px-2" onClick={handlePrint}>
-            <Printer className="w-3 h-3 mr-1 text-gray-600" /> Print
-          </Button>
+            <Button variant="outline" size="sm" className="bg-white shadow-xs border-gray-300 h-7 text-xs px-2.5" onClick={handlePrint}>
+              <Printer className="w-3.5 h-3.5 mr-1 text-gray-600" /> Print
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* FILTER PANEL */}
-      <div className="bg-white border border-gray-200 rounded-lg p-1.5 shadow-2xs space-y-1">
-        <div className="flex items-center justify-between border-b border-gray-100 pb-0.5">
-          <div className="flex items-center gap-1.5">
+      {/* COMPACT FILTER PANEL */}
+      {showFilters && (
+        <div className="bg-white border border-gray-200 rounded-xl p-2.5 shadow-xs space-y-2 transition-all">
+          <div className="flex items-center justify-between border-b border-gray-100 pb-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-gray-700">Filter Controls</span>
+              {activeChips.length > 0 && (
+                <span className="text-[10px] bg-orange-100 text-orange-800 rounded-full px-2 py-0.2 font-semibold">
+                  {activeChips.length} Active
+                </span>
+              )}
+            </div>
             {activeChips.length > 0 && (
-              <span className="text-[9px] bg-orange-100 text-orange-800 rounded-full px-1.5 py-0.1 font-semibold shadow-2xs">
-                {activeChips.length} Active
-              </span>
+              <Button variant="ghost" size="sm" onClick={clearAll} className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 text-xs h-6 px-2">
+                Reset All
+              </Button>
             )}
           </div>
+
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-2 items-end">
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Search</label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                <Input
+                  placeholder="Invoice, phone..."
+                  value={searchTerm}
+                  onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+                  className={cn(
+                    "pl-7 h-8 text-xs bg-white shadow-xs transition-colors",
+                    searchTerm.trim() ? "border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30" : "border-gray-300 text-gray-700"
+                  )}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Date Range</label>
+              <Select value={datePreset} onValueChange={(v) => handleDatePresetChange(v)}>
+                <SelectTrigger className={cn(
+                  "bg-white h-8 text-xs transition-colors py-0",
+                  datePreset !== "ALL" ? "border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30" : "border-gray-300 text-gray-700"
+                )}>
+                  <SelectValue placeholder="All Time" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Time / Max</SelectItem>
+                  <SelectItem value="TODAY">Today</SelectItem>
+                  <SelectItem value="YESTERDAY">Yesterday</SelectItem>
+                  <SelectItem value="LAST_7_DAYS">Last 7 Days</SelectItem>
+                  <SelectItem value="THIS_MONTH">This Month</SelectItem>
+                  <SelectItem value="LAST_MONTH">Last Month</SelectItem>
+                  <SelectItem value="LAST_3_MONTHS">Last 3 Months</SelectItem>
+                  <SelectItem value="THIS_YEAR">This Year</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Status</label>
+              <Select value={status} onValueChange={(v) => { setStatus(v as any); setPage(1); }}>
+                <SelectTrigger className={cn(
+                  "bg-white h-8 text-xs transition-colors py-0",
+                  status !== "ALL" ? "border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30" : "border-gray-300 text-gray-700"
+                )}>
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Status</SelectItem>
+                  {STATUS_OPTIONS.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold text-white ${statusBadgeClass(s)}`}>
+                        {s}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Payment</label>
+              <Select value={payment} onValueChange={(v) => { setPayment(v as any); setPage(1); }}>
+                <SelectTrigger className={cn(
+                  "bg-white h-8 text-xs transition-colors py-0",
+                  payment !== "ALL" ? "border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30" : "border-gray-300 text-gray-700"
+                )}>
+                  <SelectValue placeholder="All Payment" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_OPTIONS.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {p === "PAID" ? <span className="text-emerald-700 font-bold">PAID</span> : p === "DUE" ? <span className="text-rose-600 font-bold">DUE</span> : p}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Method</label>
+              <Select value={method} onValueChange={(v) => { setMethod(v as any); setPage(1); }}>
+                <SelectTrigger className={cn(
+                  "bg-white h-8 text-xs transition-colors py-0",
+                  method !== "ALL" ? "border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30" : "border-gray-300 text-gray-700"
+                )}>
+                  <SelectValue placeholder="All Methods" />
+                </SelectTrigger>
+                <SelectContent>
+                  {METHOD_OPTIONS.map((m) => (<SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Product</label>
+              <div className="h-8">
+                <ProductPicker
+                  value={productId}
+                  searchValue={productQ}
+                  onSearchChange={(v) => setProductQ(v)}
+                  onPick={(p) => {
+                    setProductId(p?.id ?? "");
+                    setSelectedProductName(p?.name ?? "");
+                    setPage(1);
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-1">
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">From</label>
+                <Input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => { setDateFrom(e.target.value); setDatePreset("CUSTOM"); setPage(1); }}
+                  className={cn(
+                    "bg-white h-8 text-[11px] px-1 transition-colors",
+                    dateFrom ? "border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30" : "border-gray-300 text-gray-700"
+                  )}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">To</label>
+                <Input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => { setDateTo(e.target.value); setDatePreset("CUSTOM"); setPage(1); }}
+                  className={cn(
+                    "bg-white h-8 text-[11px] px-1 transition-colors",
+                    dateTo ? "border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30" : "border-gray-300 text-gray-700"
+                  )}
+                />
+              </div>
+            </div>
+          </div>
+
           {activeChips.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={clearAll} className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 text-[10px] h-4 px-1">
-              Reset All
-            </Button>
+            <div className="flex flex-wrap gap-1.5 pt-1.5 border-t border-gray-100">
+              {activeChips.map((c) => (
+                <span
+                  key={c.key}
+                  className="inline-flex items-center gap-1 text-[11px] bg-orange-50 text-orange-800 border border-orange-200 rounded-full px-2.5 py-0.5 font-medium shadow-2xs"
+                >
+                  {c.label}
+                  <button type="button" onClick={c.onRemove} className="hover:text-orange-900">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
           )}
         </div>
+      )}
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1 items-end">
-          <div className="space-y-0.2">
-            <label className="text-[9px] font-semibold text-gray-500">Search</label>
-            <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
-              <Input
-                placeholder="Invoice, phone..."
-                value={searchTerm}
-                onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
-                className={cn(
-                  "pl-6 h-6 text-[11px] bg-white shadow-2xs transition-colors",
-                  searchTerm.trim() ? "border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30" : "border-gray-300 text-gray-700"
-                )}
-              />
-            </div>
+      {/* METRICS BAR */}
+      <div className={cn(
+        "grid grid-cols-2 sm:grid-cols-3 gap-2",
+        isSuperAdmin ? "lg:grid-cols-7" : "lg:grid-cols-6"
+      )}>
+        <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Filtered Orders</p>
+            <h3 className="text-xs sm:text-sm font-bold text-gray-900">{summaryMetrics.totalValidCount} / {summaryMetrics.totalCount}</h3>
           </div>
-
-          <div className="space-y-0.2">
-            <label className="text-[9px] font-semibold text-gray-500">Date Range</label>
-            <Select value={datePreset} onValueChange={(v) => handleDatePresetChange(v)}>
-              <SelectTrigger className={cn(
-                "bg-white h-6 text-[11px] transition-colors py-0",
-                datePreset !== "ALL" ? "border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30" : "border-gray-300 text-gray-700"
-              )}>
-                <SelectValue placeholder="All Time" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Time / Max</SelectItem>
-                <SelectItem value="TODAY">Today</SelectItem>
-                <SelectItem value="YESTERDAY">Yesterday</SelectItem>
-                <SelectItem value="LAST_7_DAYS">Last 7 Days</SelectItem>
-                <SelectItem value="THIS_MONTH">This Month</SelectItem>
-                <SelectItem value="LAST_MONTH">Last Month</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-0.2">
-            <label className="text-[9px] font-semibold text-gray-500">Status</label>
-            <Select value={status} onValueChange={(v) => { setStatus(v as any); setPage(1); }}>
-              <SelectTrigger className={cn(
-                "bg-white h-6 text-[11px] transition-colors py-0",
-                status !== "ALL" ? "border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30" : "border-gray-300 text-gray-700"
-              )}>
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Status</SelectItem>
-                {STATUS_OPTIONS.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    <span className={`inline-block px-1.5 py-0.2 rounded text-[10px] font-bold text-white ${statusBadgeClass(s)}`}>
-                      {s}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-0.2">
-            <label className="text-[9px] font-semibold text-gray-500">Payment</label>
-            <Select value={payment} onValueChange={(v) => { setPayment(v as any); setPage(1); }}>
-              <SelectTrigger className={cn(
-                "bg-white h-6 text-[11px] transition-colors py-0",
-                payment !== "ALL" ? "border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30" : "border-gray-300 text-gray-700"
-              )}>
-                <SelectValue placeholder="All Payment" />
-              </SelectTrigger>
-              <SelectContent>
-                {PAYMENT_OPTIONS.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {p === "PAID" ? <span className="text-emerald-700 font-bold">PAID</span> : p === "DUE" ? <span className="text-rose-600 font-bold">DUE</span> : p}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-0.2">
-            <label className="text-[9px] font-semibold text-gray-500">Method</label>
-            <Select value={method} onValueChange={(v) => { setMethod(v as any); setPage(1); }}>
-              <SelectTrigger className={cn(
-                "bg-white h-6 text-[11px] transition-colors py-0",
-                method !== "ALL" ? "border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30" : "border-gray-300 text-gray-700"
-              )}>
-                <SelectValue placeholder="All Methods" />
-              </SelectTrigger>
-              <SelectContent>
-                {METHOD_OPTIONS.map((m) => (<SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-0.2">
-            <label className="text-[9px] font-semibold text-gray-500">Product</label>
-            <div className="h-6">
-              <ProductPicker
-                value={productId}
-                searchValue={productQ}
-                onSearchChange={(v) => setProductQ(v)}
-                onPick={(p) => {
-                  setProductId(p?.id ?? "");
-                  setSelectedProductName(p?.name ?? "");
-                  setPage(1);
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-1">
-            <div className="space-y-0.2">
-              <label className="text-[9px] font-semibold text-gray-500">From</label>
-              <Input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => { setDateFrom(e.target.value); setDatePreset("CUSTOM"); setPage(1); }}
-                className={cn(
-                  "bg-white h-6 text-[10px] px-1 transition-colors",
-                  dateFrom ? "border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30" : "border-gray-300 text-gray-700"
-                )}
-              />
-            </div>
-            <div className="space-y-0.2">
-              <label className="text-[9px] font-semibold text-gray-500">To</label>
-              <Input
-                type="date"
-                value={dateTo}
-                onChange={(e) => { setDateTo(e.target.value); setDatePreset("CUSTOM"); setPage(1); }}
-                className={cn(
-                  "bg-white h-6 text-[10px] px-1 transition-colors",
-                  dateTo ? "border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30" : "border-gray-300 text-gray-700"
-                )}
-              />
-            </div>
+          <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
+            <TrendingUp className="w-3.5 h-3.5" />
           </div>
         </div>
 
-        {activeChips.length > 0 && (
-          <div className="flex flex-wrap gap-1 pt-1 border-t border-gray-100">
-            {activeChips.map((c) => (
-              <span
-                key={c.key}
-                className="inline-flex items-center gap-1 text-[10px] bg-orange-50 text-orange-800 border border-orange-200 rounded-full px-2 py-0.5 font-medium shadow-2xs"
-              >
-                {c.label}
-                <button type="button" onClick={c.onRemove} className="hover:text-orange-900">
-                  <X className="w-2.5 h-2.5" />
-                </button>
-              </span>
-            ))}
+        <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Total COD</p>
+            <h3 className="text-xs sm:text-sm font-bold text-gray-900">৳{summaryMetrics.totalCodAmount.toLocaleString()}</h3>
+          </div>
+          <div className="p-1.5 bg-amber-50 text-amber-600 rounded-lg">
+            <Truck className="w-3.5 h-3.5" />
+          </div>
+        </div>
+
+        <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Total Bill</p>
+            <h3 className="text-xs sm:text-sm font-bold text-blue-600">৳{summaryMetrics.totalBillAmount.toLocaleString()}</h3>
+          </div>
+          <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
+            <FileText className="w-3.5 h-3.5" />
+          </div>
+        </div>
+
+        <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Total RCV</p>
+            <h3 className="text-xs sm:text-sm font-bold text-green-700">৳{summaryMetrics.totalRcvAmount.toLocaleString()}</h3>
+          </div>
+          <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
+            <DollarSign className="w-3.5 h-3.5" />
+          </div>
+        </div>
+
+        <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Paid Orders</p>
+            <h3 className="text-xs sm:text-sm font-bold text-emerald-600">{summaryMetrics.paidCount}</h3>
+          </div>
+          <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+          </div>
+        </div>
+
+        <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Due / Unpaid</p>
+            <h3 className="text-xs sm:text-sm font-bold text-rose-600">{summaryMetrics.dueCount}</h3>
+          </div>
+          <div className="p-1.5 bg-rose-50 text-rose-600 rounded-lg">
+            <Clock className="w-3.5 h-3.5" />
+          </div>
+        </div>
+
+        {/* 🔒 Super Admin Net Profit Card (7th column) */}
+        {isSuperAdmin && (
+          <div className="bg-white p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/20 shadow-2xs flex items-center justify-between col-span-2 sm:col-span-1">
+            <div>
+              <p className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider">Net Profit</p>
+              <h3 className={cn("text-xs sm:text-sm font-black", filteredNetProfit >= 0 ? "text-emerald-700" : "text-rose-600")}>
+                ৳{filteredNetProfit.toLocaleString()}
+              </h3>
+            </div>
+            <div className="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg">
+              <TrendingUp className="w-3.5 h-3.5" />
+            </div>
           </div>
         )}
       </div>
 
-      {/* METRICS BAR (GLOBAL DATASET AGGREGATED SUMMARY) */}
-      <div className="grid grid-cols-2 sm:grid-cols-6 gap-1.5">
-        <div className="bg-white p-2 rounded-lg border border-gray-200 shadow-2xs flex items-center justify-between">
-          <div>
-            <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider">Filtered Orders</p>
-            <h3 className="text-xs font-bold text-gray-900">{summaryMetrics.totalCount}</h3>
-          </div>
-          <div className="p-1 bg-blue-50 text-blue-600 rounded">
-            <TrendingUp className="w-3 h-3" />
-          </div>
-        </div>
-
-        <div className="bg-white p-2 rounded-lg border border-gray-200 shadow-2xs flex items-center justify-between">
-          <div>
-            <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider">Total COD</p>
-            <h3 className="text-xs font-bold text-gray-900">৳{summaryMetrics.totalCodAmount.toLocaleString()}</h3>
-          </div>
-          <div className="p-1 bg-amber-50 text-amber-600 rounded">
-            <DollarSign className="w-3 h-3" />
-          </div>
-        </div>
-
-        <div className="bg-white p-2 rounded-lg border border-gray-200 shadow-2xs flex items-center justify-between">
-          <div>
-            <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider">Total Bill</p>
-            <h3 className="text-xs font-bold text-blue-600">৳{summaryMetrics.totalBillAmount.toLocaleString()}</h3>
-          </div>
-          <div className="p-1 bg-blue-50 text-blue-600 rounded">
-            <FileText className="w-3 h-3" />
-          </div>
-        </div>
-
-        <div className="bg-white p-2 rounded-lg border border-gray-200 shadow-2xs flex items-center justify-between">
-          <div>
-            <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider">Total RCV</p>
-            <h3 className="text-xs font-bold text-green-700">৳{summaryMetrics.totalRcvAmount.toLocaleString()}</h3>
-          </div>
-          <div className="p-1 bg-emerald-50 text-emerald-600 rounded">
-            <Truck className="w-3 h-3" />
-          </div>
-        </div>
-
-        <div className="bg-white p-2 rounded-lg border border-gray-200 shadow-2xs flex items-center justify-between">
-          <div>
-            <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider">Paid Orders</p>
-            <h3 className="text-xs font-bold text-emerald-600">{summaryMetrics.paidCount}</h3>
-          </div>
-          <div className="p-1 bg-emerald-50 text-emerald-600 rounded">
-            <CheckCircle2 className="w-3 h-3" />
-          </div>
-        </div>
-
-        <div className="bg-white p-2 rounded-lg border border-gray-200 shadow-2xs flex items-center justify-between">
-          <div>
-            <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider">Due / Unpaid</p>
-            <h3 className="text-xs font-bold text-rose-600">{summaryMetrics.dueCount}</h3>
-          </div>
-          <div className="p-1 bg-rose-50 text-rose-600 rounded">
-            <Clock className="w-3 h-3" />
-          </div>
-        </div>
-      </div>
-
       {/* TABLE CONTAINER */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow-2xs overflow-hidden">
+      <div className="bg-white border border-gray-200 rounded-xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto w-full">
           <Table>
             <TableHeader className="bg-gray-50/75 border-b border-gray-200 text-gray-700">
               <TableRow>
-                <TableHead className="w-9 text-center py-2">
+                <TableHead className="w-9 text-center py-2.5">
                   <button onClick={handleSelectAll} className="inline-flex items-center text-gray-500 hover:text-gray-900">
                     {selectedOrderIds.length > 0 && selectedOrderIds.length === sortedOrders.length ? (
                       <CheckSquare className="w-4 h-4 text-[#FB923C]" />
@@ -976,25 +1026,30 @@ const OrderList = () => {
                     )}
                   </button>
                 </TableHead>
-                <TableHead className="font-bold py-2 text-xs">Invoice</TableHead>
-                <TableHead onClick={() => toggleSort("orderTime")} className="cursor-pointer select-none font-bold py-2 text-xs">
+                <TableHead className="font-bold py-2.5 text-xs">Invoice</TableHead>
+                <TableHead onClick={() => toggleSort("orderTime")} className="cursor-pointer select-none font-bold py-2.5 text-xs">
                   <div className="flex items-center">Order Time {renderSortIcon("orderTime")}</div>
                 </TableHead>
-                <TableHead className="font-bold py-2 text-xs">Customer & Contact</TableHead>
-                <TableHead className="font-bold py-2 text-xs">Shipping Details</TableHead>
-                <TableHead className="font-bold py-2 text-xs">Ordered Products</TableHead>
+                <TableHead className="font-bold py-2.5 text-xs">Customer & Contact</TableHead>
+                <TableHead className="font-bold py-2.5 text-xs">Shipping Details</TableHead>
+                <TableHead className="font-bold py-2.5 text-xs">Ordered Products</TableHead>
 
-                <TableHead onClick={() => toggleSort("amount")} className="cursor-pointer select-none font-bold py-2 text-xs">
+                <TableHead onClick={() => toggleSort("amount")} className="cursor-pointer select-none font-bold py-2.5 text-xs">
                   <div className="flex items-center">COD {renderSortIcon("amount")}</div>
                 </TableHead>
 
-                <TableHead className="font-bold py-2 text-xs">Bill / Cash</TableHead>
+                <TableHead className="font-bold py-2.5 text-xs">Bill / Cash</TableHead>
 
-                <TableHead onClick={() => toggleSort("status")} className="cursor-pointer select-none font-bold py-2 text-xs">
+                {/* 🔒 Super Admin Net Profit Column Header */}
+                {isSuperAdmin && (
+                  <TableHead className="font-bold py-2.5 text-xs text-emerald-700">Net Profit</TableHead>
+                )}
+
+                <TableHead onClick={() => toggleSort("status")} className="cursor-pointer select-none font-bold py-2.5 text-xs">
                   <div className="flex items-center">Status {renderSortIcon("status")}</div>
                 </TableHead>
-                <TableHead className="font-bold py-2 text-xs">Payment</TableHead>
-                <TableHead className="text-right font-bold pr-3 py-2 text-xs w-[1%] whitespace-nowrap">Action</TableHead>
+                <TableHead className="font-bold py-2.5 text-xs">Payment</TableHead>
+                <TableHead className="text-right font-bold pr-3 py-2.5 text-xs w-[1%] whitespace-nowrap">Action</TableHead>
               </TableRow>
             </TableHeader>
 
@@ -1002,16 +1057,16 @@ const OrderList = () => {
               {isLoading ? (
                 [...Array(6)].map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={11} className="py-2.5">
+                    <TableCell colSpan={isSuperAdmin ? 12 : 11} className="py-3">
                       <Skeleton className="w-full h-6 my-0.5 rounded-md" />
                     </TableCell>
                   </TableRow>
                 ))
               ) : sortedOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="text-center py-8 text-gray-500">
+                  <TableCell colSpan={isSuperAdmin ? 12 : 11} className="text-center py-10 text-gray-500">
                     <p className="font-semibold text-sm">No orders found.</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">Try adjusting your search criteria or filters.</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Try adjusting your search criteria or filters.</p>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -1021,7 +1076,7 @@ const OrderList = () => {
                   const isThisRowLoading = loadingInvoiceId === order.id;
 
                   const shipping = Number(order.shippingCost || 0);
-                  const itemsSubtotal = orderItems.reduce((acc, it) => acc + (Number(it.price || 0) * Number(it.quantity || it.qty || 1)), 0);
+                  const itemsSubtotal = orderItems.reduce((acc: any, it: any) => acc + (Number(it.price || 0) * Number(it.quantity || it.qty || 1)), 0);
                   const productBill = itemsSubtotal > 0 ? itemsSubtotal : Math.max(0, Number(order.amount || 0) - shipping);
 
                   const districtLower = String(order.shipping?.district || "").toLowerCase();
@@ -1066,24 +1121,35 @@ const OrderList = () => {
 
                   let rcvDisplayClass = `font-black text-xs ${rcvColorClass}`;
 
+                  // ✅ Calculate per-order profit for Super Admin
+                  const orderItemCosts = (order as any).orderItemCosts || [];
+                  const totalOrderProfit = orderItemCosts.reduce((sum: number, ic: any) => sum + Number(ic.profit || 0), 0);
+
                   return (
                     <TableRow key={order.id} className={`hover:bg-gray-50/85 transition-colors ${isSelected ? "bg-orange-50/40" : ""}`}>
-                      <TableCell className="text-center align-top py-2.5">
+                      <TableCell className="text-center align-top py-3">
                         <button onClick={() => toggleSelectOrder(order.id)} className="inline-flex items-center text-gray-400 hover:text-gray-900">
                           {isSelected ? <CheckSquare className="w-4 h-4 text-[#FB923C]" /> : <Square className="w-4 h-4" />}
                         </button>
                       </TableCell>
 
-                      <TableCell className="font-bold align-top py-2.5 text-xs">
+                      <TableCell className="font-bold align-top py-3 text-xs">
                         <div className="flex flex-col gap-0.5">
                           <div>
-                            <Link target="_blank" href={`/orders/${order.id}`} className="text-blue-600 hover:underline">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingOrderId(order.id);
+                                setIsEditModalOpen(true);
+                              }}
+                              className="text-blue-600 hover:underline font-bold text-left cursor-pointer"
+                            >
                               #{order.invoice}
-                            </Link>
+                            </button>
                           </div>
                           <div>
                             {(order as any).consignmentId ? (
-                              <Link target="_blank" href={`${(order as any).trackingLink}`} className="text-[10px] text-emerald-700 border border-emerald-200 px-1 py-0.2 rounded font-mono truncate max-w-30" title={(order as any).trackingCode}>
+                              <Link target="_blank" href={`${(order as any).trackingLink}`} className="text-xs text-emerald-700 border border-emerald-200 px-1 py-0.2 rounded font-mono truncate max-w-30" title={(order as any).trackingCode}>
                                 {(order as any).consignmentId}
                                 <ArrowUpRight className="w-3 h-3 inline-block ml-0.5" />
                               </Link>
@@ -1092,7 +1158,7 @@ const OrderList = () => {
                         </div>
                       </TableCell>
 
-                      <TableCell className="text-gray-600 text-xs whitespace-nowrap align-top py-2.5 font-medium">
+                      <TableCell className="text-gray-600 text-xs whitespace-nowrap align-top py-3 font-medium">
                         {order.orderTime ? (
                           <>
                             <div className="font-semibold text-gray-900">
@@ -1115,15 +1181,13 @@ const OrderList = () => {
                         )}
                       </TableCell>
 
-                      {/* Customer & Contact Column */}
-                      <TableCell className="text-gray-900 align-top py-2.5 max-w-[170px]">
+                      <TableCell className="text-gray-900 align-top py-3 max-w-[170px]">
                         <div className="font-bold text-[13px] truncate text-gray-900" title={order.customer?.name || order.shipping?.name || "Guest"}>
                           {order.customer?.name || order.shipping?.name || "Guest"}
                         </div>
 
-                        {/* Phone number and call button inline */}
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-sm text-gray-700 font-semibold truncate">
+                          <span className="text-xs text-gray-700 font-semibold truncate">
                             {order.customer?.phone || order.shipping?.phone || "No phone"}
                           </span>
                           {(order.customer?.phone || order.shipping?.phone) && (
@@ -1144,9 +1208,7 @@ const OrderList = () => {
                         )}
                       </TableCell>
 
-                      {/* Shipping Details Column */}
-                      <TableCell className="align-top py-2.5 max-w-[230px]">
-                        {/* Address and Map location button inline */}
+                      <TableCell className="align-top py-3 max-w-[230px]">
                         <div className="flex items-start justify-between gap-1">
                           <span className="block max-w-[170px] line-clamp-2 overflow-hidden text-ellipsis whitespace-normal break-words text-xs font-medium text-gray-900" title={order.shipping?.address || "No address provided"}>
                             {order.shipping?.address || "No address"}
@@ -1176,11 +1238,10 @@ const OrderList = () => {
                         )}
                       </TableCell>
 
-                      {/* Ordered Products Column with optional cross lines for canceled/returned */}
-                      <TableCell className="align-top py-2 max-w-[260px]">
+                      <TableCell className="align-top py-3 max-w-[260px]">
                         {orderItems.length > 0 ? (
-                          <div className="space-y-0.5">
-                            {orderItems.map((item, idx) => {
+                          <div className="space-y-1">
+                            {orderItems.map((item: any, idx: number) => {
                               const productName = item.name || item.product?.name || "Product";
                               const itemSize = item.size ? `(${item.size}` : "";
                               const itemUnit = item.unit ? `${item.unit})` : "";
@@ -1189,9 +1250,9 @@ const OrderList = () => {
                               const slug = generateSlug(productName);
 
                               return (
-                                <div key={idx} className={cn("text-[11px] bg-gray-50 border border-gray-200/80 rounded px-1.5 py-0.5 flex items-center justify-between gap-1 shadow-2xs", isCanceledOrReturned && "line-through opacity-70 text-gray-400")}>
+                                <div key={idx} className={cn("text-[11px] bg-gray-50 border border-gray-200/80 rounded px-1.5 py-1 flex items-center justify-between gap-1 shadow-2xs", isCanceledOrReturned && "line-through opacity-70 text-gray-400")}>
                                   <div className="truncate font-semibold flex items-center gap-1 min-w-0">
-                                    <span className="text-[#382efa] font-bold shrink-0">{itemQty}x</span>
+                                    <span className="text-blue-600 font-bold shrink-0">{itemQty}x</span>
                                     <span className="truncate" title={`${productName} ${itemSize} ${itemUnit}`}>
                                       {productName} <span className="text-[10px]">{itemSize}</span> <span className="text-[10px]">{itemUnit}</span>
                                     </span>
@@ -1223,9 +1284,9 @@ const OrderList = () => {
                         )}
                       </TableCell>
 
-                      <TableCell className="font-bold text-gray-900 whitespace-nowrap align-top py-2.5 text-xs">
+                      <TableCell className="font-bold text-gray-900 whitespace-nowrap align-top py-3 text-xs">
                         <div>{codOrTotalAmount} BDT</div>
-                        <div className="text-[10px] text-gray-600 uppercase font-semibold mt-0.2">
+                        <div className="text-[10px] text-gray-600 uppercase font-semibold mt-0.5">
                           {methodLabel(order.method)}
                         </div>
                         <div className="text-[10px] text-gray-500">
@@ -1233,8 +1294,8 @@ const OrderList = () => {
                         </div>
                       </TableCell>
 
-                      <TableCell className="align-top py-2 whitespace-nowrap text-xs">
-                        <div className="space-y-0.2 bg-gray-50/80 p-1.5 rounded border border-gray-200/70">
+                      <TableCell className="align-top py-3 whitespace-nowrap text-xs">
+                        <div className="space-y-0.5 bg-gray-50/80 p-2 rounded-lg border border-gray-200/70">
                           <div className="flex items-center justify-between gap-1">
                             <div className={cn("font-bold text-[11px]", isCanceledOrReturned ? "line-through text-gray-400" : "text-gray-900")}>
                               Bill: ৳{productBill}
@@ -1258,7 +1319,33 @@ const OrderList = () => {
                         </div>
                       </TableCell>
 
-                      <TableCell className="align-top py-2">
+                      {/* 🔒 Super Admin Net Profit Cell */}
+                      {isSuperAdmin && (
+                        <TableCell className="align-top py-3 whitespace-nowrap text-xs">
+                          <div
+                            onClick={() => {
+                              setProfitEditorOrder(order);
+                              setIsProfitEditorVisible(true);
+                            }}
+                            className={cn(
+                              'p-1.5 rounded-md border inline-flex items-center gap-1.5 cursor-pointer hover:shadow-xs transition-all',
+                              orderItemCosts.length > 0
+                                ? totalOrderProfit >= 0
+                                  ? 'bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100'
+                                  : 'bg-rose-50 border-rose-300 text-rose-700 hover:bg-rose-100'
+                                : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
+                            )}
+                            title="Click to view full financial calculation and edit fields"
+                          >
+                            <TrendingUp className="w-3.5 h-3.5" />
+                            <span className="font-black text-xs">
+                              {orderItemCosts.length > 0 ? `৳${totalOrderProfit.toLocaleString()}` : 'Edit'}
+                            </span>
+                          </div>
+                        </TableCell>
+                      )}
+
+                      <TableCell className="align-top py-3">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Badge className={`${statusBadgeClass(order.status)} cursor-pointer transition-transform active:scale-95 text-[10px] px-2 py-0.5`}>
@@ -1279,7 +1366,7 @@ const OrderList = () => {
                                 onClick={() => handleUpdateStatus(order.id, s)}
                                 className="text-xs font-medium cursor-pointer py-1"
                               >
-                                <span className={`inline-block px-1.5 py-0.2 rounded text-[10px] font-bold text-white mr-1.5 ${statusBadgeClass(s)}`}>
+                                <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold text-white mr-1.5 ${statusBadgeClass(s)}`}>
                                   {s}
                                 </span>
                               </DropdownMenuItem>
@@ -1288,7 +1375,7 @@ const OrderList = () => {
                         </DropdownMenu>
                       </TableCell>
 
-                      <TableCell className="align-top py-2">
+                      <TableCell className="align-top py-3">
                         <Badge
                           onClick={() => {
                             if (updatingPaymentId === order.id) return;
@@ -1308,60 +1395,60 @@ const OrderList = () => {
                         </Badge>
                       </TableCell>
 
-                      <TableCell className="text-right pr-1 align-top py-1.5 whitespace-nowrap">
-                        <div className="inline-flex justify-end items-center gap-0">
+                      <TableCell className="text-right pr-2 align-top py-3 whitespace-nowrap">
+                        <div className="inline-flex justify-end items-center gap-1">
                           {!(order as any).consignmentId ? (
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6 text-green-600 hover:bg-green-50"
+                              className="h-7 w-7 text-green-600 hover:bg-green-50"
                               disabled={sendingOrderId === order.id}
                               onClick={() => handleSendToSteadfast(order.id, order.invoice)}
                               title="Send to Steadfast Courier"
                             >
                               {sendingOrderId === order.id ? (
-                                <Loader2 className="w-3 h-3 animate-spin text-green-600" />
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-green-600" />
                               ) : (
-                                <Truck className="w-3 h-3" />
+                                <Truck className="w-3.5 h-3.5" />
                               )}
                             </Button>
                           ) : (
-                            <span className="w-6 h-6 inline-block" />
+                            <span className="w-7 h-7 inline-block" />
                           )}
 
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 text-blue-600 hover:bg-blue-50"
+                            className="h-7 w-7 text-blue-600 hover:bg-blue-50"
                             disabled={isThisRowLoading}
                             onClick={() => handleOpenInvoice(order.id)}
                             title="Download Invoice PDF"
                           >
                             {isThisRowLoading ? (
-                              <Loader2 className="w-3 h-3 animate-spin text-blue-600" />
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
                             ) : (
-                              <Download className="w-3 h-3" />
+                              <Download className="w-3.5 h-3.5" />
                             )}
                           </Button>
 
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 text-gray-700 hover:text-gray-900 hover:bg-gray-100"
+                            className="h-7 w-7 text-gray-700 hover:text-gray-900 hover:bg-gray-100"
                             onClick={() => { setSelectedOrderId(order.id); setIsModalVisible(true); }}
                             title="View Details"
                           >
-                            <Eye className="w-3 h-3" />
+                            <Eye className="w-3.5 h-3.5" />
                           </Button>
 
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 text-rose-600 hover:bg-rose-50"
+                            className="h-7 w-7 text-rose-600 hover:bg-rose-50"
                             onClick={() => setOrderToDelete({ id: order.id, invoice: order.invoice })}
                             title="Delete Order"
                           >
-                            <Trash2 className="w-3 h-3" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </Button>
                         </div>
                       </TableCell>
@@ -1375,14 +1462,14 @@ const OrderList = () => {
 
         {/* PAGINATION FOOTER */}
         {meta && (
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-2 px-2.5 py-2 bg-gray-50/50 border-t border-gray-200">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-2 px-3 py-2.5 bg-gray-50/50 border-t border-gray-200">
             <div className="flex items-center gap-2">
-              <p className="text-[11px] text-gray-600 font-semibold">
+              <p className="text-xs text-gray-600 font-semibold">
                 Page <span className="font-bold text-gray-900">{meta.page}</span> of <span className="font-bold text-gray-900">{meta.totalPage || 1}</span> (Total <span className="font-bold text-gray-900">{meta.total}</span> orders)
               </p>
 
               <div className="flex items-center gap-1">
-                <span className="text-[11px] text-gray-600 font-semibold">Rows:</span>
+                <span className="text-xs text-gray-600 font-semibold">Rows:</span>
                 <Select
                   value={limit.toString()}
                   onValueChange={(val) => {
@@ -1390,27 +1477,26 @@ const OrderList = () => {
                     setPage(1);
                   }}
                 >
-                  <SelectTrigger className="h-6 w-[55px] bg-white text-[11px] font-semibold">
+                  <SelectTrigger className="h-7 w-[60px] bg-white text-xs font-semibold">
                     <SelectValue placeholder={limit.toString()} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="10">10</SelectItem>
                     <SelectItem value="20">20</SelectItem>
                     <SelectItem value="50">50</SelectItem>
                     <SelectItem value="100">100</SelectItem>
-                    <SelectItem value="250">250</SelectItem>
+                    <SelectItem value="500">500</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 disabled={page === 1}
                 onClick={() => setPage((prev) => prev - 1)}
-                className="bg-white border-gray-300 text-gray-700 h-6 text-[11px] px-2.5 font-semibold"
+                className="bg-white border-gray-300 text-gray-700 h-7 text-xs px-3 font-semibold"
               >
                 Previous
               </Button>
@@ -1419,7 +1505,7 @@ const OrderList = () => {
                 size="sm"
                 disabled={page >= (meta.totalPage || 1)}
                 onClick={() => setPage((prev) => prev + 1)}
-                className="bg-white border-gray-300 text-gray-700 h-6 text-[11px] px-2.5 font-semibold"
+                className="bg-white border-gray-300 text-gray-700 h-7 text-xs px-3 font-semibold"
               >
                 Next
               </Button>
@@ -1472,6 +1558,30 @@ const OrderList = () => {
 
       {/* Modals */}
       <OrderDetailsModal orderId={selectedOrderId || ""} visible={isModalVisible} onClose={() => setIsModalVisible(false)} />
+
+      <EditOrderModal
+        orderId={editingOrderId}
+        visible={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingOrderId(null);
+        }}
+      />
+
+      {/* ✅ Interactive Order Profit Editor Modal */}
+      {profitEditorOrder && (
+        <OrderProfitEditorModal
+          sale={profitEditorOrder}
+          visible={isProfitEditorVisible}
+          onClose={() => {
+            setIsProfitEditorVisible(false);
+            setProfitEditorOrder(null);
+          }}
+          onSuccess={() => {
+            refetch();
+          }}
+        />
+      )}
 
       <OrderInvoice
         order={invoiceOrder}

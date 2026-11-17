@@ -3,22 +3,14 @@ import baseApi from "../baseApi";
 const salesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
 
-
     getAllSales: builder.query({
-      query: ({ searchTerm, page, limit }) => ({
+      query: (params) => ({
         url: "/sales/get-all-sales",
         method: "GET",
-        params: {
-          searchTerm,
-          page: String(page), // Ensure page is a string
-          limit: String(limit), // Ensure limit is a string
-
-
-        },
+        params: params ?? undefined,
       }),
       providesTags: ['Sales'],
     }),
-
 
 
     //get user sales 
@@ -48,18 +40,23 @@ const salesApi = baseApi.injectEndpoints({
       providesTags: ['Sales'],
     }),
 
-
-
-
-
-    // Update Category API (PATCH)
+    // ✅ Full Update Sale API (PATCH)
     updateSales: builder.mutation({
-      query: ({ id, status }) => ({
-        url: `/sales/update-sale-status/${id}`, // Adjust your actual update endpoint
+      query: ({ id, ...body }) => ({
+        url: `/sales/update-sale/${id}`,
         method: 'PATCH',
-        body: { status },
+        body,
       }),
-      invalidatesTags: ['Sales'], // Invalidate the 'Categories' tag to refetch data
+      invalidatesTags: ['Sales'],
+    }),
+
+    // ✅ Delete Sale API (DELETE)
+    deleteSale: builder.mutation({
+      query: (id) => ({
+        url: `/sales/delete-sale/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Sales'],
     }),
 
     // Add Sale API (POST)
@@ -75,8 +72,21 @@ const salesApi = baseApi.injectEndpoints({
 
     // ✅ Get order by ID (Admin)
     getSaleById: builder.query({
-      query: (id) => ({
-        url: `/sales/get-sale-by-id/${id}`,
+      query: (id) => {
+        if (!id || id.trim() === '') {
+          throw new Error('Sale ID is required'); // Prevents empty requests
+        }
+        return {
+          url: `/sales/get-sale-by-id/${id}`,
+          method: "GET",
+        };
+      },
+      providesTags: ['Sales'],
+    }),
+
+    getSalesByCustomer: builder.query({
+      query: (phone: string) => ({
+        url: `/sales/get-sales-by-customer/${phone}`,
         method: "GET",
       }),
       providesTags: ['Sales'],
@@ -93,11 +103,11 @@ export const {
   useGetUserSalesQuery,
   useGetUserSaleDetilsQuery,
   useGetAdminSaleDetilsQuery,
-
   useUpdateSalesMutation, // Export the update mutation hook
+  useDeleteSaleMutation,
   useAddSaleMutation, // Export the new add sale mutation hook
   useGetSaleByIdQuery,
-
+  useLazyGetSalesByCustomerQuery,
 } = salesApi;
 
 export default salesApi;

@@ -26,18 +26,18 @@ import {
 
 interface FormInputProps {
   name: string;
-  label: string;
+  label?: string;
   type?:
-    | 'text'
-    | 'number'
-    | 'email'
-    | 'password'
-    | 'select'
-    | 'file'
-    | 'checkbox'
-    | 'radio'
-    | 'textarea'
-    | 'datetime-local';
+  | 'text'
+  | 'number'
+  | 'email'
+  | 'password'
+  | 'select'
+  | 'file'
+  | 'checkbox'
+  | 'radio'
+  | 'textarea'
+  | 'datetime-local';
   placeholder?: string;
   required?: boolean;
   options?: { value: string; label: string }[];
@@ -45,7 +45,7 @@ interface FormInputProps {
   inputClassName?: string;
   labelClassName?: string;
   onChange?: (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: ChangeEvent<any> // ⚡ Changed to 'any' or broader union to resolve typing conflicts
   ) => void;
   accept?: string;
   multiple?: boolean;

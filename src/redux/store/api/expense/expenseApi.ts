@@ -11,14 +11,10 @@ const expenseApi = baseApi.injectEndpoints({
       invalidatesTags: ['Expenses'],
     }),
     getAllExpenses: builder.query({
-      query: ({ searchTerm, page, limit }) => ({
+      query: (params) => ({
         url: '/expenses/get-all-expenses',
         method: 'GET',
-        params: {
-          searchTerm,
-          page: String(page),
-          limit: String(limit),
-        },
+        params: params ?? undefined,
       }),
       providesTags: ['Expenses'],
     }),

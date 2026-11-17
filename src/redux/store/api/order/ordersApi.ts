@@ -282,6 +282,6 @@ export const {
   useGetDashboardMetricsQuery,
   useGetWeeklySalesOverviewQuery,
   useGetMonthlySalesOverviewQuery,
-  useLazyTrackOrdersQuery,
+  // useLazyTrackOrdersQuery,
   useDeleteOrderMutation,
 } = orderApi

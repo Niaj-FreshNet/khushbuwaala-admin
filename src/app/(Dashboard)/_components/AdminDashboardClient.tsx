@@ -15,7 +15,7 @@ import { toast } from "sonner";
 type DashboardType = "all" | "website" | "manual";
 
 export default function AdminDashboardClient() {
-    const [type, setType] = useState<DashboardType>("all");
+    const [type, setType] = useState<DashboardType>("website");
 
     const { data, isLoading, isError, refetch, isFetching } = useGetDashboardMetricsQuery(
         { type },
@@ -27,11 +27,36 @@ export default function AdminDashboardClient() {
         toast.success("Dashboard refreshed successfully!", { duration: 1000 });
     };
 
+    const metricsData = data?.data;
+    const formatBDT = (v: number) => `৳${Number(v || 0).toLocaleString()}`;
+
+    const todayData = (metricsData as any)?.today ?? (metricsData as any)?.today;
+    const weekData = (metricsData as any)?.thisWeek ?? (metricsData as any)?.weekly;
+    const monthlyData = (metricsData as any)?.thisMonth ?? (metricsData as any)?.monthly;
+    const last3MonthsData = (metricsData as any)?.last3Months ?? (metricsData as any)?.last3Months;
+
+    // 4 Consolidated Metric Cards showing Orders & Sales Amount beside each other
     const metrics = [
-        { label: "Today Orders", value: data?.data?.todayOrders ?? 0, circleColor: "#FF8C38" },
-        { label: "This Month Orders", value: data?.data?.monthOrders ?? 0, circleColor: "#FFD700" },
-        { label: "This Month Sales", value: data?.data?.monthSales ?? 0, circleColor: "#000000" },
-        { label: "Total Sales", value: data?.data?.totalSales ?? 0, circleColor: "#00C4B4" },
+        {
+            label: "Today's",
+            value: `Orders: ${todayData?.orders ?? 0} | Sales: ${formatBDT(todayData?.sales ?? 0)}`,
+            circleColor: "#FF8C38",
+        },
+        {
+            label: "This Week",
+            value: `Orders: ${weekData?.orders ?? 0} | Sales: ${formatBDT(weekData?.sales ?? 0)}`,
+            circleColor: "#6366f1",
+        },
+        {
+            label: "This Month",
+            value: `Orders: ${monthlyData?.orders ?? 0} | Sales: ${formatBDT(monthlyData?.sales ?? 0)}`,
+            circleColor: "#FFD700",
+        },
+        {
+            label: "Last 3 Months",
+            value: `Orders: ${last3MonthsData?.orders ?? 0} | Sales: ${formatBDT(last3MonthsData?.sales ?? 0)}`,
+            circleColor: "#00C4B4",
+        },
     ];
 
     return (
@@ -48,11 +73,10 @@ export default function AdminDashboardClient() {
                             key={t.key}
                             type="button"
                             onClick={() => setType(t.key as DashboardType)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                                type === t.key 
-                                    ? "bg-[#1b382b] text-white border-[#1b382b] shadow-sm" 
-                                    : "bg-white text-stone-600 border-stone-200 hover:bg-stone-50"
-                            }`}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${type === t.key
+                                ? "bg-[#1b382b] text-white border-[#1b382b] shadow-sm"
+                                : "bg-white text-stone-600 border-stone-200 hover:bg-stone-50"
+                                }`}
                         >
                             {t.label}
                         </button>
@@ -72,14 +96,13 @@ export default function AdminDashboardClient() {
                 </Button>
             </div>
 
-            {/* Metrics Section with individual skeleton loading */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Metrics Section: Displayed neatly in 4 cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {isLoading ? (
-                    // Render 4 loading skeleton cards while metrics are fetching
                     [...Array(4)].map((_, i) => (
                         <div key={i} className="bg-white rounded-2xl p-5 border border-stone-200/80 shadow-sm animate-pulse space-y-3">
                             <div className="h-3 w-24 bg-stone-100 rounded" />
-                            <div className="h-7 w-16 bg-stone-200 rounded" />
+                            <div className="h-7 w-36 bg-stone-200 rounded" />
                         </div>
                     ))
                 ) : isError ? (
@@ -88,7 +111,11 @@ export default function AdminDashboardClient() {
                     </div>
                 ) : (
                     metrics.map((metric, index) => (
-                        <MetricCard key={index} {...metric} />
+                        <MetricCard
+                            key={index}
+                            {...metric}
+                            blurTimeoutSeconds={10}
+                        />
                     ))
                 )}
             </div>
@@ -103,9 +130,8 @@ export default function AdminDashboardClient() {
                 </div>
             </div>
 
-            {/* Recent Orders List Section */}
             <div className="bg-white shadow-sm rounded-2xl border border-stone-200/80">
-                <RecentOrderList />
+                <RecentOrderList type={type} />
             </div>
         </div>
     );

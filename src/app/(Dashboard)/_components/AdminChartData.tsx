@@ -22,19 +22,26 @@ export default function AdminChartData({ type }: { type: DashboardType }) {
         month: selectedMonth 
     });
 
-    const weeklyData = (weeklyRes?.data || []).map((item: any) => ({
+    // Directly map weekly data from backend response array
+    const rawWeeklyArray = Array.isArray(weeklyRes) ? weeklyRes : (weeklyRes as any)?.data || (weeklyRes as any)?.result || [];
+    const weeklyData = rawWeeklyArray.map((item: any) => ({
         ...item,
-        totalSales: item.sales ?? 0,
-        totalOrders: item.orders ?? 0,
+        day: item.day || item.date,
+        totalSales: Number(item.totalSales ?? item.sales ?? 0),
+        totalNetReceivable: Number(item.totalNetReceivable ?? item.netReceivable ?? 0),
+        totalOrders: Number(item.totalOrders ?? item.ordersCount ?? 0),
+        orders: item.orders || [],
     }));
 
-    const monthlyData = (monthlyRes?.data || []).map((item: any) => ({
+    const rawMonthlyArray = Array.isArray(monthlyRes) ? monthlyRes : (monthlyRes as any)?.data || (monthlyRes as any)?.result || [];
+    const monthlyData = rawMonthlyArray.map((item: any) => ({
         ...item,
-        totalSales: item.sales ?? 0,
-        totalOrders: item.orders ?? 0,
+        totalSales: Number(item.totalSales ?? item.sales ?? 0),
+        totalNetReceivable: Number(item.totalNetReceivable ?? item.netReceivable ?? 0),
+        totalOrders: Number(item.totalOrders ?? item.ordersCount ?? 0),
+        orders: item.orders || [],
     }));
 
-    // Handlers for going back or forward one month
     const handlePrevMonth = () => {
         if (selectedMonth === 1) {
             setSelectedMonth(12);

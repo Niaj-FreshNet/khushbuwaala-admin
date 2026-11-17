@@ -34,11 +34,11 @@ interface NavbarProductsResponse {
 export const productApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     // Create Product (ADMIN)
-    createProduct: builder.mutation<IProductResponse, FormData>({
-      query: (formData) => ({
+    createProduct: builder.mutation<IProductResponse, any>({
+      query: (payload) => ({
         url: '/products/create-product',
         method: 'POST',
-        body: formData,
+        body: payload,
         headers: {
           // Remove Content-Type header to let browser set multipart/form-data with boundary
         },
@@ -74,7 +74,7 @@ export const productApi = baseApi.injectEndpoints({
     }),
 
     // Get Single Product
-    getProduct: builder.query<IProductResponse, string>({
+    getProduct: builder.query<ApiResponse<IProductResponse>, string>({
       query: (id) => `/products/get-product/${id}`,
       providesTags: (result, error, id) => [{ type: 'Product', id }],
     }),
@@ -86,11 +86,11 @@ export const productApi = baseApi.injectEndpoints({
     }),
 
     // Update Product (ADMIN)
-    updateProduct: builder.mutation<IProductResponse, { id: string; formData: FormData }>({
-      query: ({ id, formData }) => ({
+    updateProduct: builder.mutation<IProductResponse, { id: string; payload: any }>({
+      query: ({ id, payload }) => ({
         url: `/products/update-product/${id}`,
         method: 'PATCH',
-        body: formData,
+        body: payload,
         headers: {
           // Remove Content-Type header for multipart/form-data
         },
@@ -258,6 +258,7 @@ export const {
   useGetProductsByCategoryNameQuery,
   useGetRelatedProductsQuery,
   useSearchProductsQuery,
+  useLazySearchProductsQuery,
   useGetProductVariantsQuery,
   useUpdateProductStockMutation,
   useGetProductAnalyticsQuery,

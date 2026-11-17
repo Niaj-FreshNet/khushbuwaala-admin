@@ -27,14 +27,6 @@ const stockApi = baseApi.injectEndpoints({
       }),
       providesTags: ['Stock'],
     }),
-    addStock: builder.mutation({
-      query: (body) => ({
-        url: '/stock/add-stock',
-        method: 'POST',
-        body,
-      }),
-      invalidatesTags: ['Stock'],
-    }),
     getStockLogs: builder.query({
       query: (productId) => ({
         url: `/stock/get-stock-logs/${productId}`,
@@ -49,7 +41,6 @@ const stockApi = baseApi.injectEndpoints({
 export const {
   useGetAllProductsQuery,
   useGetLowStockProductsQuery,
-  useAddStockMutation,
   useGetStockLogsQuery,
 } = stockApi;
 

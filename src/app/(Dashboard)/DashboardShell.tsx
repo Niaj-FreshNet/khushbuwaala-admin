@@ -11,16 +11,13 @@ import Cookies from "js-cookie";
 import SideBar from "@/components/Shared/Dashboard/Sidebar";
 
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
-    const [isOpen, setIsOpen] = useState(false); // mobile sidebar
-    const [isShort, setIsShort] = useState(true); // desktop sidebar
+    const [isOpen, setIsOpen] = useState(false);
+    const [isShort, setIsShort] = useState(false); // Default to full width on desktop for better first impression
     const navRef = useRef<HTMLDivElement>(null);
 
     const { user, isLoading } = useAuth();
-
-    // Check if token exists client-side to prevent false "not logged in" flashes
     const hasToken = typeof window !== "undefined" && (Boolean(localStorage.getItem("accessToken")) || Boolean(Cookies.get("accessToken")));
 
-    // Close on outside click
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (navRef.current && !navRef.current.contains(event.target as Node)) {
@@ -31,18 +28,13 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Lock body scroll ONLY when mobile sidebar open
     useEffect(() => {
         const original = document.body.style.overflow;
         if (isOpen) document.body.style.overflow = "hidden";
         else document.body.style.overflow = original;
-
-        return () => {
-            document.body.style.overflow = original;
-        };
+        return () => { document.body.style.overflow = original; };
     }, [isOpen]);
 
-    // ESC closes sidebar
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
             if (e.key === "Escape") setIsOpen(false);
@@ -52,79 +44,58 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     }, []);
 
     return (
-        <div className="min-h-screen w-full bg-gray-50 relative">
+        <div className="min-h-screen w-full bg-slate-50 relative font-sans text-slate-900">
             {/* Backdrop for mobile drawer */}
             <div
                 onClick={() => setIsOpen(false)}
-                className={[
-                    "fixed inset-0 z-40 bg-black/40 transition-opacity lg:hidden",
-                    isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
-                ].join(" ")}
+                className={cn(
+                    "fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm transition-opacity lg:hidden",
+                    isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+                )}
                 aria-hidden="true"
             />
 
-            {/* Sidebar (Fixed to screen left) */}
-            <SideBar
-                dark
-                setIsShort={setIsShort}
-                additionalRoutes={null}
-                isOpen={isOpen}
-                isShort={isShort}
-                navRef={navRef}
-            />
+            <SideBar dark setIsShort={setIsShort} additionalRoutes={null} isOpen={isOpen} isShort={isShort} navRef={navRef} />
 
-            {/* Main Content Container - Dynamic left margin based on sidebar state (w-14 = 3.5rem -> ml-14, w-46 -> ml-46) */}
+            {/* Dynamic left margin: w-20 (5rem) -> ml-20 | w-64 (16rem) -> ml-64 */}
             <div
                 className={cn(
                     "flex flex-col min-w-0 transition-all duration-300 ease-in-out",
-                    isShort ? "lg:ml-14" : "lg:ml-46"
+                    isShort ? "lg:ml-20" : "lg:ml-64"
                 )}
             >
-                {/* Top bar */}
                 <TopBar dark setIsOpen={setIsOpen} isOpen={isOpen} />
 
-                {/* Page Content */}
-                <main className="flex-1 min-w-0 bg-gray-50/70 p-2 sm:p-4">
-                    <BreadCrumb />
+                <main className="flex-1 min-w-0 bg-slate-50 sm:p-2 p-1">
+                    {/* <BreadCrumb /> */}
 
-                    {/* content card */}
-                    <div className="shadow-sm mt-4">
-                        {isLoading || (hasToken && !user) ? (
-                            <div className="py-10 text-center">
-                                <p className="text-gray-500">Checking session...</p>
+                    {isLoading || (hasToken && !user) ? (
+                        <div className="flex items-center justify-center h-[60vh]">
+                            <div className="animate-pulse flex flex-col items-center gap-4">
+                                <div className="h-10 w-10 bg-emerald-500 rounded-full animate-bounce" />
+                                <p className="text-slate-500 font-medium tracking-wide">Loading workspace...</p>
                             </div>
-                        ) : !user ? (
-                            <div className="py-10 text-center">
-                                <h2 className="text-lg font-semibold text-gray-900">You’re not logged in</h2>
-                                <p className="text-gray-600 mt-1">
-                                    Please login to access the dashboard.
-                                </p>
-
-                                <div className="mt-5 flex items-center justify-center gap-2">
-                                    <Link
-                                        href="/login"
-                                        className={cn(
-                                            "inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium",
-                                            "bg-gray-900 text-white hover:bg-gray-800"
-                                        )}
-                                    >
+                        </div>
+                    ) : !user ? (
+                        <div className="py-20 text-center max-w-md mx-auto">
+                            <div className="bg-white p-8 rounded-2xl shadow-xl border border-slate-100">
+                                <h2 className="text-2xl font-bold text-slate-900">Access Denied</h2>
+                                <p className="text-slate-500 mt-2">Please securely log in to access the Khushbuwaala dashboard.</p>
+                                <div className="mt-8 flex flex-col gap-3">
+                                    <Link href="/login" className="w-full inline-flex items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-600/20">
                                         Go to Login
                                     </Link>
-                                    <Link
-                                        href="/dashboard"
-                                        className={cn(
-                                            "inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium",
-                                            "border border-gray-200 bg-white text-gray-900 hover:bg-gray-50"
-                                        )}
-                                    >
-                                        Back to Home
+                                    <Link href="/" className="w-full inline-flex items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 transition-colors">
+                                        Return Home
                                     </Link>
                                 </div>
                             </div>
-                        ) : (
-                            children
-                        )}
-                    </div>
+                        </div>
+                    ) : (
+                        <div className="animate-in fade-in duration-500">
+                            {children}
+                        </div>
+                    )}
                 </main>
             </div>
         </div>

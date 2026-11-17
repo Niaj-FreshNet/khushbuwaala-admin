@@ -25,7 +25,7 @@ export default function TopBar({
 
     // Helper to extract initials for the avatar fallback
     const getInitials = (name?: string) => {
-        if (!name) return 'KW';
+        if (!name) return null;
         const parts = name.trim().split(' ');
         if (parts.length >= 2) {
             return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
@@ -35,7 +35,7 @@ export default function TopBar({
 
     // Format role display cleanly (e.g., SUPER_ADMIN -> Super Admin)
     const formatRole = (role?: string) => {
-        if (!role) return 'Administrator';
+        if (!role) return null;
         return role
             .toLowerCase()
             .split('_')
@@ -44,8 +44,8 @@ export default function TopBar({
     };
 
     return (
-        <header className={`sticky top-0 z-30 w-full backdrop-blur-md bg-white/90 border-b border-stone-200/80 shadow-xs transition-all`}>
-            <div className="flex items-center justify-between gap-4 px-4 sm:px-6 py-3">
+        <header className={`sticky top-0 z-30 w-full backdrop-blur-md bg-white/90 border-b border-stone-200/80 transition-all`}>
+            <div className="flex items-center justify-between gap-4 px-2 sm:px-4 py-1 lg:py-2">
                 
                 {/* Left: Mobile Toggle & Title Branding */}
                 <div className="flex items-center gap-3">
@@ -59,9 +59,6 @@ export default function TopBar({
                     </button>
 
                     <div className="flex items-center gap-2">
-                        <div className="hidden sm:flex items-center justify-center w-8 h-8 rounded-lg bg-green-50 text-green-700 border border-green-200/60 shadow-xs">
-                            <LuShieldCheck className="w-4 h-4" />
-                        </div>
                         <div>
                             <h1 className="text-base sm:text-lg font-bold text-stone-900 font-serif tracking-tight truncate">
                                 Khushbuwaala <span className="font-sans font-normal text-xs text-stone-500 uppercase tracking-wider ml-1 hidden md:inline-block">Admin Portal</span>

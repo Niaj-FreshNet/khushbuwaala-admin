@@ -13,6 +13,8 @@ interface BlogData {
     metaDescription?: string;
     keywords?: string;
     slug?: string;
+    imageAltText?: string;
+    others?: string;
 }
 
 interface BlogResponse {
@@ -48,11 +50,11 @@ interface SingleBlogResponse {
 
 export const blogApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
-        addBlog: builder.mutation<BlogData, FormData>({
-            query: (formData) => ({
+        addBlog: builder.mutation<BlogData, Record<string, any>>({
+            query: (payload) => ({
                 url: '/blog/create-blog',
                 method: 'POST',
-                body: formData,
+                body: payload,
             }),
             invalidatesTags: ['Blog'],
         }),
@@ -70,17 +72,10 @@ export const blogApi = baseApi.injectEndpoints({
             }),
             providesTags: ['Blog'],
         }),
-        // getBlog: builder.query<SingleBlogResponse, string>({
-        //     query: (id) => ({
-        //         url: `/blog/get-blog/${id}`,
-        //         method: 'GET',
-        //     }),
-        //     providesTags: ['Blog'],
-        // }),
-        updateBlog: builder.mutation<BlogData, { id: string; data: FormData }>({
+        updateBlog: builder.mutation<BlogData, { id: string; data: Record<string, any> }>({
             query: ({ id, data }) => ({
                 url: `/blog/update-blog/${id}`,
-                method: 'PATCH', // Changed to PATCH for partial updates
+                method: 'PATCH',
                 body: data,
             }),
             invalidatesTags: ['Blog'],
@@ -107,7 +102,6 @@ export const {
     useAddBlogMutation,
     useGetAdminBlogsQuery,
     useGetAllBlogsQuery,
-    // useGetBlogQuery,
     useUpdateBlogMutation,
     useDeleteBlogMutation,
     useGetBlogQuery,

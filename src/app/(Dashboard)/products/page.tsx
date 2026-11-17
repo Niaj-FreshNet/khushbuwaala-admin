@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Table,
@@ -20,11 +20,12 @@ import {
   useDeleteProductMutation,
   useUpdateProductMutation,
 } from '@/redux/store/api/product/productApi';
+import { IProductResponse } from '@/types/product.types';
 import {
-  IProductResponse,
-  IProductVariantResponse,
-} from '@/types/product.types';
-import { Search, Plus, Trash2, Eye, Calendar, Tag, Layers, Star, DollarSign, PackageOpen } from 'lucide-react';
+  Search, Plus, Trash2, Calendar, Tag, Layers,
+  Star, PackageOpen, Edit, Loader2, CheckCircle2,
+  XCircle, DollarSign
+} from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,25 +37,44 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from '@/components/ui/hover-card';
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 import debounce from 'lodash/debounce';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import CostingModal from '../finance/_components/CostingModal';
+import { useAuth } from '@/redux/store/hooks/useAuth';
 
 const ProductList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(20);
   const [searchTerm, setSearchTerm] = useState('');
   const [query, setQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
+  // 1. Finance Modal State & Auth Check
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+
+  const [costingModalConfig, setCostingModalConfig] = useState<{
+    isOpen: boolean;
+    productId: string;
+    variantSku: string;
+    productName: string;
+    variantSize: number;
+    variantUnit: string;
+  } | null>(null);
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
-  const { data, isLoading } = useGetAllProductsAdminQuery(
+
+  const { data, isLoading, isFetching } = useGetAllProductsAdminQuery(
     { searchTerm: query, page: currentPage, limit: pageSize },
     { refetchOnMountOrArgChange: true }
   );
@@ -68,28 +88,47 @@ const ProductList = () => {
   );
   const meta = (data as any)?.meta;
 
+  // ⚡ Keyboard Shortcut: Press '/' to focus search bar
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const debouncedSearch = useCallback(
     debounce((value: string) => {
-      setQuery(value);
+      // ⚡ Clean and normalize search query
+      const sanitized = value.replace(/\s+/g, ' ').trim();
+      setQuery(sanitized);
       setCurrentPage(1);
-    }, 500),
+      setIsSearching(false);
+    }, 350),
     []
   );
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
+    setIsSearching(true);
     debouncedSearch(value);
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
+      setIsDeleting(true);
       await deleteProduct(deleteId).unwrap();
       toast.success('Product deleted successfully!');
       setDeleteId(null);
     } catch {
       toast.error('Failed to delete product');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -97,7 +136,7 @@ const ProductList = () => {
     try {
       await updateProduct({
         id: productId,
-        data: { published: checked },
+        payload: { published: checked },
       }).unwrap();
       toast.success('Product status updated successfully!');
     } catch {
@@ -114,8 +153,19 @@ const ProductList = () => {
     });
   };
 
+  const showSearchLoader = isSearching || isFetching;
+
   return (
     <div className="w-full min-h-screen bg-gray-50/40 px-2 sm:px-4 py-2 space-y-2">
+
+      {/* 2. Costing Modal Renderer */}
+      {costingModalConfig && (
+        <CostingModal
+          {...costingModalConfig}
+          onClose={() => setCostingModalConfig({ ...costingModalConfig, isOpen: false })}
+        />
+      )}
+
       {/* Top Header & Search Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-white px-3.5 py-2.5 rounded-xl border border-gray-200 shadow-2xs">
         <div>
@@ -124,20 +174,41 @@ const ProductList = () => {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
+          {/* Search Bar with Ref for '/' Hotkey Focus */}
           <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            {showSearchLoader ? (
+              <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 text-green-700 w-4 h-4 animate-spin" />
+            ) : (
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            )}
             <Input
-              placeholder="Search product name..."
+              ref={searchInputRef}
+              placeholder="Search product name... (Press '/' to focus)"
               value={searchTerm}
               onChange={handleSearch}
               className={cn(
-                "pl-9 h-8 text-xs bg-white transition-colors shadow-2xs",
-                searchTerm.trim() ? "border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30" : "border-gray-300 text-gray-700"
+                "pl-9 pr-8 h-8 text-xs bg-white transition-colors shadow-2xs",
+                searchTerm.trim() ? "border-gray-200 text-gray-900 font-semibold bg-orange-50/20" : "border-gray-300 text-gray-700"
               )}
             />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm('');
+                  setQuery('');
+                  setIsSearching(false);
+                  setCurrentPage(1);
+                }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-700 hover:text-gray-900 text-[10px] font-bold bg-gray-100 hover:bg-gray-200 rounded-full w-4 h-4 flex items-center justify-center"
+                title="Clear search"
+              >
+                ✕
+              </button>
+            )}
           </div>
           <Button
-            className="bg-[#FB923C] hover:bg-[#ff8a29] text-white h-8 text-xs px-3.5 font-semibold shrink-0 shadow-2xs"
+            className="bg-green-600 hover:bg-green-800 text-white h-8 text-xs px-3.5 font-semibold shrink-0 shadow-2xs"
             onClick={() => router.push('/products/add')}
           >
             <Plus className="w-4 h-4 mr-1" /> Add Product
@@ -155,7 +226,7 @@ const ProductList = () => {
                 <TableHead className="font-bold py-3 text-xs sm:text-sm">Category</TableHead>
                 <TableHead className="font-bold py-3 text-xs sm:text-sm">Price Range</TableHead>
                 <TableHead className="font-bold py-3 text-xs sm:text-sm">Variants & Stock</TableHead>
-                <TableHead className="font-bold py-3 text-xs sm:text-sm hidden md:table-cell">Accords / Tags</TableHead>
+                <TableHead className="font-bold py-3 text-xs sm:text-sm hidden md:table-cell">Accords</TableHead>
                 <TableHead className="font-bold py-3 text-xs sm:text-sm hidden lg:table-cell">Sales / Rating</TableHead>
                 <TableHead className="font-bold py-3 text-xs sm:text-sm hidden xl:table-cell">Created Date</TableHead>
                 <TableHead className="font-bold py-3 text-xs sm:text-sm">Status</TableHead>
@@ -164,7 +235,7 @@ const ProductList = () => {
             </TableHeader>
 
             <TableBody className="divide-y divide-gray-100 text-xs sm:text-sm">
-              {isLoading ? (
+              {isLoading || showSearchLoader ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell colSpan={9} className="py-3">
@@ -184,7 +255,12 @@ const ProductList = () => {
                 </TableRow>
               ) : (
                 allProducts.map((product: any) => {
-                  const variants = product.variants || [];
+                  // ⚡ Sort variants by size in ascending order (smallest to largest)
+                  const variants = [...(product.variants || [])].sort((a: any, b: any) =>
+                    (Number(a.size) || 0) - (Number(b.size) || 0)
+                  );
+
+                  const publishedVariantsCount = variants.filter((v: any) => v.published === true || v.published === undefined).length;
                   const prices = variants.map((v: any) => v.price || 0);
                   const min = prices.length ? Math.min(...prices) : 0;
                   const max = prices.length ? Math.max(...prices) : 0;
@@ -226,7 +302,6 @@ const ProductList = () => {
                       {/* Price Range */}
                       <TableCell className="align-top py-3 font-bold text-gray-900 text-xs sm:text-sm whitespace-nowrap">
                         <div className="flex items-center gap-1">
-                          <DollarSign className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                           <span>
                             {prices.length
                               ? min === max
@@ -237,38 +312,89 @@ const ProductList = () => {
                         </div>
                       </TableCell>
 
-                      {/* Variants & Stock (Hover Card) */}
+                      {/* Variants & Stock */}
                       <TableCell className="align-top py-3 whitespace-nowrap">
                         <div className="space-y-1">
-                          <HoverCard openDelay={150} closeDelay={150}>
-                            <HoverCardTrigger asChild>
-                              <span className="inline-flex items-center text-xs font-bold text-[#FB923C] cursor-pointer hover:underline">
-                                <Layers className="w-3.5 h-3.5 inline mr-1" />
-                                {variants.length} Variants
-                              </span>
-                            </HoverCardTrigger>
-                            <HoverCardContent className="w-64 p-3 text-xs space-y-2 shadow-lg rounded-xl border border-gray-200 bg-white" align="start">
-                              <p className="font-bold text-gray-900 border-b pb-1 text-xs">Variant Details & Pricing</p>
-                              {variants.length > 0 ? (
-                                variants.map((variant: IProductVariantResponse, index: number) => (
-                                  <div
-                                    key={variant.id || index}
-                                    className="flex items-center justify-between text-xs border-b border-gray-100 pb-1.5 last:border-b-0 last:pb-0"
-                                  >
-                                    <div>
-                                      <span className="font-bold text-gray-800">
-                                        {variant.size} {variant.unit}
-                                      </span>
-                                      <span className="block text-[10px] font-mono text-gray-400">{variant.sku}</span>
-                                    </div>
-                                    <span className="font-black text-emerald-700">{variant.price} BDT</span>
-                                  </div>
-                                ))
-                              ) : (
-                                <p className="text-gray-500 text-center py-1">No variants</p>
-                              )}
-                            </HoverCardContent>
-                          </HoverCard>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button type="button" className="inline-flex items-center text-xs font-bold text-[#FB923C] cursor-pointer hover:underline text-left">
+                                <Layers className="w-3.5 h-3.5 inline mr-1 shrink-0" />
+                                <span className="bg-orange-50 px-1.5 py-0.5 rounded border border-orange-200">
+                                  <strong className="text-emerald-700">{publishedVariantsCount}</strong> / {variants.length} Published
+                                </span>
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80 p-3 text-xs space-y-2 shadow-xl rounded-xl border border-gray-200 bg-white z-50" align="start">
+                              <div className="flex items-center justify-between border-b pb-1.5">
+                                <p className="font-bold text-gray-900 text-xs">Variant Status & Pricing</p>
+                                <span className="text-[10px] text-gray-500 font-medium">🟢 Active | ⚫ Draft</span>
+                              </div>
+                              <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
+                                {variants.length > 0 ? (
+                                  variants.map((variant: any, index: number) => {
+                                    const isPublished = variant.published !== false;
+                                    return (
+                                      <div
+                                        key={variant.id || index}
+                                        className={cn(
+                                          "flex items-start justify-between text-xs p-2 rounded-lg border transition-colors",
+                                          isPublished ? "bg-emerald-50/40 border-emerald-100" : "bg-gray-50 border-gray-200 opacity-70"
+                                        )}
+                                      >
+                                        <div className="space-y-0.5">
+                                          <div className="flex items-center gap-1.5">
+                                            {isPublished ? (
+                                              <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                                            ) : (
+                                              <XCircle className="w-3 h-3 text-gray-400 shrink-0" />
+                                            )}
+                                            <span className="font-bold text-gray-900">
+                                              {variant.size} {variant.unit}
+                                            </span>
+
+
+                                            {/* 3. The Super Admin Costing Button */}
+                                            {isSuperAdmin && (
+                                              <button
+                                                onClick={(e) => {
+                                                  e.preventDefault();
+                                                  e.stopPropagation();
+                                                  setCostingModalConfig({
+                                                    isOpen: true,
+                                                    productId: product.id,
+                                                    variantSku: variant.sku,
+                                                    productName: product.name,
+                                                    variantSize: variant.size,
+                                                    variantUnit: variant.unit
+                                                  });
+                                                }}
+                                                className="flex items-center gap-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 px-2 py-0.5 rounded text-[10px] font-bold transition-colors shadow-xs cursor-pointer"
+                                                title="Manage Costings & WAC"
+                                              >
+                                                <DollarSign className="w-3 h-3" /> Costs
+                                              </button>
+                                            )}
+                                          </div>
+                                          <span className="block text-[10px] font-mono text-gray-500 pl-4">{variant.sku}</span>
+                                        </div>
+
+                                        <div className="flex flex-col items-end gap-1.5">
+                                          <div className="text-right">
+                                            <span className="font-black text-emerald-700 block">{variant.price} ৳</span>
+                                            <span className={cn("text-[9px] font-semibold uppercase px-1 rounded", isPublished ? "text-emerald-700 bg-emerald-100" : "text-gray-500 bg-gray-200")}>
+                                              {isPublished ? "Live" : "Hidden"}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })
+                                ) : (
+                                  <p className="text-gray-500 text-center py-2">No variants available</p>
+                                )}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
 
                           <div className={cn("text-xs font-semibold flex items-center gap-1", product.totalStock < 0 ? "text-rose-600" : "text-gray-700")}>
                             <PackageOpen className="w-3.5 h-3.5 shrink-0" />
@@ -328,11 +454,11 @@ const ProductList = () => {
                             size="icon"
                             className="h-8 w-8 text-blue-600 hover:bg-blue-50"
                             onClick={() =>
-                              router.push(`/products/${product.slug}`)
+                              router.push(`/products/${product.id}`)
                             }
                             title="View Product"
                           >
-                            <Eye className="w-4 h-4" />
+                            <Edit className="w-4 h-4" />
                           </Button>
                           <Button
                             variant="ghost"
@@ -404,7 +530,7 @@ const ProductList = () => {
       </div>
 
       {/* Delete Confirmation Alert */}
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+      <AlertDialog open={!!deleteId} onOpenChange={() => !isDeleting && setDeleteId(null)}>
         <AlertDialogContent className="rounded-xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
@@ -413,12 +539,17 @@ const ProductList = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-rose-600 hover:bg-rose-700 text-white"
+              disabled={isDeleting}
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              className="bg-rose-600 hover:bg-rose-700 text-white flex items-center gap-2"
             >
-              Delete Product
+              {isDeleting && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isDeleting ? 'Deleting...' : 'Delete Product'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

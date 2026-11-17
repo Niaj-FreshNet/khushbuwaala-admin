@@ -37,12 +37,19 @@ export interface IProductVariant {
   updatedAt?: string;
 }
 
-export interface VariantForForm extends Omit<IProductVariant, "size"> {
-  size: string; // force size to be string here
-  price: number;
-  stock?: number;
+export interface VariantForForm extends Omit<IProductVariant, "size" | "price" | "stock" | "compareAtPrice" | "costPrice" | "weightGrams"> {
+  id?: string;
+  size: number | string;
+  price: number | string;
   unit: string;
   sku: string;
+  stock?: number | string;
+  isDefault?: boolean;
+  published?: boolean;
+  compareAtPrice?: number | string;
+  costPrice?: number | string;
+  weightGrams?: number | string;
+  images?: (File | string)[];
 }
 
 // Product Creation Interface
@@ -85,7 +92,7 @@ export interface IProduct {
     id: string;
     name: string;
   }[];
-  
+
   reviews: IReview[];
   averageRating: number;
   reviewCount: number;
@@ -179,13 +186,14 @@ export interface IReview {
 
 // Response Interfaces
 export interface IProductResponse {
+  unit: string;
   id: string;
   name: string;
   slug: string;
   description: string;
   primaryImage: string;
   otherImages: string[];
-  videoUrl?: string;
+  videos?: string[];
   tags: string[];
   salesCount: number;
   published: boolean;
@@ -206,9 +214,15 @@ export interface IProductResponse {
   sillage?: string;
   bestFor: string[];
 
+  condition?: string;
+  googleProductCategory?: string;
+  metaTitle?: string;
+  metaDescription?: string;
+
   categoryId: string;
   category?: {
     categoryName: string;
+    unit?: string;
     imageUrl: string;
   };
 

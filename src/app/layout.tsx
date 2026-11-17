@@ -1,5 +1,5 @@
 import type React from "react"
-import type { Viewport } from "next"
+import type { Metadata, Viewport } from "next"
 import { Inter, Noto_Serif_Bengali } from "next/font/google"
 import "./globals.css"
 import { siteConfig } from "@/config/site"
@@ -20,6 +20,15 @@ const notoSerifBengali = Noto_Serif_Bengali({
   display: "swap",
 })
 
+// Metadata for the tab title and SEO
+export const metadata: Metadata = {
+  title: {
+    default: "Khushbuwaala Admin Portal",
+    template: "%s | Khushbuwaala Admin",
+  },
+  description: "Admin dashboard and inventory management for Khushbuwaala.",
+}
+
 export const viewport: Viewport = {
   themeColor: siteConfig.themeColor,
   width: "device-width",
@@ -37,6 +46,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${inter.variable} ${notoSerifBengali.variable}`}
+      suppressHydrationWarning
     >
       <body
         className={`min-h-screen text-foreground bg-background font-sans antialiased`}

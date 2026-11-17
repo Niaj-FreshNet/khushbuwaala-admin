@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -39,7 +40,7 @@ export default function CategorySizesUpdater({ categories, setSelectedSizes }: P
     const category = categories.find((c) => c.id === selectedCategoryId);
 
     const sizes = (category?.sizes || []).map((s: any) => String(s).trim());
-    const unit = category?.unit ? String(category.unit).trim() : '';
+    const unit = category?.unit ? String(category.unit).trim() : 'ML';
 
     const key = `${sizes.join('|')}__${unit}`;
     if (prevKeyRef.current === key) return;
@@ -49,7 +50,7 @@ export default function CategorySizesUpdater({ categories, setSelectedSizes }: P
 
     const existingVariants = form.getValues('variants') || [];
 
-    const nextVariants: VariantForForm[] = sizes.map((size) => {
+    const nextVariants: VariantForForm[] = sizes.map((size, index) => {
       const found = existingVariants.find((v) => String(v.size) === size);
       return {
         id: found?.id || uuidv4(),
@@ -57,7 +58,11 @@ export default function CategorySizesUpdater({ categories, setSelectedSizes }: P
         price: found?.price ?? 0,
         stock: found?.stock ?? 0,
         size,
-        unit: unit || found?.unit || '',
+        unit: unit || found?.unit || 'ML',
+        isDefault: found?.isDefault ?? (index === 0), // First size defaults to true if none set
+        compareAtPrice: found?.compareAtPrice ?? '',
+        weightGrams: found?.weightGrams ?? '',
+        images: found?.images || [],
       };
     });
 

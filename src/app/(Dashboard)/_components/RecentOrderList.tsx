@@ -35,43 +35,20 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
+// APIs
 import {
     useGetAllOrdersQuery,
     useGetOrderByIdQuery,
 } from "@/redux/store/api/order/ordersApi";
+import {
+    useGetAllSalesQuery,
+    useGetSaleByIdQuery,
+} from "@/redux/store/api/sales/salesApi"; // Adjust path if necessary
+
 import OrderInvoice from "../orders/_components/OrderInvoice";
 
 type SortField = "orderTime" | "amount" | "status" | "invoice";
 type SortOrder = "asc" | "desc";
-
-interface OrderItem {
-    id?: string;
-    name?: string;
-    product?: { name?: string };
-    size?: string;
-    unit?: string;
-    quantity?: number;
-    qty?: number;
-    price?: number;
-    amount?: number;
-}
-
-interface Order {
-    id: string;
-    orderTime: string;
-    invoice: string;
-    customer: { name: string; phone?: string; email?: string } | null;
-    shipping?: { name?: string; phone?: string; address?: string; district?: string };
-    method: string;
-    amount: number;
-    shippingCost?: number;
-    additionalNotes?: string;
-    status: string;
-    isPaid: boolean;
-    items?: OrderItem[];
-    orderItems?: OrderItem[];
-    cartItems?: OrderItem[];
-}
 
 const METHOD_OPTIONS = [
     { value: "ALL", label: "All Methods" },
@@ -90,12 +67,10 @@ const METHOD_OPTIONS = [
 
 function useDebouncedValue<T>(value: T, delay = 350) {
     const [debounced, setDebounced] = useState(value);
-
     useEffect(() => {
         const t = setTimeout(() => setDebounced(value), delay);
         return () => clearTimeout(t);
     }, [value, delay]);
-
     return debounced;
 }
 
@@ -129,49 +104,89 @@ function generateSlug(str: string) {
         .replace(/^-+|-+$/g, "");
 }
 
-export default function RecentOrderList() {
+// Deep extractors to permanently solve the "No Data" issue by checking all standard payload formats
+const extractList = (res: any) => {
+    if (!res) return [];
+    if (Array.isArray(res)) return res;
+    if (Array.isArray(res.data)) return res.data;
+    if (res.data && Array.isArray(res.data.data)) return res.data.data;
+    return [];
+};
+
+const extractMeta = (res: any) => {
+    if (!res) return null;
+    if (res.meta) return res.meta;
+    if (res.data && res.data.meta) return res.data.meta;
+    return null;
+};
+
+
+export default function RecentOrderList({ type = "website" }: { type?: "all" | "website" | "manual" }) {
     const [searchTerm, setSearchTerm] = useState("");
     const debouncedSearch = useDebouncedValue(searchTerm, 350);
 
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState<number>(10);
-
     const [sortField, setSortField] = useState<SortField>("orderTime");
     const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
-    const queryArgs = useMemo(() => {
-        return {
-            searchTerm: debouncedSearch?.trim() || undefined,
-            page,
-            limit,
-        } as any;
-    }, [debouncedSearch, page, limit]);
+    const queryArgs = useMemo(() => ({
+        searchTerm: debouncedSearch?.trim() || undefined,
+        page,
+        limit,
+    }), [debouncedSearch, page, limit]);
 
-    const { data, isLoading, isFetching, refetch } = useGetAllOrdersQuery(queryArgs);
+    const fetchOrders = type === "all" || type === "website";
+    const fetchSales = type === "all" || type === "manual";
 
-    const [invoiceOrderId, setInvoiceOrderId] = useState<string | null>(null);
+    const { data: oData, isLoading: oLoading, isFetching: oFetching, refetch: oRefetch } = useGetAllOrdersQuery(queryArgs, { skip: !fetchOrders });
+    const { data: sData, isLoading: sLoading, isFetching: sFetching, refetch: sRefetch } = useGetAllSalesQuery(queryArgs, { skip: !fetchSales });
+
+    const [invoiceId, setInvoiceId] = useState<string | null>(null);
+    const [invoiceType, setInvoiceType] = useState<"ORDER" | "SALE" | null>(null);
     const [isInvoiceVisible, setIsInvoiceVisible] = useState(false);
 
-    const { data: invoiceData } = useGetOrderByIdQuery(invoiceOrderId || "", { skip: !invoiceOrderId });
-    const invoiceOrder: Order | undefined = invoiceData?.data;
+    const { data: invOrderData } = useGetOrderByIdQuery(invoiceId || "", { skip: invoiceType !== "ORDER" || !invoiceId });
+    const { data: invSaleData } = useGetSaleByIdQuery(invoiceId || "", { skip: invoiceType !== "SALE" || !invoiceId });
 
-    const ordersRaw = useMemo(() => (data as any)?.data?.data || [], [data]);
-    const meta = (data as any)?.data?.meta;
+    const invoiceOrder = invoiceType === "ORDER" ? (invOrderData as any)?.data : (invSaleData as any)?.data;
 
-    const orders = useMemo(() => {
-        const list = [...ordersRaw];
+    const ordersRaw = extractList(oData);
+    const salesRaw = extractList(sData);
 
-        list.sort((a: any, b: any) => {
-            let valA: any = a?.[sortField];
-            let valB: any = b?.[sortField];
+    const combinedMeta = useMemo(() => {
+        if (type === "website") return extractMeta(oData);
+        if (type === "manual") return extractMeta(sData);
+
+        // Combine meta for "all"
+        const oMeta = extractMeta(oData) || { total: 0, totalPage: 1 };
+        const sMeta = extractMeta(sData) || { total: 0, totalPage: 1 };
+        return {
+            total: oMeta.total + sMeta.total,
+            totalPage: Math.max(oMeta.totalPage, sMeta.totalPage)
+        };
+    }, [type, oData, sData]);
+
+    const unifiedList = useMemo(() => {
+        const list: any[] = [];
+        if (fetchOrders) {
+            list.push(...ordersRaw.map((o: any) => ({ ...o, _type: 'ORDER', date: o.orderTime || o.createdAt })));
+        }
+        if (fetchSales) {
+            list.push(...salesRaw.map((s: any) => ({ ...s, _type: 'SALE', date: s.saleTime || s.orderTime || s.createdAt })));
+        }
+
+        list.sort((a, b) => {
+            let valA: any = a[sortField];
+            let valB: any = b[sortField];
 
             if (sortField === "orderTime") {
-                valA = valA ? new Date(valA).getTime() : 0;
-                valB = valB ? new Date(valB).getTime() : 0;
+                valA = a.date ? new Date(a.date).getTime() : 0;
+                valB = b.date ? new Date(b.date).getTime() : 0;
             } else if (sortField === "amount") {
                 valA = Number(valA || 0);
                 valB = Number(valB || 0);
-            } else if (sortField === "status" || sortField === "invoice") {
+            } else {
                 valA = String(valA || "");
                 valB = String(valB || "");
             }
@@ -181,8 +196,9 @@ export default function RecentOrderList() {
             return 0;
         });
 
-        return list;
-    }, [ordersRaw, sortField, sortOrder]);
+        // Ensure we respect the limit locally when merging two API responses
+        return type === 'all' ? list.slice(0, limit) : list;
+    }, [ordersRaw, salesRaw, fetchOrders, fetchSales, sortField, sortOrder, type, limit]);
 
     const toggleSort = (field: SortField) => {
         if (field === sortField) setSortOrder((p) => (p === "asc" ? "desc" : "asc"));
@@ -201,23 +217,32 @@ export default function RecentOrderList() {
         );
     };
 
-    const handleViewInvoice = (orderId: string) => {
-        setInvoiceOrderId(orderId);
+    const handleViewInvoice = (id: string, itemType: "ORDER" | "SALE") => {
+        setInvoiceId(id);
+        setInvoiceType(itemType);
         setIsInvoiceVisible(true);
     };
 
     const handleManualRefresh = () => {
-        refetch();
-        toast.success("Orders refreshed successfully!", { duration: 1000 });
+        if (fetchOrders) oRefetch();
+        if (fetchSales) sRefetch();
+        toast.success("List refreshed successfully!", { duration: 1000 });
     };
+
+    const isLoading = (fetchOrders && oLoading) || (fetchSales && sLoading);
+    const isFetching = (fetchOrders && oFetching) || (fetchSales && sFetching);
 
     return (
         <div className="w-full bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden p-4 sm:p-5 space-y-3">
             {/* Top Bar */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
                 <div>
-                    <h2 className="text-base font-bold text-gray-900 leading-tight">Recent Orders</h2>
-                    <p className="text-xs text-gray-500">Website Orders Only</p>
+                    <h2 className="text-base font-bold text-gray-900 leading-tight">
+                        {type === 'website' ? "Recent Orders" : type === 'manual' ? "Recent Sales" : "Recent Transactions"}
+                    </h2>
+                    <p className="text-xs text-gray-500">
+                        {type === 'website' ? "Website Orders Only" : type === 'manual' ? "Manual Sales Only" : "Combined Orders & Sales"}
+                    </p>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -242,7 +267,7 @@ export default function RecentOrderList() {
                         onClick={handleManualRefresh}
                         disabled={isFetching}
                         className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50 h-8 text-xs px-2.5 flex items-center gap-1 shadow-2xs"
-                        title="Refresh Orders"
+                        title="Refresh List"
                     >
                         <RefreshCw className={cn("w-3 h-3 text-gray-600", isFetching && "animate-spin text-[#FB923C]")} />
                         <span>Refresh</span>
@@ -256,41 +281,22 @@ export default function RecentOrderList() {
                     <TableHeader className="bg-gray-50/75 border-b border-gray-200 text-gray-700">
                         <TableRow>
                             <TableHead className="w-10 text-center py-2.5 text-xs font-bold">Sr.</TableHead>
-
-                            <TableHead
-                                onClick={() => toggleSort("invoice")}
-                                className="cursor-pointer select-none font-bold py-2.5 text-xs"
-                            >
+                            <TableHead onClick={() => toggleSort("invoice")} className="cursor-pointer select-none font-bold py-2.5 text-xs">
                                 <div className="flex items-center">Invoice {renderSortIcon("invoice")}</div>
                             </TableHead>
-
-                            <TableHead
-                                onClick={() => toggleSort("orderTime")}
-                                className="cursor-pointer select-none font-bold py-2.5 text-xs"
-                            >
-                                <div className="flex items-center">Order Time {renderSortIcon("orderTime")}</div>
+                            <TableHead onClick={() => toggleSort("orderTime")} className="cursor-pointer select-none font-bold py-2.5 text-xs">
+                                <div className="flex items-center">Date & Time {renderSortIcon("orderTime")}</div>
                             </TableHead>
-
                             <TableHead className="font-bold py-2.5 text-xs">Customer & Contact</TableHead>
-                            <TableHead className="font-bold py-2.5 text-xs">Shipping Address</TableHead>
-                            <TableHead className="font-bold py-2.5 text-xs">Ordered Products</TableHead>
-
-                            <TableHead
-                                onClick={() => toggleSort("amount")}
-                                className="cursor-pointer select-none font-bold py-2.5 text-xs"
-                            >
-                                <div className="flex items-center">COD {renderSortIcon("amount")}</div>
+                            <TableHead className="font-bold py-2.5 text-xs">Address / Note</TableHead>
+                            <TableHead className="font-bold py-2.5 text-xs">Products</TableHead>
+                            <TableHead onClick={() => toggleSort("amount")} className="cursor-pointer select-none font-bold py-2.5 text-xs">
+                                <div className="flex items-center">Total {renderSortIcon("amount")}</div>
                             </TableHead>
-
                             <TableHead className="font-bold py-2.5 text-xs">Bill / Cash</TableHead>
-
-                            <TableHead
-                                onClick={() => toggleSort("status")}
-                                className="cursor-pointer select-none font-bold py-2.5 text-xs"
-                            >
+                            <TableHead onClick={() => toggleSort("status")} className="cursor-pointer select-none font-bold py-2.5 text-xs">
                                 <div className="flex items-center">Status {renderSortIcon("status")}</div>
                             </TableHead>
-
                             <TableHead className="font-bold py-2.5 text-xs">Payment</TableHead>
                             <TableHead className="text-right font-bold pr-4 py-2.5 text-xs">Action</TableHead>
                         </TableRow>
@@ -305,17 +311,16 @@ export default function RecentOrderList() {
                                     </TableCell>
                                 </TableRow>
                             ))
-                        ) : orders.length === 0 ? (
+                        ) : unifiedList.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={11} className="text-center py-10 text-gray-500">
-                                    <p className="font-medium text-sm">No orders found.</p>
+                                    <p className="font-medium text-sm">No transactions found.</p>
                                     <p className="text-xs text-gray-400 mt-0.5">Try adjusting your search criteria.</p>
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            orders.map((order: any, idx: number) => {
+                            unifiedList.map((order: any, idx: number) => {
                                 const orderItems = order.items || order.orderItems || order.cartItems || [];
-
                                 const shipping = Number(order.shippingCost || 0);
                                 const itemsSubtotal = orderItems.reduce((acc: number, it: any) => acc + (Number(it.price || 0) * Number(it.quantity || it.qty || 1)), 0);
                                 const productBill = itemsSubtotal > 0 ? itemsSubtotal : Math.max(0, Number(order.amount || 0) - shipping);
@@ -337,30 +342,13 @@ export default function RecentOrderList() {
                                 let netReceivable = Math.max(0, productBill - effectiveDeliveryDeduction - codCharge);
                                 let rcvColorClass = "text-green-700";
 
-                                if (orderStatus === "COMPLETED") {
-                                    netReceivable = Math.max(0, productBill - effectiveDeliveryDeduction - codCharge);
-                                    rcvColorClass = "text-green-600";
-                                } else if (orderStatus === "DELIVERED") {
-                                    netReceivable = Math.max(0, productBill - effectiveDeliveryDeduction - codCharge);
-                                    rcvColorClass = "text-blue-600";
-                                } else if (orderStatus === "SHIPPED") {
-                                    netReceivable = Math.max(0, productBill - effectiveDeliveryDeduction - codCharge);
-                                    rcvColorClass = "text-indigo-600";
-                                } else if (orderStatus === "PROCESSING") {
-                                    netReceivable = Math.max(0, productBill - effectiveDeliveryDeduction - codCharge);
-                                    rcvColorClass = "text-amber-500";
-                                } else if (orderStatus === "CANCELED") {
+                                if (orderStatus === "CANCELED") {
                                     netReceivable = 0;
                                     rcvColorClass = "text-black";
                                 } else if (orderStatus === "RETURNED") {
                                     netReceivable = -courierDeliveryCharge;
                                     rcvColorClass = "text-red-600";
-                                } else {
-                                    netReceivable = Math.max(0, productBill - effectiveDeliveryDeduction - codCharge);
-                                    rcvColorClass = "text-orange-500";
                                 }
-
-                                let rcvDisplayClass = `font-black text-xs ${rcvColorClass}`;
 
                                 return (
                                     <TableRow key={order.id} className="hover:bg-gray-50/85 transition-colors">
@@ -372,44 +360,25 @@ export default function RecentOrderList() {
                                         <TableCell className="font-bold align-top py-3 text-sm">
                                             <div className="flex flex-col gap-1">
                                                 <div>
-                                                    <Link href={`/orders/${order.id}`} className="text-blue-600 font-semibold hover:underline">
-                                                        #{order.invoice}
-                                                    </Link>
+                                                    <span className={cn("px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider", order._type === 'ORDER' ? "bg-indigo-100 text-indigo-700" : "bg-emerald-100 text-emerald-700")}>
+                                                        {order._type}
+                                                    </span>
                                                 </div>
-                                                <div>
-                                                    {order.consignmentId ? (
-                                                        <Link
-                                                            target="_blank"
-                                                            href={`${order.trackingLink}`}
-                                                            className="text-[10px] text-emerald-700 border border-emerald-200 bg-emerald-50/50 px-1.5 py-0.5 rounded font-mono truncate max-w-30 inline-flex items-center gap-0.5 hover:bg-emerald-100 transition-colors"
-                                                            title={`Tracking Code: ${order.trackingCode || "N/A"}`}
-                                                        >
-                                                            <span>{order.consignmentId}</span>
-                                                            <ArrowUpRight className="w-3 h-3 shrink-0" />
-                                                        </Link>
-                                                    ) : (
-                                                        null)}
-                                                </div>
+                                                <Link href={`/${order._type === 'SALE' ? 'sales' : 'orders'}/${order.id}`} className="text-blue-600 font-semibold hover:underline mt-0.5 block">
+                                                    #{order.invoice}
+                                                </Link>
                                             </div>
                                         </TableCell>
 
                                         {/* Order Time */}
                                         <TableCell className="text-gray-600 text-xs whitespace-nowrap align-top py-2.5 font-medium">
-                                            {order.orderTime ? (
+                                            {order.date ? (
                                                 <>
                                                     <div className="font-semibold text-gray-900">
-                                                        {new Date(order.orderTime).toLocaleDateString("en-GB", {
-                                                            day: "2-digit",
-                                                            month: "short",
-                                                            year: "numeric",
-                                                        })}
+                                                        {new Date(order.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
                                                     </div>
                                                     <div className="text-[11px] text-gray-500">
-                                                        {new Date(order.orderTime).toLocaleTimeString("en-GB", {
-                                                            hour: "numeric",
-                                                            minute: "2-digit",
-                                                            hour12: true,
-                                                        })}
+                                                        {new Date(order.date).toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit", hour12: true })}
                                                     </div>
                                                 </>
                                             ) : (
@@ -424,92 +393,42 @@ export default function RecentOrderList() {
                                             </div>
                                             <div className="flex items-center gap-1.5 mt-0.5">
                                                 <span className="text-[13px] text-gray-700 font-semibold truncate">
-                                                    {order?.customer?.phone || order?.shipping?.phone || "No phone"}
+                                                    {order?.customer?.phone || order?.shipping?.phone || order?.phone || "No phone"}
                                                 </span>
-                                                {(order?.customer?.phone || order?.shipping?.phone) && (
-                                                    <a
-                                                        href={`tel:${order?.customer?.phone || order?.shipping?.phone}`}
-                                                        className="inline-flex items-center justify-center p-1 rounded-md bg-green-50 text-green-700 hover:bg-green-100 transition-colors flex-shrink-0"
-                                                        title="Call Customer"
-                                                    >
-                                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                                                        </svg>
-                                                    </a>
-                                                )}
                                             </div>
-                                            {order.customer?.email && !order.customer.email.toLowerCase().includes("guest") && (
-                                                <div className="text-[10px] text-gray-500 truncate mt-0.5" title={order.customer.email}>{order.customer.email}</div>
-                                            )}
                                         </TableCell>
 
-                                        {/* Shipping Address */}
+                                        {/* Address & Note */}
                                         <TableCell className="align-top py-3 max-w-[210px]">
-                                            <div className="flex items-start justify-between gap-1">
-                                                <span className="block max-w-[170px] line-clamp-2 overflow-hidden text-ellipsis whitespace-normal break-words text-xs font-medium text-gray-900" title={order.shipping?.address || "No address provided"}>
-                                                    {order.shipping?.address || "No address"}
-                                                </span>
-                                                {order.shipping?.address && (
-                                                    <a
-                                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${order.shipping.address}, ${order.shipping.district || ""}`)}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="inline-flex items-center justify-center p-1 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors flex-shrink-0 mt-0.5"
-                                                        title="Search Address on Google Maps"
-                                                    >
-                                                        <MapPin className="w-3.5 h-3.5" />
-                                                    </a>
-                                                )}
-                                            </div>
+                                            <span className="block max-w-[170px] line-clamp-2 text-xs font-medium text-gray-900">
+                                                {order.shipping?.address || order.address || "No address"}
+                                            </span>
                                             <div className="text-[11px] text-gray-600 font-semibold mt-1">
-                                                <span className="text-gray-900">{order.shipping?.district || "N/A"}</span>
+                                                {order.shipping?.district && <span className="text-gray-900">{order.shipping.district}</span>}
                                             </div>
                                             {order.additionalNotes && (
-                                                <div className="text-[10px] bg-amber-50 text-amber-900 border border-amber-200 rounded px-1.5 py-0.2 mt-0.5 flex items-center gap-1 truncate font-medium" title={order.additionalNotes}>
+                                                <div className="text-[10px] bg-amber-50 text-amber-900 border border-amber-200 rounded px-1.5 py-0.5 mt-1 flex items-center gap-1 truncate font-medium">
                                                     <FileText className="w-3 h-3 text-amber-600 shrink-0" />
                                                     <span className="truncate">Note: {order.additionalNotes}</span>
                                                 </div>
                                             )}
                                         </TableCell>
 
-                                        {/* Ordered Products with line-through for canceled/returned */}
+                                        {/* Products */}
                                         <TableCell className="align-top py-2.5 max-w-[240px]">
                                             {orderItems.length > 0 ? (
                                                 <div className="space-y-0.5">
                                                     {orderItems.map((item: any, iIdx: number) => {
                                                         const productName = item.name || item.product?.name || "Product";
-                                                        const itemSize = item.size ? `(${item.size}` : "";
-                                                        const itemUnit = item.unit ? `${item.unit})` : "";
                                                         const itemQty = item.quantity ?? item.qty ?? 1;
                                                         const itemPrice = item.price || item.amount || 0;
-                                                        const slug = generateSlug(productName);
-
                                                         return (
                                                             <div key={iIdx} className={cn("text-[11px] bg-gray-50 border border-gray-200/80 rounded px-1.5 py-0.5 flex items-center justify-between gap-1 shadow-2xs", isCanceledOrReturned && "line-through opacity-70 text-gray-400")}>
                                                                 <div className="truncate font-semibold flex items-center gap-1 min-w-0">
                                                                     <span className="text-[#382efa] font-bold shrink-0">{itemQty}x</span>
-                                                                    <span className="truncate" title={`${productName} ${itemSize} ${itemUnit}`}>
-                                                                        {productName} <span className="text-[10px]">{itemSize}</span> <span className="text-[10px]">{itemUnit}</span>
-                                                                    </span>
-                                                                    {slug && !isCanceledOrReturned && (
-                                                                        <Link
-                                                                            href={`https://khushbuwaala.com/products/${slug}`}
-                                                                            target="_blank"
-                                                                            rel="noopener noreferrer"
-                                                                            className="text-blue-600 hover:text-blue-800 shrink-0 inline-flex items-center"
-                                                                            title="View Product Details"
-                                                                        >
-                                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                                                            </svg>
-                                                                        </Link>
-                                                                    )}
+                                                                    <span className="truncate">{productName}</span>
                                                                 </div>
-                                                                {itemPrice > 0 && (
-                                                                    <div className="font-bold whitespace-nowrap text-[11px]">
-                                                                        {itemPrice * itemQty}৳
-                                                                    </div>
-                                                                )}
+                                                                {itemPrice > 0 && <div className="font-bold whitespace-nowrap text-[11px]">{itemPrice * itemQty}৳</div>}
                                                             </div>
                                                         );
                                                     })}
@@ -519,63 +438,46 @@ export default function RecentOrderList() {
                                             )}
                                         </TableCell>
 
-                                        {/* COD / Method */}
+                                        {/* Amount & Method */}
                                         <TableCell className="font-bold text-gray-900 whitespace-nowrap align-top py-3 text-xs">
                                             <div>{codOrTotalAmount} BDT</div>
-                                            <div className="text-[10px] text-gray-600 uppercase font-semibold mt-0.2">
-                                                {methodLabel(order.method)}
-                                            </div>
-                                            <div className="text-[10px] text-gray-500">
-                                                {shipping > 0 ? null : "Free Shipping"}
-                                            </div>
+                                            <div className="text-[10px] text-gray-600 uppercase font-semibold mt-0.5">{methodLabel(order.method)}</div>
                                         </TableCell>
 
-                                        {/* Bill / Cash Breakdown */}
+                                        {/* Bill / Cash */}
                                         <TableCell className="align-top py-2.5 whitespace-nowrap text-xs">
-                                            <div className="space-y-0.2 bg-gray-50/80 p-1.5 rounded border border-gray-200/70">
+                                            <div className="space-y-0.5 bg-gray-50/80 p-1.5 rounded border border-gray-200/70">
                                                 <div className="flex items-center justify-between gap-1">
                                                     <div className={cn("font-bold text-[11px]", isCanceledOrReturned ? "line-through text-gray-400" : "text-gray-900")}>
                                                         Bill: ৳{productBill}
                                                     </div>
-                                                    <div className={`border-t border-gray-200 ${rcvDisplayClass}`}>
+                                                    <div className={`border-t border-gray-200 font-black text-xs ${rcvColorClass}`}>
                                                         ৳{netReceivable}
                                                     </div>
                                                 </div>
-                                                <div className="text-[10px] text-gray-500">
-                                                    {isShippingIncludedInCod ? (
-                                                        <span className="text-gray-500">Delivery: ৳{courierDeliveryCharge}</span>
-                                                    ) : (
-                                                        <span className="text-rose-600">Delivery: -৳{courierDeliveryCharge}</span>
-                                                    )}
-                                                </div>
-                                                {isCod && codCharge > 0 && !isCanceledOrReturned && (
-                                                    <div className="text-[10px] text-rose-600">
-                                                        COD (1%): -৳{codCharge}
-                                                    </div>
-                                                )}
                                             </div>
                                         </TableCell>
 
-                                        {/* Status (Read-only Badge) */}
+                                        {/* Status */}
                                         <TableCell className="align-top py-3">
                                             <Badge className={`${statusBadgeClass(order.status)} px-2.5 py-1`}>
                                                 {order.status || "PENDING"}
                                             </Badge>
                                         </TableCell>
 
-                                        {/* Payment (Read-only Badge) */}
+                                        {/* Payment Status */}
                                         <TableCell className="align-top py-3">
                                             <Badge className={`${order.isPaid ? "bg-emerald-600" : "bg-rose-600"} text-white text-[10px] px-2 py-0.5 font-bold`}>
                                                 {order.isPaid ? "PAID" : "DUE"}
                                             </Badge>
                                         </TableCell>
 
-                                        {/* Action: Invoice Download Only */}
+                                        {/* Action */}
                                         <TableCell className="text-right pr-4 align-top py-3">
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                onClick={() => handleViewInvoice(order.id)}
+                                                onClick={() => handleViewInvoice(order.id, order._type)}
                                                 className="inline-flex items-center gap-1.5 border-gray-300 text-gray-700 hover:bg-gray-50 h-8 text-xs font-semibold shadow-2xs"
                                                 title="Open Invoice"
                                             >
@@ -592,13 +494,12 @@ export default function RecentOrderList() {
             </div>
 
             {/* Pagination */}
-            {meta && (
+            {combinedMeta && (
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-2 pt-3 border-t border-gray-100">
                     <div className="flex items-center gap-3">
                         <p className="text-xs text-gray-600 font-semibold">
-                            Showing <span className="font-bold text-gray-900">{orders.length}</span> of <span className="font-bold text-gray-900">{meta.total}</span> orders
+                            Showing <span className="font-bold text-gray-900">{unifiedList.length}</span> of <span className="font-bold text-gray-900">{combinedMeta.total}</span> items
                         </p>
-
                         <div className="flex items-center gap-1.5">
                             <span className="text-xs text-gray-600 font-semibold">Rows:</span>
                             <Select
@@ -612,10 +513,10 @@ export default function RecentOrderList() {
                                     <SelectValue placeholder={limit.toString()} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="5">5</SelectItem>
                                     <SelectItem value="10">10</SelectItem>
-                                    <SelectItem value="20">20</SelectItem>
+                                    <SelectItem value="25">25</SelectItem>
                                     <SelectItem value="50">50</SelectItem>
+                                    <SelectItem value="100">100</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -632,12 +533,12 @@ export default function RecentOrderList() {
                             Previous
                         </Button>
                         <span className="text-xs text-gray-600 font-semibold px-1 self-center">
-                            Page {page} of {meta.totalPage || 1}
+                            Page {page} of {combinedMeta.totalPage || 1}
                         </span>
                         <Button
                             variant="outline"
                             size="sm"
-                            disabled={page >= (meta.totalPage || 1)}
+                            disabled={page >= (combinedMeta.totalPage || 1)}
                             onClick={() => setPage((prev) => prev + 1)}
                             className="bg-white border-gray-300 text-gray-700 h-7 text-xs px-3 font-semibold"
                         >
@@ -647,14 +548,15 @@ export default function RecentOrderList() {
                 </div>
             )}
 
-            {/* Invoice Modal */}
-            {invoiceData && (
+            {/* Invoice Modal - Handles BOTH Orders & Sales seamlessly */}
+            {invoiceOrder && (
                 <OrderInvoice
                     order={invoiceOrder}
                     visible={isInvoiceVisible}
                     onClose={() => {
                         setIsInvoiceVisible(false);
-                        setInvoiceOrderId(null);
+                        setInvoiceId(null);
+                        setInvoiceType(null);
                     }}
                 />
             )}

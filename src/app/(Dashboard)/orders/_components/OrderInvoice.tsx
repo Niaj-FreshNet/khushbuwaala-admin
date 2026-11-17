@@ -11,48 +11,7 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
 interface OrderInvoiceProps {
-    order: (IOrderResponse & {
-        invoice?: string | number;
-        coupon?: string | null;
-        discountAmount?: number | null;
-        shippingCost?: number | null;
-        estimatedTaxes?: number | null;
-
-        billing?: {
-            name?: string | null;
-            phone?: string | null;
-            email?: string | null;
-            address?: string | null;
-            district?: string | null;
-            thana?: string | null;
-        };
-        shipping?: {
-            name?: string | null;
-            phone?: string | null;
-            email?: string | null;
-            address?: string | null;
-            district?: string | null;
-            thana?: string | null;
-        };
-
-        method?: string | null;
-        saleType?: string | null;
-        customer?: { name?: string | null } | null;
-
-        orderItems?: Array<{
-            id?: string;
-            productId?: string;
-            variantId?: string;
-            size?: number;
-            unit?: string;
-            quantity?: number;
-            price?: number;
-            originalPrice?: number;
-            discount?: number;
-            product?: { id?: string; name?: string; primaryImage?: string };
-            variant?: { id?: string; size?: number; unit?: string; price?: number };
-        }>;
-    }) | undefined;
+    order: any;
 
     visible: boolean;
     onClose: () => void;
@@ -144,8 +103,8 @@ export default function OrderInvoice({ order, visible, onClose }: OrderInvoicePr
     }, [order, totalOrderDiscount]);
 
     const totals = useMemo(() => {
-        const subtotalOriginal = lines.reduce((s, x) => s + x.lineOriginal, 0);
-        const itemDiscountsSum = lines.reduce((s, x) => s + x.save, 0);
+        const subtotalOriginal = lines.reduce((s: any, x: { lineOriginal: any; }) => s + x.lineOriginal, 0);
+        const itemDiscountsSum = lines.reduce((s: any, x: { save: any; }) => s + x.save, 0);
         const displayDiscountAmount = Math.max(itemDiscountsSum, totalOrderDiscount);
 
         const coupon = order?.coupon ? String(order.coupon).toUpperCase() : null;
@@ -388,7 +347,7 @@ export default function OrderInvoice({ order, visible, onClose }: OrderInvoicePr
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {lines.map((item, idx) => (
+                                    {lines.map((item: any, idx: number) => (
                                         <tr key={item.id} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
                                             <td className="py-1.5 px-3">
                                                 <div className="flex items-center gap-2">
