@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import BreadCrumb from "@/components/Shared/Dashboard/BreadCrumb";
 import TopBar from "@/components/Shared/Dashboard/TopBar";
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";

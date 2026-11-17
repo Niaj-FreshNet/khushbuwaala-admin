@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { jwtDecode } from "jwt-decode";
 import { TUser } from "@/types/auth.types";
+import Cookies from "js-cookie";
 
 interface AuthState {
   user: TUser | null;
@@ -70,9 +71,16 @@ const authSlice = createSlice({
       state.refreshToken = null;
       state.isAuthenticated = false;
       state.isLoading = false;
+
       if (typeof window !== "undefined") {
+        // Clear Local Storage
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
+
+        // ✅ Force Clear Cookies to trigger the middleware block
+        Cookies.remove("accessToken", { path: '/' });
+        Cookies.remove("access_token", { path: '/' });
+        Cookies.remove("refreshToken", { path: '/' });
       }
     },
 

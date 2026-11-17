@@ -1,5 +1,5 @@
-// src/app/admin/ledger/page.tsx
 'use client';
+
 import { useAuth } from '@/redux/store/hooks/useAuth';
 import { ShieldAlert, Loader2 } from 'lucide-react';
 import FinancePage from './_components/FInanceHub';

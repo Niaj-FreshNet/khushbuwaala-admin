@@ -121,11 +121,16 @@ export default function SideBar({
   const handleLogout = async () => {
     try {
       await logoutApi({}).unwrap();
+    } catch (error) {
+      // Even if backend fails, we still want to log the user out locally
+      console.error("Backend logout failed", error);
+    } finally {
+      // Always run this locally
       dispatch(logout());
       toast.success("Logged out successfully!");
-      window.location.href = "/login";
-    } catch (error) {
-      toast.error("Failed to log out. Please try again.");
+
+      // Force a hard redirect so Next.js middleware runs again
+      window.location.replace("/login");
     }
   };
 
