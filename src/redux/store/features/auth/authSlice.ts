@@ -73,14 +73,28 @@ const authSlice = createSlice({
       state.isLoading = false;
 
       if (typeof window !== "undefined") {
-        // Clear Local Storage
+        // 1. Clear Local Storage
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
 
-        // ✅ Force Clear Cookies to trigger the middleware block
-        Cookies.remove("accessToken", { path: '/' });
-        Cookies.remove("access_token", { path: '/' });
-        Cookies.remove("refreshToken", { path: '/' });
+        // 2. Aggressively clear cookies across all possible production domains
+        const hostname = window.location.hostname;
+        const rootDomain = hostname.split('.').slice(-2).join('.'); // gets "khushbuwaala.com"
+
+        const domainsToClear = [
+          undefined,                   // default
+          hostname,                    // e.g., admin.khushbuwaala.com
+          `.${hostname}`,              // e.g., .admin.khushbuwaala.com
+          `.${rootDomain}`             // e.g., .khushbuwaala.com (Very common in production)
+        ];
+
+        const cookiesToClear = ["accessToken", "access_token", "refreshToken", "refresh_token"];
+
+        cookiesToClear.forEach(cookieName => {
+          domainsToClear.forEach(domain => {
+            Cookies.remove(cookieName, { path: '/', domain });
+          });
+        });
       }
     },
 

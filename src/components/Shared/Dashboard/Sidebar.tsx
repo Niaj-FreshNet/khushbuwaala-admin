@@ -122,15 +122,16 @@ export default function SideBar({
     try {
       await logoutApi({}).unwrap();
     } catch (error) {
-      // Even if backend fails, we still want to log the user out locally
       console.error("Backend logout failed", error);
     } finally {
-      // Always run this locally
+      // 1. Wipe Redux and ALL cookies completely
       dispatch(logout());
       toast.success("Logged out successfully!");
 
-      // Force a hard redirect so Next.js middleware runs again
-      window.location.replace("/login");
+      // 2. Wait exactly 300ms for browser networking & cookie storage to settle
+      setTimeout(() => {
+        window.location.replace("/login");
+      }, 300);
     }
   };
 
