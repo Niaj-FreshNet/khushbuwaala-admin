@@ -156,7 +156,7 @@ export const navLinks: NavLink[] = [
     name: "Investor",
     href: "/investor",
     icon: UserCog,
-    roles: ["INVESTOR", "SUPER_ADMIN"],
+    roles: ["INVESTOR"],
   },
   {
     name: "Finance",
