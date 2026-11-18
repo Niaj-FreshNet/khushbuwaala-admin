@@ -36,7 +36,7 @@ export default function SignUp() {
       email: '',
       password: '',
       confirmPassword: '',
-      role: 'ADMIN', // Default role selection
+      role: 'INVESTOR',
       agree: false,
     },
   });

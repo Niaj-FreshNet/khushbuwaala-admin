@@ -80,8 +80,6 @@ export default function RoleManager() {
         role,
         isApproved: approvalBool,
         investorProfitPercentage: Number(profitPercentage),
-        totalInvested: Number(totalInvested),
-        currentBalance: Number(currentBalance),
       }).unwrap();
 
       toast.success("User access and profile updated successfully!");
