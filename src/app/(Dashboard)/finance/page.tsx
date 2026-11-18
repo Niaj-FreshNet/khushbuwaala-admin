@@ -2,37 +2,38 @@
 
 import { useAuth } from '@/redux/store/hooks/useAuth';
 import { ShieldAlert, Loader2 } from 'lucide-react';
-import FinancePage from './_components/FInanceHub';
+import FinanceHub from './_components/FinanceHub';
 
 export default function LedgerPage() {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh] p-2 text-center">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-400 mb-2" />
-        <p className="text-xs text-gray-500">Verifying authorization...</p>
+      <div className="flex h-[80vh] flex-col items-center justify-center space-y-4">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+        <p className="text-sm font-medium text-stone-500">Verifying secure access...</p>
       </div>
     );
   }
 
-  if (user?.role !== 'SUPER_ADMIN') {
+  // Only SUPER_ADMIN (or explicitly allowed financial controllers) can see the full raw company ledger
+  if (user?.role !== 'SUPER_ADMIN' && user?.role !== 'INVESTOR') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh] p-2 text-center">
-        <div className="p-3 bg-rose-50 text-rose-600 rounded-full mb-3">
-          <ShieldAlert className="w-8 h-8" />
+      <div className="flex h-[80vh] flex-col items-center justify-center p-4 text-center">
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-rose-100 text-rose-600 shadow-sm">
+          <ShieldAlert className="h-8 w-8" />
         </div>
-        <h1 className="text-base font-bold text-gray-900">Access Denied</h1>
-        <p className="text-xs text-gray-500 mt-1 max-w-sm">
-          Only Super Administrators are authorized to view store ledgers, profit margins, and financial records.
+        <h1 className="text-xl font-bold text-stone-900">Access Restricted</h1>
+        <p className="mt-2 max-w-sm text-sm text-stone-500">
+          Only Super Administrators possess the security clearance required to view master store ledgers and raw financial records.
         </p>
       </div>
     );
   }
 
   return (
-    <main className="w-full min-h-screen bg-gray-50/50">
-      <FinancePage />
+    <main className="min-h-screen w-full bg-stone-50/30">
+      <FinanceHub />
     </main>
   );
 }

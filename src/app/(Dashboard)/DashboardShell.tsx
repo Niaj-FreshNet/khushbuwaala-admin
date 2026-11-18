@@ -54,7 +54,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                 aria-hidden="true"
             />
 
-            <SideBar dark setIsShort={setIsShort} additionalRoutes={null} isOpen={isOpen} isShort={isShort} navRef={navRef} />
+            <SideBar dark setIsShort={setIsShort} additionalRoutes={null} isOpen={isOpen} setIsOpen={setIsOpen} isShort={isShort} navRef={navRef} />
 
             {/* Dynamic left margin: w-20 (5rem) -> ml-20 | w-64 (16rem) -> ml-64 */}
             <div

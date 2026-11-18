@@ -2,14 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import {
-  LuChevronDown,
-  LuChevronUp,
-  LuChevronsLeft,
-  LuChevronsRight,
-} from 'react-icons/lu';
+import { LuChevronDown, LuChevronsLeft, LuChevronsRight } from 'react-icons/lu';
 import { NavLink } from '@/types/navlink.types';
 
 interface MainNavLinkProps {
@@ -19,6 +14,7 @@ interface MainNavLinkProps {
   setIsShort: React.Dispatch<React.SetStateAction<boolean>>;
   dark?: boolean;
   role?: string;
+  onLinkClick?: () => void;
 }
 
 export default function MainNavLink({
@@ -28,10 +24,10 @@ export default function MainNavLink({
   setIsShort,
   dark = true,
   role,
+  onLinkClick,
 }: MainNavLinkProps) {
   const pathname = usePathname();
-  const router = useRouter();
-  const [openSubMenus, setOpenSubMenus] = useState<string[]>([]);
+  const [openSubMenu, setOpenSubMenu] = useState<string | null>(null);
 
   const allLinks = useMemo(
     () => [...(navLink || []), ...(additionalRoutes || [])],
@@ -39,20 +35,16 @@ export default function MainNavLink({
   );
 
   const toggleSubMenu = (name: string) => {
-    setOpenSubMenus((prev) =>
-      prev.includes(name) ? prev.filter((i) => i !== name) : [...prev, name]
-    );
+    setOpenSubMenu((prev) => (prev === name ? null : name));
   };
 
   useEffect(() => {
     const parent = allLinks.find((l) => l.subItems?.some((s) => s.href === pathname));
-    if (parent?.name && !openSubMenus.includes(parent.name)) {
-      setOpenSubMenus((prev) => [...prev, parent.name]);
+    if (parent?.name && openSubMenu !== parent.name) {
+      setOpenSubMenu(parent.name);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, allLinks]);
 
-  // Khushbuwaala Theme: Slate & Emerald
   const baseItemClasses = (active: boolean) =>
     cn(
       'w-full flex items-center gap-3 rounded-xl transition-all duration-200 select-none font-medium text-sm',
@@ -70,17 +62,13 @@ export default function MainNavLink({
       active ? 'text-white' : dark ? 'text-slate-400 group-hover:text-emerald-400' : 'text-slate-500 group-hover:text-emerald-600'
     );
 
-  // Reusable function to handle parent category click
-  const handleParentClick = (link: NavLink) => {
-    toggleSubMenu(link.name); // Toggle the visual menu
-    if (link.subItems?.[0]?.href) {
-      router.push(link.subItems[0].href); // Navigate to the first sub-item
-    }
+  // 👇 Clean, native handling for closing the sidebar
+  const handleLinkClick = () => {
+    if (onLinkClick) onLinkClick();
   };
 
   return (
     <nav className="flex flex-col h-full">
-      {/* Sidebar Header */}
       <div className={cn('flex items-center justify-between mb-8 px-2', isShort && 'justify-center')}>
         {!isShort && (
           <div className="flex flex-col">
@@ -98,26 +86,23 @@ export default function MainNavLink({
         <button
           onClick={() => setIsShort((p) => !p)}
           className={cn(
-            'hidden lg:flex items-center justify-center rounded-lg p-2 transition-all',
+            'hidden lg:flex items-center justify-center rounded-lg p-2 transition-all duration-300 ease-in-out',
             dark ? 'hover:bg-slate-800 text-slate-400 hover:text-white' : 'hover:bg-emerald-50 text-slate-600 hover:text-emerald-600'
           )}
-          aria-label={isShort ? 'Expand sidebar' : 'Collapse sidebar'}
-          title={isShort ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label="Toggle sidebar"
           type="button"
         >
           {isShort ? <LuChevronsRight className="h-5 w-5" /> : <LuChevronsLeft className="h-5 w-5" />}
         </button>
       </div>
 
-      {/* Navigation Links */}
       <ul className="flex-1 space-y-1.5 overflow-y-auto pr-2 custom-scrollbar">
         {allLinks.map((link) => {
           const subItemActive = link.subItems?.some((sub) => pathname === sub.href) ?? false;
           const isActive = !subItemActive && pathname === link.href;
-          const isSubMenuOpen = openSubMenus.includes(link.name);
+          const isSubMenuOpen = openSubMenu === link.name;
           const hasSub = !!link.subItems?.length;
 
-          // ================= COLLAPSED MODE =================
           if (isShort) {
             return (
               <li key={link.name} className="group relative">
@@ -125,46 +110,44 @@ export default function MainNavLink({
                   <>
                     <button
                       type="button"
-                      onClick={() => handleParentClick(link)}
+                      onClick={() => toggleSubMenu(link.name)}
                       className={cn(baseItemClasses(subItemActive), 'justify-center p-3 group')}
                       title={link.name}
                     >
                       {link.icon && <link.icon className={iconColor(subItemActive)} />}
                     </button>
 
-                    {isSubMenuOpen && (
-                      <ul className={cn('mt-1 space-y-1 rounded-lg', dark ? 'bg-slate-800/50' : 'bg-slate-50', 'p-1')}>
-                        {link.subItems!.map((sub) => {
-                          const isSubActive = pathname === sub.href;
-                          return (
-                            <li key={sub.name}>
-                              <Link
-                                href={sub.href}
-                                title={sub.name}
-                                className={cn(
-                                  'w-full flex items-center justify-center rounded-lg p-2 text-sm transition-all',
-                                  isSubActive
-                                    ? 'bg-emerald-500 text-white shadow-sm'
-                                    : dark
-                                      ? 'text-slate-400 hover:bg-slate-700 hover:text-white'
-                                      : 'text-slate-600 hover:bg-emerald-100 hover:text-emerald-700'
-                                )}
-                              >
-                                {sub.icon ? (
-                                  <sub.icon className={cn('h-4 w-4 shrink-0', isSubActive ? 'text-white' : '')} />
-                                ) : (
-                                  <span className="text-xs font-bold">{sub.name.slice(0, 2).toUpperCase()}</span>
-                                )}
-                              </Link>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
+                    <div className={cn(
+                      'absolute left-full top-0 ml-2 w-48 rounded-xl p-1 shadow-xl transition-all duration-200 z-50',
+                      dark ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-slate-200',
+                      isSubMenuOpen ? 'opacity-100 visible translate-x-0' : 'opacity-0 invisible -translate-x-2'
+                    )}>
+                      <div className="px-3 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{link.name}</div>
+                      {link.subItems!.map((sub) => {
+                        const isSubActive = pathname === sub.href;
+                        return (
+                          <Link
+                            key={sub.name}
+                            href={sub.href}
+                            onClick={handleLinkClick}
+                            className={cn(
+                              'flex items-center gap-3 rounded-lg p-2.5 text-sm transition-all',
+                              isSubActive
+                                ? 'bg-emerald-500 text-white shadow-sm'
+                                : dark ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-600 hover:bg-emerald-50 hover:text-emerald-700'
+                            )}
+                          >
+                            {sub.icon && <sub.icon className={cn('h-4 w-4 shrink-0', isSubActive ? 'text-white' : '')} />}
+                            <span>{sub.name}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
                   </>
                 ) : (
                   <Link
                     href={link.href}
+                    onClick={handleLinkClick}
                     className={cn(baseItemClasses(isActive), 'justify-center p-3 group')}
                     title={link.name}
                   >
@@ -175,37 +158,38 @@ export default function MainNavLink({
             );
           }
 
-          // ================= EXPANDED MODE =================
           return (
             <li key={link.name} className="group">
               {hasSub ? (
                 <>
                   <button
                     type="button"
-                    onClick={() => handleParentClick(link)}
+                    onClick={() => toggleSubMenu(link.name)}
                     className={cn(baseItemClasses(subItemActive), 'p-3 justify-between group')}
                   >
                     <span className="flex items-center gap-3">
                       {link.icon && <link.icon className={iconColor(subItemActive)} />}
                       <span className="truncate">{link.name}</span>
                     </span>
-                    {isSubMenuOpen ? <LuChevronUp className="h-4 w-4 opacity-70" /> : <LuChevronDown className="h-4 w-4 opacity-70" />}
+                    <LuChevronDown
+                      className={cn("h-4 w-4 opacity-70 transition-transform duration-300 ease-in-out", isSubMenuOpen ? "rotate-180" : "rotate-0")}
+                    />
                   </button>
-                  {isSubMenuOpen && (
-                    <ul className="ml-4 mt-1.5 space-y-1 border-l-2 border-slate-800/40 pl-2">
+
+                  <div className={cn("grid transition-all duration-300 ease-in-out", isSubMenuOpen ? "grid-rows-[1fr] opacity-100 mt-1" : "grid-rows-[0fr] opacity-0 mt-0")}>
+                    <ul className="overflow-hidden ml-4 space-y-1 border-l-2 border-slate-800/40 pl-2">
                       {link.subItems!.map((sub) => {
                         const isSubActive = pathname === sub.href;
                         return (
-                          <li key={sub.name}>
+                          <li key={sub.name} className="pt-1">
                             <Link
                               href={sub.href}
+                              onClick={handleLinkClick}
                               className={cn(
-                                'w-full flex items-center gap-3 rounded-lg p-2.5 text-sm transition-all',
+                                'w-full flex items-center gap-3 rounded-lg p-2.5 text-sm transition-all duration-200',
                                 isSubActive
                                   ? 'bg-emerald-500/10 text-emerald-400 font-semibold'
-                                  : dark
-                                    ? 'text-slate-400 hover:bg-slate-800 hover:text-emerald-300'
-                                    : 'text-slate-600 hover:bg-emerald-50 hover:text-emerald-700'
+                                  : dark ? 'text-slate-400 hover:bg-slate-800 hover:text-emerald-300' : 'text-slate-600 hover:bg-emerald-50 hover:text-emerald-700'
                               )}
                             >
                               {sub.icon && <sub.icon className={cn('h-4 w-4 shrink-0', isSubActive ? 'text-emerald-400' : '')} />}
@@ -215,10 +199,14 @@ export default function MainNavLink({
                         );
                       })}
                     </ul>
-                  )}
+                  </div>
                 </>
               ) : (
-                <Link href={link.href} className={cn(baseItemClasses(isActive), 'p-3 group')}>
+                <Link
+                  href={link.href}
+                  onClick={handleLinkClick}
+                  className={cn(baseItemClasses(isActive), 'p-3 group')}
+                >
                   {link.icon && <link.icon className={iconColor(isActive)} />}
                   <span className="truncate">{link.name}</span>
                 </Link>

@@ -21,7 +21,9 @@ import {
   LucideListOrdered,
   BadgeDollarSign,
   Store,
-  Users2
+  Users2,
+  UserCog,
+  Settings
 } from "lucide-react";
 
 import { MdCategory, MdReviews } from "react-icons/md";
@@ -149,11 +151,18 @@ export const navLinks: NavLink[] = [
   },
 
   // ================= FINANCIALS =================
+
+  {
+    name: "Investor",
+    href: "/investor",
+    icon: UserCog,
+    roles: ["INVESTOR", "SUPER_ADMIN"],
+  },
   {
     name: "Finance",
     href: "/finance",
     icon: Calculator,
-    roles: ["SUPER_ADMIN"],
+    roles: ["SUPER_ADMIN", "INVESTOR"],
   },
   {
     name: "Payments",
@@ -222,16 +231,18 @@ export const navLinks: NavLink[] = [
         roles: ["ADMIN", "SUPER_ADMIN"],
       },
     ],
+  },
 
-    //   name: "User Management",
-    //   href: "#",
-    //   icon: UserCog,
-    //   roles: ["SUPER_ADMIN"],
-    //   subItems: [
-    //     { name: "Add User", href: "/users/add", icon: Plus, roles: ["SUPER_ADMIN"] },
-    //     { name: "Users List", href: "/users", icon: Users, roles: ["SUPER_ADMIN"] },
-    //     { name: "Assign Roles", href: "/assign-roles", icon: Settings, roles: ["SUPER_ADMIN"] },
-    //   ],
-    // },
+  {
+    name: "Manage Investor",
+    href: "/manage-investor",
+    icon: UserCog,
+    roles: ["SUPER_ADMIN"],
+  },
+  {
+    name: "Manage Roles",
+    href: "/role-manager",
+    icon: Settings,
+    roles: ["SUPER_ADMIN"],
   },
 ];

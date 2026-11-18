@@ -19,7 +19,6 @@ import {
     Loader2,
     UserCheck,
 } from 'lucide-react';
-import { toast } from 'sonner';
 
 export default function CustomerDetailsPage() {
     const params = useParams();
@@ -31,23 +30,6 @@ export default function CustomerDetailsPage() {
     });
 
     const user = rawUser?.data ? rawUser.data : rawUser;
-    const [updateUser, { isLoading: isUpdating }] = useUpdateUserProfileMutation();
-
-    const handleRoleToggle = async () => {
-        if (!user) return;
-        const nextRole = user.role === 'ADMIN' ? 'USER' : 'ADMIN';
-        if (window.confirm(`Change role to ${nextRole}?`)) {
-            try {
-                await updateUser({
-                    id: user.id || id,
-                    updates: { role: nextRole },
-                }).unwrap();
-                toast.success(`Role updated to ${nextRole}`);
-            } catch (err: any) {
-                toast.error(err?.data?.message || 'Failed to update role');
-            }
-        }
-    };
 
     if (isLoading) {
         return (
@@ -87,20 +69,6 @@ export default function CustomerDetailsPage() {
                 <Button variant="ghost" size="sm" onClick={() => router.push('/customer-list')} className="gap-1 text-xs text-gray-600 hover:text-gray-900 h-7 px-2">
                     <ArrowLeft className="w-3.5 h-3.5" /> Back to List
                 </Button>
-
-                {user.role !== 'SUPER_ADMIN' && (
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleRoleToggle}
-                        disabled={isUpdating}
-                        className="border-orange-300 text-orange-600 hover:bg-orange-50 text-xs h-7 px-3 shadow-2xs"
-                    >
-                        {isUpdating && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
-                        <UserCheck className="w-3.5 h-3.5 mr-1" />
-                        {user.role === 'ADMIN' ? 'Demote to User' : 'Promote to Admin'}
-                    </Button>
-                )}
             </div>
 
             <div className="max-w-4xl w-full mx-auto space-y-3">

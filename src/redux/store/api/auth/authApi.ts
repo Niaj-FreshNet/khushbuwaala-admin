@@ -101,6 +101,15 @@ const authApi = baseApi.injectEndpoints({
       invalidatesTags: ['User'],
     }),
 
+    approveOrUpdateRole: builder.mutation({
+      query: (body) => ({
+        url: '/auth/approve-role',
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: ['User', 'Auth'],
+    }),
+
     logout: builder.mutation({
       query: () => ({
         url: '/auth/logout',
@@ -125,6 +134,7 @@ export const {
   useResendOtpMutation,
   useMakeAdminMutation,
   useMakeSalesmanMutation,
+  useApproveOrUpdateRoleMutation,
   useLogoutMutation,
 } = authApi;
 

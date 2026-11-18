@@ -74,7 +74,7 @@ export default function TopBar({
                         {user?.imageUrl ? (
                             <img 
                                 src={user.imageUrl} 
-                                alt={user?.name || 'Admin'} 
+                                alt={user?.name || 'N/A'} 
                                 className="h-9 w-9 rounded-full object-cover border border-stone-200 shadow-xs" 
                             />
                         ) : (

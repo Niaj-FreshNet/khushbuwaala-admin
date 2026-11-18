@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState } from 'react';
@@ -14,6 +15,13 @@ import { useRegisterMutation } from '@/redux/store/api/auth/authApi';
 import AuthLayout from '@/components/Layout/AuthLayout/AuthLayout';
 import FormInput from '@/components/ReusableUI/FormInput';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function SignUp() {
   const [showPassword, setShowPassword] = useState(false);
@@ -21,13 +29,14 @@ export default function SignUp() {
   const [registerUser, { isLoading }] = useRegisterMutation();
   const router = useRouter();
 
-  const methods = useForm<z.infer<typeof signUpSchema>>({
-    resolver: zodResolver(signUpSchema),
+  const methods = useForm<z.infer<typeof signUpSchema> & { role: string }>({
+    resolver: zodResolver(signUpSchema.extend({ role: z.string().min(1, "Please select a role") })),
     defaultValues: {
       fullName: '',
       email: '',
       password: '',
       confirmPassword: '',
+      role: 'ADMIN', // Default role selection
       agree: false,
     },
   });
@@ -38,13 +47,13 @@ export default function SignUp() {
     formState: { errors },
   } = methods;
 
-  const onSubmit = async (data: z.infer<typeof signUpSchema>) => {
-    const { fullName, email, password } = data;
+  const onSubmit = async (data: any) => {
+    const { fullName, email, password, role } = data;
     const name = fullName;
 
     try {
-      await registerUser({ name, email, password }).unwrap();
-      toast.success('Account created successfully! Please verify your email.');
+      await registerUser({ name, email, password, role }).unwrap();
+      toast.success('Please verify your email.');
       router.push(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch (error: any) {
       toast.error(
@@ -90,6 +99,32 @@ export default function SignUp() {
               required
             />
 
+            {/* Role Selection Field */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-stone-700">Select Role</label>
+              <Controller
+                name="role"
+                control={control}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <SelectTrigger className="w-full bg-white h-10 text-xs font-semibold">
+                      <SelectValue placeholder="Select your portal role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="INVESTOR">Investor</SelectItem>
+                      <SelectItem value="SALESMAN">Salesman</SelectItem>
+                      <SelectItem value="ADMIN">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.role && (
+                <p className="text-xs text-rose-500 mt-1">
+                  {errors.role.message as string}
+                </p>
+              )}
+            </div>
+
             {/* Password */}
             <div className="relative">
               <FormInput
@@ -124,9 +159,7 @@ export default function SignUp() {
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 tabIndex={-1}
                 className="absolute right-3.5 top-6.5 sm:top-8.5 text-stone-400 hover:text-stone-700 transition-colors p-1"
-                aria-label={
-                  showConfirmPassword ? 'Hide password' : 'Show password'
-                }
+                aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
               >
                 {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -180,7 +213,7 @@ export default function SignUp() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full mt-4 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold  text-stone-950 bg-green-600 hover:bg-green-700 active:scale-[0.99] transition-all shadow-md shadow-amber-500/25 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
+              className="w-full mt-4 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold text-white bg-green-600 hover:bg-green-700 active:scale-[0.99] transition-all shadow-md shadow-green-600/20 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
             >
               {isLoading ? (
                 <>

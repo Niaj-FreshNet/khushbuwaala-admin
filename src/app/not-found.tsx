@@ -30,11 +30,6 @@ export default function NotFound() {
 
           <BackButton />
         </div>
-
-        <p className="mt-6 text-xs text-muted-foreground flex items-center justify-center gap-1">
-          <Search size={14} />
-          Try searching for a product instead
-        </p>
       </div>
     </div>
   );

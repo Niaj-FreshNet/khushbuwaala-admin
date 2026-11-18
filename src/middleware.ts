@@ -20,8 +20,14 @@ export function middleware(request: NextRequest) {
         const userInfo = jwtDecode<DecodedToken>(token);
         if (userInfo.exp && userInfo.exp * 1000 >= Date.now()) {
           const role = userInfo.role?.toUpperCase();
-          if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+          if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
             return NextResponse.redirect(new URL('/', request.url));
+          }
+          if (role === 'INVESTOR') {
+            return NextResponse.redirect(new URL('/investor', request.url));
+          }
+          if (role === 'SALESMAN') {
+            return NextResponse.redirect(new URL('/sales/add-sales', request.url));
           }
         }
       } catch {
@@ -32,9 +38,9 @@ export function middleware(request: NextRequest) {
   }
 
   // 2. Protect ALL dashboard routes AND the root ("/") from logged-out users
-  const isProtectedRoute = 
-    currentPath === "/" || 
-    currentPath.startsWith("/dashboard") || 
+  const isProtectedRoute =
+    currentPath === "/" ||
+    currentPath.startsWith("/dashboard") ||
     currentPath.startsWith("/admin") ||
     currentPath.startsWith("/orders") ||
     currentPath.startsWith("/sales") ||
@@ -42,7 +48,14 @@ export function middleware(request: NextRequest) {
     currentPath.startsWith("/stock") ||
     currentPath.startsWith("/categories") ||
     currentPath.startsWith("/finance") ||
-    currentPath.startsWith("/expense");
+    currentPath.startsWith("/expense") ||
+    currentPath.startsWith("/discounts") ||
+    currentPath.startsWith("/blogs") ||
+    currentPath.startsWith("/reviews") ||
+    currentPath.startsWith("/customer-list") ||
+    currentPath.startsWith("/role-manager") ||
+    currentPath.startsWith("/investor");
+    currentPath.startsWith("/manage-investor");
 
   if (isProtectedRoute) {
     if (!token) {
@@ -62,7 +75,7 @@ export function middleware(request: NextRequest) {
       }
 
       const role = userInfo.role?.toUpperCase();
-      if (role !== "ADMIN" && role !== "SUPER_ADMIN") {
+      if (role !== "SUPER_ADMIN" && role !== "ADMIN" && role !== 'SALESMAN' && role !== 'INVESTOR') {
         return NextResponse.redirect(new URL("/login", request.url));
       }
     } catch {
@@ -74,11 +87,10 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // ✅ Added all your primary dashboard routes to the matcher
   matcher: [
-    "/", 
-    "/login", 
-    "/dashboard/:path*", 
+    "/",
+    "/login",
+    "/dashboard/:path*",
     "/admin/:path*",
     "/orders/:path*",
     "/sales/:path*",
@@ -86,6 +98,13 @@ export const config = {
     "/stock/:path*",
     "/categories/:path*",
     "/finance/:path*",
-    "/expense/:path*"
+    "/expense/:path*",
+    "/discounts/:path*",
+    "/blogs/:path*",
+    "/reviews/:path*",
+    "/customer-list/:path*",
+    "/role-manager/:path*",
+    "/investor/:path*",
+    "/manage-investor/:path*",
   ],
 };

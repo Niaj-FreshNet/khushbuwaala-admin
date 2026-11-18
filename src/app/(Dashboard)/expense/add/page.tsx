@@ -293,7 +293,7 @@ const AddExpensePage = () => {
                         <div className="rounded-xl border bg-white p-4 sm:p-5 shadow-2xs">
                             <h2 className="mb-3 text-sm font-bold text-gray-800 flex items-center gap-2">
                                 <FileText className="h-4 w-4 text-orange-500" />
-                                Reference & Authorization
+                                Reference
                             </h2>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
