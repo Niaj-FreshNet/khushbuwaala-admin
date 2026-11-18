@@ -492,7 +492,7 @@ function LedgerTab({ rows, loading, isError, onRetry, range }: any) {
                             [...Array(6)].map((_, i) => <TableRow key={i}><TableCell colSpan={6} className="py-4 px-5"><Skeleton className="h-6 w-full" /></TableCell></TableRow>)
                         ) : pageRows.length === 0 ? (
                             <TableRow><TableCell colSpan={6} className="py-16 text-center text-stone-500 font-medium">No transactions found.</TableCell></TableRow>
-                        ) : pageRows.map((r: any, idx) => (
+                        ) : pageRows.map((r: any, idx: any) => (
                             <TableRow key={`${r.id}-${idx}`} className={cn('transition-colors hover:bg-stone-50/70', r.type === 'CREDIT' && 'bg-emerald-50/10')}>
                                 <TableCell className="px-5 py-3 text-xs font-medium text-stone-600 whitespace-nowrap">{fmtDate(r.date)} <span className="text-stone-400 block">{fmtTime(r.date)}</span></TableCell>
                                 <TableCell className="px-5 py-3 max-w-[280px]">
