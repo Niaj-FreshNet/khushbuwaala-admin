@@ -236,6 +236,25 @@ export const productApi = baseApi.injectEndpoints({
       query: (productId) => `/products/get-stock-logs/${productId}`,
       providesTags: ['Product'],
     }),
+
+    // src/redux/store/api/product/productApi.ts
+    quickUpdateCell: builder.mutation<
+      any,
+      {
+        entity: 'PRODUCT' | 'VARIANT';
+        id: string;
+        field: string;
+        value: string | number | boolean | null;
+      }
+    >({
+      query: (body) => ({
+        url: '/products/quick-cell-update',
+        method: 'PATCH',
+        body,
+      }),
+      // Optimistic / silent tag invalidation so typing doesn't cause full table flicker
+      invalidatesTags: ['Product'],
+    }),
   }),
   overrideExisting: false,
 });
@@ -265,6 +284,7 @@ export const {
   useGetLowStockProductsQuery,
   useGetBestSellersQuery,
   useGetStockLogsQuery,
+  useQuickUpdateCellMutation,
 } = productApi;
 
 export default productApi;

@@ -24,7 +24,8 @@ import { IProductResponse } from '@/types/product.types';
 import {
   Search, Plus, Trash2, Calendar, Tag, Layers,
   Star, PackageOpen, Edit, Loader2, CheckCircle2,
-  XCircle, DollarSign
+  XCircle, DollarSign,
+  TableProperties
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -174,8 +175,8 @@ const ProductList = () => {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          {/* Search Bar with Ref for '/' Hotkey Focus */}
-          <div className="relative w-full sm:w-80">
+          {/* Existing Search Bar */}
+          <div className="relative w-full sm:w-72">
             {showSearchLoader ? (
               <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 text-green-700 w-4 h-4 animate-spin" />
             ) : (
@@ -207,6 +208,15 @@ const ProductList = () => {
               </button>
             )}
           </div>
+          {/* Dedicated Price List Sheet Button */}
+          <Button
+            variant="outline"
+            className="border-emerald-300 bg-emerald-50/70 hover:bg-emerald-100 text-emerald-800 h-8 text-xs px-3 font-bold shrink-0 shadow-2xs gap-1.5"
+            onClick={() => router.push('/price-list')}
+          >
+            <TableProperties className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Price Sheet</span>
+          </Button>
           <Button
             className="bg-green-600 hover:bg-green-800 text-white h-8 text-xs px-3.5 font-semibold shrink-0 shadow-2xs"
             onClick={() => router.push('/products/add')}
