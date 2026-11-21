@@ -749,10 +749,17 @@ export default function DedicatedPriceListPage() {
         const variants = (p.variants || []).map((v: any) => ({ ...v, ...(overrides[`VARIANT:${v.id}`] || {}) }))
             .sort((a: any, b: any) => num(a.size) - num(b.size) || String(a.unit).localeCompare(String(b.unit)));
         const base: any = { ...p, ...(po || {}), variants };
+        // the admin list may not send categoryId, so fall back to the nested category object
+        // category can arrive as an object, an id, or just a name depending on the endpoint — resolve all of them
+        const rawCat: any = p.category;
+        const catName = typeof rawCat === 'string' ? rawCat : rawCat?.categoryName;
+        const byName = catName ? categories.find((c) => String(c.categoryName).toLowerCase() === String(catName).toLowerCase()) : undefined;
+        base.categoryId = po?.categoryId ?? p.categoryId ?? rawCat?.id ?? rawCat?._id ?? byName?.id;
         if (po?.categoryId) base.category = catById.get(po.categoryId) || p.category;
+        else if (typeof rawCat === 'string' && byName) base.category = byName;
         if (po && 'stock' in po) base.totalStock = po.stock;
         return base;
-    }), [rawProducts, overrides, catById]);
+    }), [rawProducts, overrides, catById, categories]);
 
     const sizeCols = useMemo(() => {
         const m = new Map<string, { key: string; size: number; label: string }>();

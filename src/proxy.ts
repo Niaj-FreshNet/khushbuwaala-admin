@@ -8,7 +8,7 @@ interface DecodedToken {
   exp: number;
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   // ✅ Check for both common cookie names just to be safe
   const token = request.cookies.get("accessToken")?.value || request.cookies.get("access_token")?.value;
   const currentPath = request.nextUrl.pathname;

@@ -25,7 +25,7 @@ export default function LedgerPage() {
         </div>
         <h1 className="text-xl font-bold text-stone-900">Access Restricted</h1>
         <p className="mt-2 max-w-sm text-sm text-stone-500">
-          Only Super Administrators possess the security clearance required to view master store ledgers and raw financial records.
+          Only Super Administrators possess the security clearance required to view store ledgers and raw financial records.
         </p>
       </div>
     );
