@@ -25,7 +25,10 @@ export default function LoginForm() {
     const router = useRouter();
     const dispatch = useDispatch();
 
-    const redirect = searchParams.get('redirect');
+    // Only allow paths inside this app (a full URL here could send users to another site).
+    const rawRedirect = searchParams.get('redirect');
+    const redirect = rawRedirect && rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') ? rawRedirect : null;
+    const sessionExpired = searchParams.get('expired') === '1';
 
     const methods = useForm<{ email: string; password: string }>({
         resolver: zodResolver(loginSchema),
@@ -104,6 +107,12 @@ export default function LoginForm() {
                             Admin Portal
                         </h1>
                     </div>
+
+                    {sessionExpired && (
+                        <p role="status" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                            Your session ended. Please log in again — you&apos;ll go straight back to where you were.
+                        </p>
+                    )}
 
                     <FormProvider {...methods}>
                         <form
