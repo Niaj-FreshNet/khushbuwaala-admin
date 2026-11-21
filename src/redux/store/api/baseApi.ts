@@ -32,9 +32,10 @@ let refreshInFlight: Promise<string | null> | null = null;
 
 const saveAccessToken = (token: string) => {
   localStorage.setItem("accessToken", token);
+  // Host-only (admin subdomain); also clear any old site-wide copy.
+  Cookies.remove("accessToken", { path: "/", domain: ".khushbuwaala.com" });
   Cookies.set("accessToken", token, {
     path: "/",
-    domain: window.location.hostname.includes("khushbuwaala.com") ? ".khushbuwaala.com" : undefined,
     secure: window.location.protocol === "https:",
     sameSite: "lax",
   });

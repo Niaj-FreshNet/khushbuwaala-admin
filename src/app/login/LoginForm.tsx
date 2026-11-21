@@ -56,11 +56,12 @@ export default function LoginForm() {
                 return;
             }
 
-            // Set cookies with domain config for admin.khushbuwaala.com and proper flags
+            // Host-only cookie: stays on admin.khushbuwaala.com. (It used to be set for all of
+            // .khushbuwaala.com, which sent staff tokens to the shop and the sgtm tag server.)
             localStorage.setItem('accessToken', accessToken);
+            Cookies.remove('accessToken', { path: '/', domain: '.khushbuwaala.com' });
             Cookies.set('accessToken', accessToken, {
                 path: '/',
-                domain: window.location.hostname.includes('khushbuwaala.com') ? '.khushbuwaala.com' : undefined,
                 secure: window.location.protocol === 'https:',
                 sameSite: 'lax'
             });
