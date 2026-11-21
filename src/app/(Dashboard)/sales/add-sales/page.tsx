@@ -45,7 +45,6 @@ import {
 } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 import productApi, { useGetAllProductsQuery, useSearchProductsQuery } from '@/redux/store/api/product/productApi';
-import { useAddToCartMutation } from '@/redux/store/api/cart/cartApi';
 import {
     useAddSaleMutation,
     useLazyGetSalesByCustomerQuery,
@@ -56,7 +55,6 @@ import InvoiceDialog, { InvoiceData } from '../_components/SaleInvoiceDialog';
 
 // ───────────────────────── Config ─────────────────────────
 
-const PRICE_IS_LINE_TOTAL = true;
 
 export const PLATFORMS = [
     { value: 'SHOWROOM', label: 'Showroom', full: 'Showroom', icon: Store },
@@ -267,7 +265,6 @@ const AddSalesPage = () => {
         return map;
     }, [allProductsData, products]);
 
-    const [addToCart] = useAddToCartMutation();
     const [addSale] = useAddSaleMutation();
     const [getProductVariants] = productApi.useLazyGetProductVariantsQuery();
     const [fetchCustomer] = useLazyGetSalesByCustomerQuery();
@@ -460,20 +457,15 @@ const AddSalesPage = () => {
 
         setSubmitting(true);
         try {
-            const cartItemIds: string[] = [];
-            for (const c of active) {
-                const res: any = await addToCart({
-                    productId: c.line.productId,
-                    variantId: c.variant?.id ?? null,
-                    size: c.variant?.size ?? null,
-                    unit: c.variant?.unit ?? null,
-                    quantity: c.line.qty,
-                    price: PRICE_IS_LINE_TOTAL ? c.total : c.unit,
-                }).unwrap();
-                const id = res?.data?.id ?? res?.id;
-                if (!id) throw new Error('Could not add an item to the cart');
-                cartItemIds.push(id);
-            }
+            // One request: the backend creates the sale lines inside the sale transaction.
+            // `price` is the UNIT selling price the salesman entered.
+            const items = active.map((c) => ({
+                productId: c.line.productId,
+                variantId: c.variant?.id ?? undefined,
+                quantity: c.line.qty,
+                price: c.unit,
+                originalPrice: c.listUnit,
+            }));
 
             const customerName = name.trim() || 'Random';
             const when = saleTime ? new Date(saleTime).toISOString() : new Date().toISOString();
@@ -481,7 +473,7 @@ const AddSalesPage = () => {
             const methodLabel = PAYMENT_METHODS.find((m) => m.value === method)?.label;
 
             const res: any = await addSale({
-                cartItemIds,
+                items,
                 amount: grandTotal,
                 isPaid,
                 method: method || undefined,

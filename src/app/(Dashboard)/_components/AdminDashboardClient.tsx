@@ -15,7 +15,7 @@ import { toast } from "sonner";
 type DashboardType = "all" | "website" | "manual";
 
 export default function AdminDashboardClient() {
-    const [type, setType] = useState<DashboardType>("website");
+    const [type, setType] = useState<DashboardType>("all");
 
     const { data, isLoading, isError, refetch, isFetching } = useGetDashboardMetricsQuery(
         { type },
@@ -65,9 +65,9 @@ export default function AdminDashboardClient() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white px-3 py-2 rounded-xl border border-stone-200 shadow-2xs">
                 <div className="flex flex-wrap gap-1.5">
                     {[
-                        { key: "all", label: "All" },
-                        { key: "website", label: "Website Orders" },
-                        { key: "manual", label: "Manual Sales" },
+                        { key: "all", label: "All (Orders + Sales)" },
+                        { key: "website", label: "Orders (Website)" },
+                        { key: "manual", label: "Sales (Manual)" },
                     ].map((t) => (
                         <button
                             key={t.key}
