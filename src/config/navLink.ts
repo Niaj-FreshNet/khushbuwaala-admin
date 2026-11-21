@@ -23,7 +23,8 @@ import {
   Store,
   Users2,
   UserCog,
-  Settings
+  Settings,
+  UserCircle2
 } from "lucide-react";
 
 import { MdCategory, MdReviews } from "react-icons/md";
@@ -244,5 +245,11 @@ export const navLinks: NavLink[] = [
     href: "/role-manager",
     icon: Settings,
     roles: ["SUPER_ADMIN"],
+  },
+  {
+    name: "My Account",
+    href: "/account",
+    icon: UserCircle2,
+    roles: ["SALESMAN", "ADMIN", "SUPER_ADMIN", "INVESTOR"],
   },
 ];

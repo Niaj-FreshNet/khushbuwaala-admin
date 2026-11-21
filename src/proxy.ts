@@ -56,7 +56,13 @@ export function proxy(request: NextRequest) {
     currentPath.startsWith("/role-manager") ||
     currentPath.startsWith("/investor") ||
     currentPath.startsWith("/manage-investor") ||
-    currentPath.startsWith("/price-list");
+    currentPath.startsWith("/price-list") ||
+    currentPath.startsWith("/account") ||
+    currentPath.startsWith("/payments") ||
+    currentPath.startsWith("/carts") ||
+    currentPath.startsWith("/materials") ||
+    currentPath.startsWith("/fragrance-families") ||
+    currentPath.startsWith("/ledger");
 
   if (isProtectedRoute) {
     if (!token) {
@@ -114,5 +120,12 @@ export const config = {
     "/investor/:path*",
     "/manage-investor/:path*",
     "/price-list/:path*",
+    // Next requires a literal list here: keep it in sync with isProtectedRoute above
+    "/account/:path*",
+    "/payments/:path*",
+    "/carts/:path*",
+    "/materials/:path*",
+    "/fragrance-families/:path*",
+    "/ledger/:path*",
   ],
 };
