@@ -15,7 +15,8 @@ import { setUser } from "@/redux/store/features/auth/authSlice";
 import { toast } from "sonner";
 
 interface JwtPayload {
-  id: string;
+  id?: string;
+  userId?: string; // the backend's token field
   email: string;
   role: UserRole;
   exp: number;
@@ -23,9 +24,24 @@ interface JwtPayload {
 }
 
 export default function RoleManager() {
-  const { data: usersRes, isLoading, refetch } = useGetAllUsersQuery(undefined);
+  // All staff/investor accounts (it used to load only the newest 10 accounts, then hide customers)
+  const { data: usersRes, isLoading, refetch } = useGetAllUsersQuery({ staffOnly: "true", limit: 500 });
   const [approveOrUpdateRole, { isLoading: isUpdating }] = useApproveOrUpdateRoleMutation();
   const [refreshToken] = useRefreshTokenMutation();
+
+  // Find a customer (name, email or phone) to give them a staff/investor role
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(customerSearch.trim()), 300);
+    return () => clearTimeout(t);
+  }, [customerSearch]);
+  const { data: customerRes, isFetching: isSearching } = useGetAllUsersQuery(
+    { role: "USER", searchTerm: debouncedSearch, limit: 8 },
+    { skip: debouncedSearch.length < 3 }
+  );
+  const customers: any[] = debouncedSearch.length < 3 ? [] : (customerRes as any)?.data || [];
+  const [pickedCustomer, setPickedCustomer] = useState<any>(null);
 
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [role, setRole] = useState<UserRole>("USER");
@@ -40,8 +56,16 @@ export default function RoleManager() {
   const rawUsers = Array.isArray(usersRes) ? usersRes : (usersRes as any)?.data || [];
 
   const users = useMemo(() => {
-    return rawUsers.filter((user: any) => user.role !== "USER");
-  }, [rawUsers]);
+    const staff = rawUsers.filter((user: any) => user.role !== "USER");
+    // A customer picked from the search is listed too, so it can be selected and saved
+    return pickedCustomer && !staff.some((u: any) => u.id === pickedCustomer.id) ? [pickedCustomer, ...staff] : staff;
+  }, [rawUsers, pickedCustomer]);
+
+  const pickCustomer = (c: any) => {
+    setPickedCustomer(c);
+    setSelectedUserId(c.id); // role/approval are then filled from the account; choose the new role below
+    setCustomerSearch("");
+  };
 
   // Auto-fill role, approval status, and all investor fields
   useEffect(() => {
@@ -84,8 +108,9 @@ export default function RoleManager() {
 
       toast.success("User access and profile updated successfully!");
       refetch();
+      setPickedCustomer(null);
 
-      if (currentUser?.id === selectedUserId) {
+      if ((currentUser?.userId ?? currentUser?.id) === selectedUserId) {
         const resArray = await refreshToken(undefined).unwrap();
         const res = Array.isArray(resArray) ? resArray[0] : resArray;
 
@@ -132,6 +157,46 @@ export default function RoleManager() {
       </CardHeader>
 
       <CardContent className="space-y-5 pt-4">
+        {/* Find a customer to promote */}
+        <div className="space-y-1.5">
+          <label htmlFor="customer-search" className="text-xs font-semibold text-stone-700">
+            Give a customer a role
+          </label>
+          <input
+            id="customer-search"
+            type="search"
+            value={customerSearch}
+            onChange={(e) => setCustomerSearch(e.target.value)}
+            placeholder="Search customer by name, email or phone"
+            className="w-full h-11 px-3 bg-white border border-stone-200 rounded-lg text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          />
+          {customerSearch.trim().length > 0 && customerSearch.trim().length < 3 && (
+            <p className="text-[11px] text-stone-500">Type at least 3 letters.</p>
+          )}
+          {debouncedSearch.length >= 3 && customerSearch.trim().length >= 3 && (
+            <div className="rounded-lg border border-stone-200 divide-y divide-stone-100 bg-white">
+              {isSearching && <p className="px-3 py-2.5 text-xs text-stone-500">Searching…</p>}
+              {!isSearching && customers.length === 0 && (
+                <p className="px-3 py-2.5 text-xs text-stone-500">No customer found.</p>
+              )}
+              {!isSearching &&
+                customers.map((c: any) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => pickCustomer(c)}
+                    className="w-full text-left px-3 py-2.5 hover:bg-green-50 active:bg-green-100"
+                  >
+                    <span className="block text-sm font-semibold text-stone-900 truncate">{c.name || "No name"}</span>
+                    <span className="block text-xs text-stone-500 truncate">
+                      {[c.email, c.phone].filter(Boolean).join(" · ")}
+                    </span>
+                  </button>
+                ))}
+            </div>
+          )}
+        </div>
+
         {/* User Selection */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-stone-700">Select User</label>
