@@ -23,6 +23,7 @@ import {
     ChevronRight,
     Users,
 } from 'lucide-react';
+import { MobileCard, MobileCardList, MobileField } from '@/components/admin/MobileCards';
 import { useGetAllUsersQuery } from '@/redux/store/api/user/userApi';
 
 export default function CustomerListPage() {
@@ -78,7 +79,44 @@ export default function CustomerListPage() {
 
             {/* Table Card */}
             <div className="rounded-xl border border-gray-200/85 bg-white overflow-hidden shadow-2xs">
-                <div className="overflow-x-auto w-full">
+                {/* PHONE: cards */}
+                <MobileCardList
+                    className="bg-gray-50/60 p-2"
+                    isLoading={isLoading}
+                    isEmpty={!isLoading && users.length === 0}
+                    emptyText="No customers found."
+                >
+                    {users.map((user: any) => (
+                        <MobileCard
+                            key={user.id}
+                            onOpen={() => router.push(`/customer-list/${user.id}`)}
+                            title={user.name || 'Unnamed User'}
+                            subtitle={user.email?.includes('khushbuwaala.local') ? 'Guest customer' : user.email}
+                            badge={<span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-700">{user.role}</span>}
+                            actions={
+                                <>
+                                    {user.phone && (
+                                        <a href={`tel:${user.phone}`} className="inline-flex h-10 flex-1 items-center justify-center gap-1 rounded-md border border-green-200 bg-green-50 text-xs font-semibold text-green-700">
+                                            <Phone className="h-4 w-4" /> Call
+                                        </a>
+                                    )}
+                                    <Button variant="outline" size="sm" className="h-10 flex-1 text-xs" onClick={() => router.push(`/customer-list/${user.id}`)}>
+                                        View
+                                    </Button>
+                                </>
+                            }
+                        >
+                            <MobileField label="Phone">{user.phone || '—'}</MobileField>
+                            <MobileField label="Joined">{user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</MobileField>
+                            {(user.district || user.address) && (
+                                <MobileField label="Address" full>{[user.district, user.address].filter(Boolean).join(', ')}</MobileField>
+                            )}
+                        </MobileCard>
+                    ))}
+                </MobileCardList>
+
+                {/* DESKTOP: table */}
+                <div className="hidden md:block overflow-x-auto w-full">
                     {isLoading ? (
                         <div className="p-4 space-y-3">
                             {[...Array(5)].map((_, i) => (

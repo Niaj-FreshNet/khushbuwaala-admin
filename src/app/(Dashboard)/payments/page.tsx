@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search, CreditCard, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { MobileCard, MobileCardList, MobileField } from '@/components/admin/MobileCards';
 import { useGetAllPaymentHistoryQuery } from "@/redux/store/api/payment/paymentApi";
 import Link from "next/link";
 
@@ -73,7 +74,31 @@ export default function PaymentManagementPage() {
 
                 {/* Payments Table */}
                 <div className="bg-white border border-gray-200 rounded-xl shadow-xs overflow-hidden">
-                    <div className="overflow-x-auto">
+                    {/* PHONE: cards */}
+                    <MobileCardList
+                        className="bg-gray-50/60 p-2"
+                        isLoading={isLoading}
+                        isEmpty={!isLoading && payments.length === 0}
+                        emptyText="No payments found."
+                    >
+                        {payments.map((payment: any) => (
+                            <MobileCard
+                                key={payment.id}
+                                title={`৳${Number(payment.amount || 0).toLocaleString()} · ${payment.provider}`}
+                                subtitle={`${payment.order?.invoice ? `Order #${payment.order.invoice}` : 'No order'} · ${payment.createdAt ? new Date(payment.createdAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true }) : ''}`}
+                                badge={
+                                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${payment.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800' : payment.status === 'FAILED' || payment.status === 'CANCELED' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-800'}`}>
+                                        {payment.status}
+                                    </span>
+                                }
+                            >
+                                {payment.gatewayPaymentId && <MobileField label="Gateway ref" full>{payment.gatewayPaymentId}</MobileField>}
+                            </MobileCard>
+                        ))}
+                    </MobileCardList>
+
+                    {/* DESKTOP: table */}
+                    <div className="hidden md:block overflow-x-auto">
                         <Table>
                             <TableHeader className="bg-gray-50/75 border-b border-gray-200 text-gray-700">
                                 <TableRow>

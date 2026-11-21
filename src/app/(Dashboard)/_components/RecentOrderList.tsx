@@ -136,10 +136,14 @@ export default function RecentOrderList({ type = "website" }: { type?: "all" | "
         limit,
     }), [debouncedSearch, page, limit]);
 
+    // "Orders" are website orders only; manual sales come from the sales list (otherwise
+    // every manual sale appeared twice in the All view).
+    const ordersArgs = useMemo(() => ({ ...queryArgs, orderSource: "WEBSITE" }), [queryArgs]);
+
     const fetchOrders = type === "all" || type === "website";
     const fetchSales = type === "all" || type === "manual";
 
-    const { data: oData, isLoading: oLoading, isFetching: oFetching, refetch: oRefetch } = useGetAllOrdersQuery(queryArgs, { skip: !fetchOrders });
+    const { data: oData, isLoading: oLoading, isFetching: oFetching, refetch: oRefetch } = useGetAllOrdersQuery(ordersArgs, { skip: !fetchOrders });
     const { data: sData, isLoading: sLoading, isFetching: sFetching, refetch: sRefetch } = useGetAllSalesQuery(queryArgs, { skip: !fetchSales });
 
     const [invoiceId, setInvoiceId] = useState<string | null>(null);
@@ -196,8 +200,10 @@ export default function RecentOrderList({ type = "website" }: { type?: "all" | "
             return 0;
         });
 
-        // Ensure we respect the limit locally when merging two API responses
-        return type === 'all' ? list.slice(0, limit) : list;
+        // Never show the same order twice, then respect the limit when merging two responses
+        const seen = new Set<string>();
+        const unique = list.filter((x) => (seen.has(x.id) ? false : (seen.add(x.id), true)));
+        return type === 'all' ? unique.slice(0, limit) : unique;
     }, [ordersRaw, salesRaw, fetchOrders, fetchSales, sortField, sortOrder, type, limit]);
 
     const toggleSort = (field: SortField) => {

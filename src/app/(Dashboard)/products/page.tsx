@@ -21,6 +21,7 @@ import {
   useUpdateProductMutation,
 } from '@/redux/store/api/product/productApi';
 import { IProductResponse } from '@/types/product.types';
+import { MobileCard, MobileCardList, MobileField } from '@/components/admin/MobileCards';
 import {
   Search, Plus, Trash2, Calendar, Tag, Layers,
   Star, PackageOpen, Edit, Loader2, CheckCircle2,
@@ -174,7 +175,7 @@ const ProductList = () => {
           <p className="text-xs text-gray-500 mt-0.5">Catalog, pricing, variants, and stock metrics overview</p>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
           {/* Existing Search Bar */}
           <div className="relative w-full sm:w-72">
             {showSearchLoader ? (
@@ -228,7 +229,69 @@ const ProductList = () => {
 
       {/* Table Container */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-2xs overflow-hidden">
-        <div className="overflow-x-auto w-full">
+        {/* PHONE: cards */}
+        <MobileCardList
+          className="bg-gray-50/60 p-2"
+          isLoading={isLoading || showSearchLoader}
+          isEmpty={!(isLoading || showSearchLoader) && allProducts.length === 0}
+          emptyText="No products found. Try another search."
+        >
+          {allProducts.map((product: any) => {
+            const variants = [...(product.variants || [])].sort((a: any, b: any) => (Number(a.size) || 0) - (Number(b.size) || 0));
+            const live = variants.filter((v: any) => v.published !== false).length;
+            const prices = variants.map((v: any) => v.price || 0);
+            const min = prices.length ? Math.min(...prices) : 0;
+            const max = prices.length ? Math.max(...prices) : 0;
+            return (
+              <MobileCard
+                key={product.id}
+                onOpen={() => router.push(`/products/${product.id}`)}
+                leading={
+                  <div className="relative h-12 w-12 overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
+                    <Image src={product.primaryImage || '/placeholder.png'} alt={product.name || 'Product'} fill sizes="48px" className="object-cover" />
+                  </div>
+                }
+                title={product.name || 'N/A'}
+                subtitle={product.category?.categoryName || 'No category'}
+                badge={
+                  <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold', product.published ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-200 text-gray-700')}>
+                    {product.published ? 'LIVE' : 'HIDDEN'}
+                  </span>
+                }
+                actions={
+                  <>
+                    <label className="flex h-10 flex-1 items-center justify-between gap-2 rounded-md border border-gray-200 px-3 text-xs font-semibold text-gray-700">
+                      Show in shop
+                      <Switch
+                        checked={product.published}
+                        onCheckedChange={(checked) => handlePublishedChange(checked, product.id)}
+                        className="data-[state=checked]:bg-[#4CD964]"
+                      />
+                    </label>
+                    <Button variant="outline" size="sm" className="h-10 text-xs" onClick={() => router.push(`/products/${product.id}`)}>
+                      <Edit className="mr-1 h-4 w-4" /> Edit
+                    </Button>
+                    <Button variant="outline" size="icon" className="h-10 w-10 text-rose-600" aria-label="Delete product" onClick={() => setDeleteId(product.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </>
+                }
+              >
+                <MobileField label="Price">{prices.length ? (min === max ? `৳${min}` : `৳${min} – ৳${max}`) : 'N/A'}</MobileField>
+                <MobileField label="Stock">
+                  <span className={cn(product.totalStock < 0 && 'text-rose-600 font-bold')}>
+                    {product.totalStock ?? 'N/A'} {product.category?.unit || ''}
+                  </span>
+                </MobileField>
+                <MobileField label="Sizes live">{live} of {variants.length}</MobileField>
+                <MobileField label="Sold">{product.salesCount ?? 0}</MobileField>
+              </MobileCard>
+            );
+          })}
+        </MobileCardList>
+
+        {/* DESKTOP: table */}
+        <div className="hidden md:block overflow-x-auto w-full">
           <Table>
             <TableHeader className="bg-gray-50/75 border-b border-gray-200 text-gray-700">
               <TableRow>

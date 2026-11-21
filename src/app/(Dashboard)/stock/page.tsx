@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { useRouter } from 'next/navigation';
 import { Search, FileText, Package, PackagePlus, Layers, Loader2 } from 'lucide-react';
+import { MobileCard, MobileCardList, MobileField } from '@/components/admin/MobileCards';
 import { useGetAllProductsAdminQuery } from '@/redux/store/api/product/productApi';
 import { IProductResponse } from '@/types/product.types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -171,7 +172,57 @@ const StockManagementPage = () => {
 
       {/* Table Container */}
       <div className="flex-1 bg-white border border-gray-200/80 rounded-xl shadow-2xs overflow-hidden flex flex-col">
-        <div className="overflow-y-auto flex-1 max-h-[calc(100vh-170px)]">
+        {/* PHONE: cards (sizes shown inline: hover popups don't work on touch) */}
+        <MobileCardList
+          className="bg-gray-50/60 p-2"
+          isLoading={isLoading}
+          isEmpty={!isLoading && allProducts.length === 0}
+          emptyText="No products match these filters."
+        >
+          {allProducts.map((product: any) => {
+            const sizes = [...(product.variants || [])].sort((a: any, b: any) => (Number(a.size) || 0) - (Number(b.size) || 0));
+            const low = product.totalStock <= 10;
+            return (
+              <MobileCard
+                key={product.id}
+                title={product.name}
+                subtitle={`${product.brand || 'Khushbuwaala'}${product.supplier ? ` · ${product.supplier}` : ''}`}
+                badge={
+                  <Badge className={cn('text-[10px] font-bold px-2 py-0.5', low ? 'bg-rose-600 text-white' : 'bg-emerald-600 text-white')}>
+                    {low ? 'Low' : 'In stock'}
+                  </Badge>
+                }
+                actions={
+                  <>
+                    <Button variant="outline" size="sm" className="h-10 flex-1 text-xs" onClick={() => handleViewLogs(product.id)}>
+                      <FileText className="mr-1 h-4 w-4" /> Stock history
+                    </Button>
+                    {isSuperAdmin && (
+                      <Button size="sm" className="h-10 flex-1 bg-emerald-600 text-xs text-white hover:bg-emerald-700" onClick={() => handleOpenRestock(product)}>
+                        <PackagePlus className="mr-1 h-4 w-4" /> Receive stock
+                      </Button>
+                    )}
+                  </>
+                }
+              >
+                <MobileField label="Total stock">
+                  <span className={cn('font-bold', low ? 'text-rose-600' : 'text-gray-900')}>
+                    {product.totalStock} {product.category?.unit || 'units'}
+                  </span>
+                </MobileField>
+                <MobileField label="Sizes">{sizes.length}</MobileField>
+                {sizes.length > 0 && (
+                  <MobileField label="Prices" full>
+                    <span className="whitespace-normal">{sizes.map((v: any) => `${v.size}${v.unit} ৳${v.price}`).join(' · ')}</span>
+                  </MobileField>
+                )}
+              </MobileCard>
+            );
+          })}
+        </MobileCardList>
+
+        {/* DESKTOP: table */}
+        <div className="hidden md:block overflow-y-auto flex-1 max-h-[calc(100vh-170px)]">
           <Table>
             <TableHeader className="bg-gray-50/80 border-b border-gray-200 text-gray-700 sticky top-0 z-10">
               <TableRow>

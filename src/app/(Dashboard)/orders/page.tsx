@@ -1593,7 +1593,7 @@ const OrderList = () => {
                     setPage(1);
                   }}
                 >
-                  <SelectTrigger className="h-7 w-[60px] bg-white text-xs font-semibold">
+                  <SelectTrigger className="h-9 sm:h-7 w-[76px] bg-white text-xs font-semibold">
                     <SelectValue placeholder={limit.toString()} />
                   </SelectTrigger>
                   <SelectContent>

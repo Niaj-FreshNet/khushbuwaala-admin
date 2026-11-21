@@ -22,6 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Plus, Search, Edit, Trash, Copy, Tag, Loader2, Sparkles, Calendar } from 'lucide-react';
+import { MobileCard, MobileCardList, MobileField } from '@/components/admin/MobileCards';
 
 import {
   useGetAllDiscountsAdminQuery,
@@ -449,7 +450,60 @@ export default function DiscountManagementPage() {
 
       {/* Table Container with full responsiveness */}
       <div className="flex-1 bg-white border border-gray-200/80 rounded-xl shadow-2xs overflow-hidden flex flex-col">
-        <div className="overflow-x-auto w-full flex-1">
+        {/* PHONE: cards */}
+        <MobileCardList
+          className="bg-gray-50/60 p-2"
+          isLoading={isLoading}
+          isEmpty={!isLoading && filtered.length === 0}
+          emptyText="No discounts found."
+        >
+          {filtered.map((d: any) => {
+            const status = getStatus(d);
+            const isPromo = !!d.code?.trim();
+            const amount = d.type === 'percentage' ? `${d.value}% off` : `৳${d.value} off`;
+            const target =
+              d.scope === 'ORDER' ? 'Entire order' : `${d.product?.name || 'Product'}${d.variant ? ` · ${d.variant.size}${d.variant.unit}` : ''}`;
+            return (
+              <MobileCard
+                key={d.id}
+                title={isPromo ? `Code ${d.code}` : 'Automatic sale'}
+                subtitle={target}
+                badge={
+                  <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold text-white', status === 'Active' ? 'bg-emerald-600' : status === 'Expired' ? 'bg-rose-600' : 'bg-amber-500')}>
+                    {status}
+                  </span>
+                }
+                actions={
+                  <>
+                    {isPromo && (
+                      <Button variant="outline" size="sm" className="h-10 flex-1 text-xs" onClick={() => copyText(d.code)}>
+                        <Copy className="mr-1 h-4 w-4" /> Copy code
+                      </Button>
+                    )}
+                    <Button variant="outline" size="sm" className="h-10 flex-1 text-xs" onClick={() => handleOpenEdit(d.id)}>
+                      <Edit className="mr-1 h-4 w-4" /> Edit
+                    </Button>
+                    <Button variant="outline" size="icon" className="h-10 w-10 text-rose-600" aria-label="Delete discount" onClick={() => handleDelete(d.id)}>
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                  </>
+                }
+              >
+                <MobileField label="Discount"><span className="font-bold text-emerald-700">{amount}</span></MobileField>
+                <MobileField label="Used">{d.usedCount ?? 0}{d.maxUsage ? ` / ${d.maxUsage}` : ''}</MobileField>
+                {(d.startDate || d.endDate) && (
+                  <MobileField label="Runs" full>
+                    {d.startDate ? new Date(d.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Now'} →{' '}
+                    {d.endDate ? new Date(d.endDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'No end'}
+                  </MobileField>
+                )}
+              </MobileCard>
+            );
+          })}
+        </MobileCardList>
+
+        {/* DESKTOP: table */}
+        <div className="hidden md:block overflow-x-auto w-full flex-1">
           <Table>
             <TableHeader className="bg-gray-50/80 border-b border-gray-200 text-gray-700">
               <TableRow>

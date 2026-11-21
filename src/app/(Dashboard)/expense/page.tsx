@@ -41,6 +41,7 @@ import {
   ArrowDown,
   Pencil,
 } from 'lucide-react';
+import { MobileCard, MobileCardList, MobileField } from '@/components/admin/MobileCards';
 import {
   useDeleteExpenseMutation,
   useGetAllExpensesQuery,
@@ -696,7 +697,79 @@ const ExpenseListPage = () => {
 
       {/* TABLE CONTAINER */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-2xs overflow-hidden">
-        <div className="overflow-x-auto w-full">
+        {/* PHONE: cards */}
+        <MobileCardList
+          className="bg-gray-50/60 p-2"
+          isLoading={isLoading}
+          isEmpty={!isLoading && sortedExpenses.length === 0}
+          emptyText="No expenses found. Try changing the filters."
+        >
+          {sortedExpenses.map((expense) => {
+            const isSelected = selectedExpenseIds.includes(expense.id);
+            const by = typeof expense.expenseBy === 'object' ? expense.expenseBy?.name : expense.expenseBy;
+            const when = expense.expenseTime ? new Date(expense.expenseTime) : null;
+            return (
+              <MobileCard
+                key={expense.id}
+                selected={isSelected}
+                onOpen={() => { setSelectedExpenseId(expense.id); setIsModalVisible(true); }}
+                leading={
+                  <button
+                    type="button"
+                    aria-label={isSelected ? 'Unselect expense' : 'Select expense'}
+                    onClick={() => toggleSelectExpense(expense.id)}
+                    className="flex h-8 w-8 items-center justify-center rounded-md text-gray-400"
+                  >
+                    {isSelected ? <CheckSquare className="h-5 w-5 text-[#FB923C]" /> : <Square className="h-5 w-5" />}
+                  </button>
+                }
+                title={expense.title}
+                subtitle={`${categoryLabel(expense.category)} · ${when ? when.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'No date'}`}
+                badge={<Badge className={`${statusBadgeClass(expense.status)} text-[10px] px-2 py-0.5`}>{expense.status}</Badge>}
+                actions={
+                  <>
+                    <Button variant="outline" size="sm" className="h-10 flex-1 text-xs" onClick={() => setEditExpenseId(expense.id)}>
+                      <Pencil className="mr-1 h-4 w-4" /> Edit
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-10 flex-1 text-xs">Status</Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        {STATUS_OPTIONS.map((st) => (
+                          <DropdownMenuItem key={st} onClick={() => handleUpdateStatus(expense.id, st)} className="py-2.5 text-sm">
+                            <span className={`mr-2 inline-block rounded px-1.5 py-0.5 text-[10px] font-bold text-white ${statusBadgeClass(st)}`}>{st}</span>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-10 w-10 text-rose-600"
+                      aria-label="Delete expense"
+                      onClick={() => setExpenseToDelete({ id: expense.id, title: expense.title })}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </>
+                }
+              >
+                <MobileField label="Amount">
+                  <span className="font-bold">৳{Number(expense.amount || 0).toLocaleString()}</span>{' '}
+                  <span className={cn('ml-1 rounded px-1 text-[10px] font-bold text-white', expense.isPaid ? 'bg-emerald-600' : 'bg-rose-600')}>
+                    {expense.isPaid ? 'PAID' : 'DUE'}
+                  </span>
+                </MobileField>
+                <MobileField label="Method">{expense.method ? expense.method.replace(/([A-Z])/g, ' $1').toLowerCase() : 'cash'}</MobileField>
+                <MobileField label="Recorded by" full>{by || '—'}</MobileField>
+              </MobileCard>
+            );
+          })}
+        </MobileCardList>
+
+        {/* DESKTOP: table */}
+        <div className="hidden md:block overflow-x-auto w-full">
           <Table>
             <TableHeader className="bg-gray-50/75 border-b border-gray-200 text-gray-700">
               <TableRow>
@@ -898,7 +971,7 @@ const ExpenseListPage = () => {
                     setPage(1);
                   }}
                 >
-                  <SelectTrigger className="h-7 w-[60px] bg-white text-xs font-semibold">
+                  <SelectTrigger className="h-9 sm:h-7 w-[76px] bg-white text-xs font-semibold">
                     <SelectValue placeholder={limit.toString()} />
                   </SelectTrigger>
                   <SelectContent>
