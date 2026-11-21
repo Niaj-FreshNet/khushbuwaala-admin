@@ -274,6 +274,9 @@ const EditProductPage = () => {
           }
 
           return {
+            // Keep the existing id so the backend updates this size in place
+            // (order history, stock logs and carts point at it).
+            id: v.id || undefined,
             sku: v.sku || `KWP-${values.name.replace(/\s+/g, "").toUpperCase()}-${v.size}-${v.unit}`,
             size: Number(v.size),
             unit: (v.unit || 'ML').toUpperCase(),
