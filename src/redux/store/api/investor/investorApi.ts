@@ -49,6 +49,36 @@ const investorApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: ['Finance', 'User'], // Refresh balances immediately
         }),
+        // ---- Monthly profit share (SUPER_ADMIN) ----
+        getProfitPreview: builder.query<any, { year: number; month: number }>({
+            query: ({ year, month }) => ({ url: '/investor/profit-distributions', params: { year, month } }),
+            providesTags: ['Finance'],
+        }),
+        approveProfitMonth: builder.mutation<any, { year: number; month: number }>({
+            query: (body) => ({ url: '/investor/profit-distributions/approve', method: 'POST', body }),
+            invalidatesTags: ['Finance', 'User'],
+        }),
+        // ---- Ledger access ----
+        requestLedgerAccess: builder.mutation<any, { reason?: string }>({
+            query: (body) => ({ url: '/investor/ledger-access/request', method: 'POST', body }),
+            invalidatesTags: ['Finance'],
+        }),
+        getMyLedgerAccess: builder.query<any, void>({
+            query: () => '/investor/ledger-access/me',
+            providesTags: ['Finance'],
+        }),
+        getLedgerAccessRequests: builder.query<any, string | void>({
+            query: (status) => ({ url: '/investor/ledger-access', params: status ? { status } : undefined }),
+            providesTags: ['Finance'],
+        }),
+        decideLedgerAccess: builder.mutation<any, { id: string; status: 'APPROVED' | 'REJECTED'; hours?: number }>({
+            query: ({ id, ...body }) => ({ url: `/investor/ledger-access/${id}`, method: 'PATCH', body }),
+            invalidatesTags: ['Finance'],
+        }),
+        revokeLedgerAccess: builder.mutation<any, string>({
+            query: (id) => ({ url: `/investor/ledger-access/${id}/revoke`, method: 'PATCH' }),
+            invalidatesTags: ['Finance'],
+        }),
     }),
     overrideExisting: true,
 });
@@ -60,6 +90,13 @@ export const {
     useUpdateInvestorMutation,
     useGetAllWithdrawalsQuery,
     useUpdateWithdrawalStatusMutation,
+    useGetProfitPreviewQuery,
+    useApproveProfitMonthMutation,
+    useRequestLedgerAccessMutation,
+    useGetMyLedgerAccessQuery,
+    useGetLedgerAccessRequestsQuery,
+    useDecideLedgerAccessMutation,
+    useRevokeLedgerAccessMutation,
 } = investorApi;
 
 export default investorApi;

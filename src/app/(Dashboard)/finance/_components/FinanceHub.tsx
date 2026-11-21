@@ -21,6 +21,8 @@ import {
 import { cn } from '@/lib/utils';
 import { useGetFinancialSummaryQuery, useGetLedgerQuery, useBackfillHistoricalCostsMutation } from '@/redux/store/api/finance/financeApi';
 import { toast } from 'sonner';
+import { useAuth } from '@/redux/store/hooks/useAuth';
+import { LedgerAccessCard } from '../../investor/_components/InvestorExtras';
 
 /* =========================================================================
    Types & Utilities
@@ -158,7 +160,7 @@ function Notice({ tone, children }: { tone: 'amber' | 'blue' | 'rose'; children:
    OVERVIEW TAB
    ========================================================================= */
 
-function OverviewTab({ m, b, pm, loading, prevLoading, isError, onRetry, rangeValid, cash, cashLoading }: any) {
+function OverviewTab({ m, b, pm, loading, prevLoading, isError, onRetry, rangeValid, cash, cashLoading, cashLocked }: any) {
     const v = useMemo(() => {
         const revenue = n(m.totalRevenue);
         const cogs = n(m.totalCOGS);
@@ -340,9 +342,13 @@ function OverviewTab({ m, b, pm, loading, prevLoading, isError, onRetry, rangeVa
                         <CardTitle className="flex items-center gap-2 text-xs font-bold text-stone-800 uppercase tracking-wider"><Banknote className="h-4 w-4 text-emerald-600" /> Cash Flow (Ledger)</CardTitle>
                     </CardHeader>
                     <CardContent className="px-5 py-3 space-y-2 text-xs">
+                        {cashLocked ? (
+                            <p className="text-stone-500">Cash flow comes from the full ledger. Request ledger access to see it.</p>
+                        ) : (<>
                         <div className="flex justify-between"><span className="text-stone-500 font-medium">Money In</span>{cashLoading ? <Skeleton className="h-4 w-16" /> : <span className="font-bold tabular-nums text-emerald-600">+{money(cash.credits)}</span>}</div>
                         <div className="flex justify-between"><span className="text-stone-500 font-medium">Money Out</span>{cashLoading ? <Skeleton className="h-4 w-16" /> : <span className="font-bold tabular-nums text-rose-600">−{money(cash.debits)}</span>}</div>
                         <div className="flex justify-between border-t border-stone-100 pt-2"><span className="font-bold text-stone-900">Net Cash</span>{cashLoading ? <Skeleton className="h-4 w-16" /> : <span className={cn('font-black tabular-nums', cash.net >= 0 ? 'text-emerald-700' : 'text-rose-700')}>{money(cash.net)}</span>}</div>
+                        </>)}
                     </CardContent>
                 </Card>
 
@@ -555,6 +561,8 @@ function LedgerTab({ rows, loading, isError, onRetry, range }: any) {
    ========================================================================= */
 
 export default function FinanceHub() {
+    // Re-calculating cost snapshots is a Super Admin tool (the API rejects anyone else)
+    const isSuperAdmin = useAuth().user?.role === 'SUPER_ADMIN';
     const sp = useSearchParams();
     const router = useRouter();
     const pathname = usePathname();
@@ -585,6 +593,7 @@ export default function FinanceHub() {
     const cur = useGetFinancialSummaryQuery(rangeValid ? { startDate: range.start, endDate: range.end } : skipToken, { refetchOnMountOrArgChange: true });
     const prv = useGetFinancialSummaryQuery(prevRange ? { startDate: prevRange.start, endDate: prevRange.end } : skipToken, { refetchOnMountOrArgChange: true });
     const led = useGetLedgerQuery(rangeValid ? { startDate: range.start, endDate: range.end, type: 'ALL' } : skipToken, { refetchOnMountOrArgChange: true });
+    const ledgerLocked = (led.error as any)?.status === 403;
 
     const [backfillCosts, { isLoading: isBackfilling }] = useBackfillHistoricalCostsMutation();
 
@@ -635,7 +644,7 @@ export default function FinanceHub() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 print:hidden">
-                    <AlertDialog>
+                    {isSuperAdmin && (<AlertDialog>
                         <AlertDialogTrigger asChild>
                             <Button size="sm" variant="outline" disabled={isBackfilling} className="h-9 rounded-xl border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 font-bold">
                                 {isBackfilling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
@@ -654,7 +663,7 @@ export default function FinanceHub() {
                                 <AlertDialogAction onClick={handleBackfill} className="rounded-xl bg-stone-900 text-white font-bold hover:bg-stone-800">Confirm Sync</AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
-                    </AlertDialog>
+                    </AlertDialog>)}
 
                     <Button size="sm" variant="outline" onClick={() => window.print()} className="h-9 rounded-xl border-stone-200 text-stone-600 hover:bg-stone-100/80 font-bold">
                         <Printer className="mr-2 h-4 w-4" /> Print
@@ -697,10 +706,15 @@ export default function FinanceHub() {
                 ))}
             </div>
 
+            {/* Investors need an approved, time-limited grant for the full ledger (D-007) */}
             {tab === 'overview' ? (
-                <OverviewTab m={cur.data?.data?.metrics ?? {}} b={cur.data?.data?.breakdown ?? {}} pm={prv.data?.data?.metrics} loading={cur.isLoading} prevLoading={prv.isLoading} isError={cur.isError} onRetry={() => cur.refetch()} rangeValid={rangeValid} cash={cash} cashLoading={led.isLoading} />
+                <OverviewTab m={cur.data?.data?.metrics ?? {}} b={cur.data?.data?.breakdown ?? {}} pm={prv.data?.data?.metrics} loading={cur.isLoading} prevLoading={prv.isLoading} isError={cur.isError} onRetry={() => cur.refetch()} rangeValid={rangeValid} cash={cash} cashLoading={led.isLoading} cashLocked={ledgerLocked} />
             ) : (
-                <LedgerTab rows={ledgerRows} loading={led.isLoading} isError={led.isError} onRetry={() => led.refetch()} range={range} />
+                ledgerLocked ? (
+                    <div className="mx-auto max-w-md"><LedgerAccessCard /></div>
+                ) : (
+                    <LedgerTab rows={ledgerRows} loading={led.isLoading} isError={led.isError} onRetry={() => led.refetch()} range={range} />
+                )
             )}
         </div>
     );

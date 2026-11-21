@@ -12,6 +12,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useGetInvestorDashboardQuery, useRequestWithdrawalMutation } from '@/redux/store/api/investor/investorApi';
 import { toast } from 'sonner';
+import { LedgerAccessCard, MonthlyProfitHistory } from './_components/InvestorExtras';
 
 type Num = number | undefined;
 
@@ -324,6 +325,9 @@ function InvestorHub() {
                             <StatementRow label="Net Profit" value={net} loading={cur.isLoading} tone="total" strong />
                         </CardContent>
                     </Card>
+
+                    <MonthlyProfitHistory items={responseData?.monthlyProfits ?? []} />
+                    <LedgerAccessCard />
 
                     {/* Recent Withdrawals Ledger */}
                     <Card className="rounded-2xl border-stone-200/60 bg-white shadow-sm flex flex-col">
