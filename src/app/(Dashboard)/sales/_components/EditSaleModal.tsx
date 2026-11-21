@@ -405,7 +405,7 @@ export default function EditSaleModal({
                     ) : (
                         <>
                             {/* Quick Details & Status Bar */}
-                            <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-5 gap-2.5 bg-white p-3 rounded-lg border shadow-xs">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 bg-white p-3 rounded-lg border shadow-xs">
 
                                 <div>
                                     <label className="text-[11px] text-gray-500 font-medium mb-1 block">
@@ -419,7 +419,7 @@ export default function EditSaleModal({
                                             setDirty(true);
                                         }}
                                     >
-                                        <SelectTrigger className="h-8 text-xs">
+                                        <SelectTrigger className="h-10 sm:h-8 w-full min-w-0 text-xs">
                                             <SelectValue placeholder="Status" />
                                         </SelectTrigger>
 
@@ -449,7 +449,7 @@ export default function EditSaleModal({
                                             setDirty(true);
                                         }}
                                     >
-                                        <SelectTrigger className="h-8 text-xs">
+                                        <SelectTrigger className="h-10 sm:h-8 w-full min-w-0 text-xs">
                                             <SelectValue placeholder="Payment" />
                                         </SelectTrigger>
 
@@ -476,7 +476,7 @@ export default function EditSaleModal({
                                             setDirty(true);
                                         }}
                                     >
-                                        <SelectTrigger className="h-8 text-xs border-green-300">
+                                        <SelectTrigger className="h-10 sm:h-8 w-full min-w-0 text-xs border-green-300">
                                             <SelectValue placeholder="Method" />
                                         </SelectTrigger>
 
@@ -518,7 +518,7 @@ export default function EditSaleModal({
                                             setDirty(true);
                                         }}
                                     >
-                                        <SelectTrigger className="h-8 text-xs border-green-300">
+                                        <SelectTrigger className="h-10 sm:h-8 w-full min-w-0 text-xs border-green-300">
                                             <SelectValue placeholder="Select Platform" />
                                         </SelectTrigger>
 

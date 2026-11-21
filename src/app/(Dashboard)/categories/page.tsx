@@ -154,9 +154,9 @@ export default function CategoryList() {
     const [deleteCategory] = useDeleteCategoryMutation();
     const [updateCategory, { isLoading: isUpdating }] = useUpdateCategoryMutation();
 
-    const allCategories = data?.data?.data || [];
+    // useMemo keeps the same array between renders (a fresh `[]` every render looped forever)
+    const allCategories = useMemo(() => data?.data?.data || [], [data]);
 
-    const [filteredCategories, setFilteredCategories] = useState(allCategories);
     const [searchTerm, setSearchTerm] = useState('');
 
     const [addModalOpen, setAddModalOpen] = useState(false);
@@ -179,15 +179,11 @@ export default function CategoryList() {
         [unitOptions]
     );
 
-    useEffect(() => {
-        if (searchTerm.trim()) {
-            const filtered = allCategories.filter((cat: any) =>
-                String(cat.categoryName || '').toLowerCase().includes(searchTerm.toLowerCase().trim())
-            );
-            setFilteredCategories(filtered);
-        } else {
-            setFilteredCategories(allCategories);
-        }
+    // Derived, not copied into state
+    const filteredCategories = useMemo(() => {
+        const q = searchTerm.toLowerCase().trim();
+        if (!q) return allCategories;
+        return allCategories.filter((cat: any) => String(cat.categoryName || '').toLowerCase().includes(q));
     }, [searchTerm, allCategories]);
 
     const handleDelete = async (id: string) => {

@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Search, Trash, Star, MessageSquareText, CheckCircle2 } from 'lucide-react';
+import { MobileCard, MobileCardList, MobileField } from '@/components/admin/MobileCards';
 import {
   useGetAllReviewsAdminQuery,
   usePublishReviewMutation,
@@ -122,7 +123,47 @@ const ReviewList = () => {
           </div>
         ) : (
           <div className="rounded-xl border border-gray-200/85 bg-white overflow-hidden shadow-2xs">
-            <div className="overflow-x-auto">
+            {/* PHONE: cards */}
+            <MobileCardList className="bg-gray-50/60 p-2" isEmpty={filteredReviews.length === 0} emptyText="No reviews found.">
+              {filteredReviews.map((review) => (
+                <MobileCard
+                  key={review.id}
+                  title={review.title}
+                  subtitle={`${review.product?.name || 'Unknown product'} · ${review.user?.name || 'Guest'}`}
+                  badge={
+                    <span className="inline-flex items-center gap-0.5 text-xs font-bold text-amber-600">
+                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" /> {review.rating}/5
+                    </span>
+                  }
+                  actions={
+                    <>
+                      <label className="flex h-10 flex-1 items-center justify-between gap-2 rounded-md border border-gray-200 px-3 text-xs font-semibold text-gray-700">
+                        {review.isPublished ? 'Shown on site' : 'Hidden'}
+                        <Switch
+                          checked={review.isPublished}
+                          onCheckedChange={(checked) => handleTogglePublish(checked, review)}
+                          disabled={isPublishing}
+                          className="data-[state=checked]:bg-emerald-600"
+                        />
+                      </label>
+                      <Button variant="outline" size="icon" className="h-10 w-10 text-rose-600" aria-label="Delete review" onClick={() => handleDelete(review.id)}>
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </>
+                  }
+                >
+                  <MobileField label="Comment" full>
+                    <span className="whitespace-normal">{review.comment}</span>
+                  </MobileField>
+                  <MobileField label="Date">
+                    {new Date(review.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </MobileField>
+                </MobileCard>
+              ))}
+            </MobileCardList>
+
+            {/* DESKTOP: table */}
+            <div className="hidden md:block overflow-x-auto">
               <Table>
                 <TableHeader className="bg-gray-50/80">
                   <TableRow>
