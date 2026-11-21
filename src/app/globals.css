@@ -822,3 +822,12 @@
   /* slate-700 */
   border-radius: 10px;
 }
+/* Phones: 16px inputs stop iOS from zooming the page whenever a field is tapped
+   (pinch-zoom is enabled again for wide content). */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}

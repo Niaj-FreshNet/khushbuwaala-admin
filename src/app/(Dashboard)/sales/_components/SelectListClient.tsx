@@ -44,6 +44,8 @@ import {
   ArrowUp,
   ArrowDown,
 } from 'lucide-react';
+import { MoreVertical, Phone, Pencil } from 'lucide-react';
+import { MobileCard, MobileCardList, MobileField } from '@/components/admin/MobileCards';
 import {
   useGetAllSalesQuery,
   useUpdateSalesMutation,
@@ -892,7 +894,125 @@ const SaleListClient = () => {
 
       {/* TABLE CONTAINER */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-2xs overflow-hidden">
-        <div className="overflow-x-auto w-full">
+        {/* PHONE: cards */}
+        <MobileCardList
+          className="bg-gray-50/60 p-2"
+          isLoading={isLoading}
+          isEmpty={!isLoading && sortedSales.length === 0}
+          emptyText="No sales found. Try changing the filters."
+        >
+          {sortedSales.map((sale) => {
+            const isSelected = selectedSaleIds.includes(sale.id);
+            const saleItems: any[] = sale.orderItems || sale.cartItems || [];
+            const orderItemCosts = sale.orderItemCosts || [];
+            const profit = orderItemCosts.reduce((sum: number, ic: any) => sum + Number(ic.profit || 0), 0);
+            const phone = sale.phone;
+            const when = sale.orderTime ? new Date(sale.orderTime) : null;
+            const source = sale.orderSource === 'SHOWROOM' ? 'Showroom' : String(sale.platform || sale.orderSource || '').replace(/_/g, ' ').toLowerCase();
+            const itemsText = saleItems.length === 0
+              ? 'No items'
+              : saleItems.slice(0, 2).map((it: any) => `${it.quantity ?? 1}× ${it.product?.name || it.name || 'Product'}${it.variant?.size ?? it.size ? ` ${it.variant?.size ?? it.size}${it.variant?.unit ?? it.unit ?? ''}` : ''}`).join(', ') + (saleItems.length > 2 ? ` +${saleItems.length - 2} more` : '');
+            return (
+              <MobileCard
+                key={sale.id}
+                selected={isSelected}
+                onOpen={() => { setSelectedSaleId(sale.id); setIsModalVisible(true); }}
+                leading={
+                  <button
+                    type="button"
+                    aria-label={isSelected ? 'Unselect sale' : 'Select sale'}
+                    onClick={() => toggleSelectSale(sale.id)}
+                    className="flex h-8 w-8 items-center justify-center rounded-md text-gray-400"
+                  >
+                    {isSelected ? <CheckSquare className="h-5 w-5 text-[#FB923C]" /> : <Square className="h-5 w-5" />}
+                  </button>
+                }
+                title={<span>#{sale.invoice} · {sale.name || 'Walk-in'}</span>}
+                subtitle={`${when ? `${when.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}, ${when.toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit', hour12: true })}` : 'No date'} · ${source}`}
+                badge={
+                  <Badge className={`${statusBadgeClass(sale.status)} text-[10px] px-2 py-0.5`}>{sale.status}</Badge>
+                }
+                actions={
+                  <>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-10 flex-1 text-xs">Status</Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        {STATUS_OPTIONS.map((st) => (
+                          <DropdownMenuItem key={st} onClick={() => handleUpdateStatus(sale.id, st)} className="py-2.5 text-sm">
+                            <span className={`mr-2 inline-block rounded px-1.5 py-0.5 text-[10px] font-bold text-white ${statusBadgeClass(st)}`}>{st}</span>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-10 flex-1 text-xs"
+                      onClick={() => { setEditingSaleId(sale.id); setIsEditModalOpen(true); }}
+                    >
+                      <Pencil className="mr-1 h-4 w-4" /> Edit
+                    </Button>
+                    {phone && (
+                      <a href={`tel:${phone}`} aria-label="Call customer" className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-green-200 bg-green-50 text-green-700">
+                        <Phone className="h-4 w-4" />
+                      </a>
+                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="icon" className="h-10 w-10" aria-label="More actions">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-52">
+                        <DropdownMenuItem className="py-2.5" onClick={() => { setSelectedSaleId(sale.id); setIsModalVisible(true); }}>
+                          <Eye className="mr-2 h-4 w-4" /> View details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="py-2.5" disabled={loadingInvoiceId === sale.id} onClick={() => handleOpenInvoice(sale.id)}>
+                          <Download className="mr-2 h-4 w-4" /> Invoice PDF
+                        </DropdownMenuItem>
+                        {!sale.consignmentId && sale.orderSource !== 'SHOWROOM' && (
+                          <DropdownMenuItem className="py-2.5" disabled={sendingSaleId === sale.id} onClick={() => handleSendToSteadfast(sale.id, sale.invoice)}>
+                            <Truck className="mr-2 h-4 w-4" /> Send to Steadfast
+                          </DropdownMenuItem>
+                        )}
+                        {isSuperAdmin && (
+                          <DropdownMenuItem className="py-2.5" onClick={() => { setProfitEditorSale(sale); setIsProfitEditorVisible(true); }}>
+                            <TrendingUp className="mr-2 h-4 w-4" /> Profit details
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem className="py-2.5 text-rose-600" onClick={() => setSaleToDelete({ id: sale.id, invoice: sale.invoice })}>
+                          <Trash2 className="mr-2 h-4 w-4" /> Delete sale
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </>
+                }
+              >
+                <MobileField label="Items" full>
+                  <span className={cn(['CANCELED', 'RETURNED'].includes(String(sale.status)) && 'line-through text-gray-400')}>{itemsText}</span>
+                </MobileField>
+                <MobileField label="Amount">
+                  <span className="font-bold">৳{Number(sale.amount || 0).toLocaleString()}</span>{' '}
+                  <span className={cn('ml-1 rounded px-1 text-[10px] font-bold text-white', sale.isPaid ? 'bg-emerald-600' : 'bg-rose-600')}>{sale.isPaid ? 'PAID' : 'DUE'}</span>
+                </MobileField>
+                {isSuperAdmin ? (
+                  <MobileField label="Net profit">
+                    <span className={cn('font-bold', profit >= 0 ? 'text-emerald-700' : 'text-rose-600')}>
+                      {orderItemCosts.length ? `৳${profit.toLocaleString()}` : '—'}
+                    </span>
+                  </MobileField>
+                ) : (
+                  <MobileField label="Sold by">{sale.salesman?.name || '—'}</MobileField>
+                )}
+              </MobileCard>
+            );
+          })}
+        </MobileCardList>
+
+        {/* DESKTOP: table */}
+        <div className="hidden md:block overflow-x-auto w-full">
           <Table>
             <TableHeader className="bg-gray-50/75 border-b border-gray-200 text-gray-700">
               <TableRow>

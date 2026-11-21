@@ -41,7 +41,11 @@ import {
   RefreshCw,
   ArrowUpRight,
   Filter,
+  MoreVertical,
+  Phone,
+  Pencil,
 } from "lucide-react";
+import { MobileCard, MobileCardList, MobileField } from "@/components/admin/MobileCards";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { ChevronsUpDown, Check } from "lucide-react";
@@ -104,6 +108,43 @@ const METHOD_OPTIONS = [
   { value: "cashOnDelivery", label: "Cash On Delivery" },
   { value: "bkashPayment", label: "Bkash Payment" },
 ] as const;
+
+// Money shown per order (bill, what the courier pays us, profit). One place for both layouts.
+function getOrderRowMoney(order: any) {
+  const orderItems = order.items || order.orderItems || order.cartItems || [];
+  const shipping = Number(order.shippingCost || 0);
+  const itemsSubtotal = orderItems.reduce((acc: any, it: any) => acc + (Number(it.price || 0) * Number(it.quantity || it.qty || 1)), 0);
+  const productBill = itemsSubtotal > 0 ? itemsSubtotal : Math.max(0, Number(order.amount || 0) - shipping);
+
+  const districtLower = String(order.shipping?.district || "").toLowerCase();
+  const isDhaka = districtLower.includes("dhaka");
+  const courierDeliveryCharge = shipping > 0 ? shipping : (isDhaka ? 55 : 115);
+  const isShippingIncludedInCod = shipping > 0;
+  const effectiveDeliveryDeduction = isShippingIncludedInCod ? 0 : courierDeliveryCharge;
+
+  const isCod = String(order.method || "").toLowerCase().includes("cash") || String(order.method || "").toLowerCase().includes("cod");
+  const codCharge = isCod ? Math.round(productBill * 0.01) : 0;
+  const codOrTotalAmount = Number(order.amount || 0);
+  const orderStatus = String(order.status || "").toUpperCase();
+  const isCanceledOrReturned = orderStatus === "CANCELED" || orderStatus === "RETURNED";
+
+  let netReceivable = Math.max(0, productBill - effectiveDeliveryDeduction - codCharge);
+  const rcvColorByStatus: Record<string, string> = {
+    COMPLETED: "text-green-600", DELIVERED: "text-blue-600", SHIPPED: "text-indigo-600",
+    PROCESSING: "text-amber-500", CANCELED: "text-black", RETURNED: "text-red-600",
+  };
+  if (orderStatus === "CANCELED") netReceivable = 0;
+  if (orderStatus === "RETURNED") netReceivable = -courierDeliveryCharge;
+  const rcvColorClass = rcvColorByStatus[orderStatus] ?? "text-orange-500";
+
+  const orderItemCosts = order.orderItemCosts || [];
+  const totalOrderProfit = orderItemCosts.reduce((sum: number, ic: any) => sum + Number(ic.profit || 0), 0);
+
+  return {
+    orderItems, shipping, productBill, courierDeliveryCharge, isShippingIncludedInCod, isCod, codCharge,
+    codOrTotalAmount, isCanceledOrReturned, netReceivable, rcvColorClass, orderItemCosts, totalOrderProfit,
+  };
+}
 
 function useDebouncedValue<T>(value: T, delay = 350) {
   const [debounced, setDebounced] = useState(value);
@@ -1013,7 +1054,128 @@ const OrderList = () => {
 
       {/* TABLE CONTAINER */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-xs overflow-hidden">
-        <div className="overflow-x-auto w-full">
+        {/* PHONE: cards */}
+        <MobileCardList
+          className="bg-gray-50/60 p-2"
+          isLoading={isLoading}
+          isEmpty={!isLoading && sortedOrders.length === 0}
+          emptyText="No orders found. Try changing the filters."
+        >
+          {sortedOrders.map((order) => {
+            const m = getOrderRowMoney(order);
+            const isSelected = selectedOrderIds.includes(order.id);
+            const phone = order.customer?.phone || order.shipping?.phone;
+            const items = m.orderItems as any[];
+            const when = order.orderTime ? new Date(order.orderTime) : null;
+            const itemsText = items.length === 0
+              ? "No items"
+              : items.slice(0, 2).map((it: any) => `${it.quantity ?? it.qty ?? 1}× ${it.name || it.product?.name || "Product"}${it.size ? ` ${it.size}${it.unit || ""}` : ""}`).join(", ") + (items.length > 2 ? ` +${items.length - 2} more` : "");
+            return (
+              <MobileCard
+                key={order.id}
+                selected={isSelected}
+                onOpen={() => { setSelectedOrderId(order.id); setIsModalVisible(true); }}
+                leading={
+                  <button
+                    type="button"
+                    aria-label={isSelected ? "Unselect order" : "Select order"}
+                    onClick={() => toggleSelectOrder(order.id)}
+                    className="flex h-8 w-8 items-center justify-center rounded-md text-gray-400"
+                  >
+                    {isSelected ? <CheckSquare className="h-5 w-5 text-[#FB923C]" /> : <Square className="h-5 w-5" />}
+                  </button>
+                }
+                title={<span>#{order.invoice} · {order.customer?.name || order.shipping?.name || "Guest"}</span>}
+                subtitle={when ? `${when.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}, ${when.toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit", hour12: true })} · ${order.shipping?.district || "No district"}` : "No date"}
+                badge={
+                  <Badge className={`${statusBadgeClass(order.status)} text-[10px] px-2 py-0.5`}>
+                    {updatingStatusId === order.id ? <Loader2 className="h-3 w-3 animate-spin" /> : order.status}
+                  </Badge>
+                }
+                actions={
+                  <>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-10 flex-1 text-xs" disabled={updatingStatusId === order.id}>
+                          Status
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        {STATUS_OPTIONS.map((st) => (
+                          <DropdownMenuItem key={st} onClick={() => handleUpdateStatus(order.id, st)} className="py-2.5 text-sm">
+                            <span className={`mr-2 inline-block rounded px-1.5 py-0.5 text-[10px] font-bold text-white ${statusBadgeClass(st)}`}>{st}</span>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button
+                      size="sm"
+                      disabled={updatingPaymentId === order.id}
+                      onClick={() => handleUpdatePayment(order.id, !order.isPaid)}
+                      className={cn("h-10 flex-1 text-xs font-bold text-white", order.isPaid ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700")}
+                    >
+                      {updatingPaymentId === order.id ? <Loader2 className="h-4 w-4 animate-spin" /> : order.isPaid ? "PAID" : "DUE"}
+                    </Button>
+                    {phone && (
+                      <a href={`tel:${phone}`} aria-label="Call customer" className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-green-200 bg-green-50 text-green-700">
+                        <Phone className="h-4 w-4" />
+                      </a>
+                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="icon" className="h-10 w-10" aria-label="More actions">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-52">
+                        <DropdownMenuItem className="py-2.5" onClick={() => { setSelectedOrderId(order.id); setIsModalVisible(true); }}>
+                          <Eye className="mr-2 h-4 w-4" /> View details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="py-2.5" onClick={() => { setEditingOrderId(order.id); setIsEditModalOpen(true); }}>
+                          <Pencil className="mr-2 h-4 w-4" /> Edit order
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="py-2.5" disabled={loadingInvoiceId === order.id} onClick={() => handleOpenInvoice(order.id)}>
+                          <Download className="mr-2 h-4 w-4" /> Invoice PDF
+                        </DropdownMenuItem>
+                        {!(order as any).consignmentId && (
+                          <DropdownMenuItem className="py-2.5" disabled={sendingOrderId === order.id} onClick={() => handleSendToSteadfast(order.id, order.invoice)}>
+                            <Truck className="mr-2 h-4 w-4" /> Send to Steadfast
+                          </DropdownMenuItem>
+                        )}
+                        {isSuperAdmin && (
+                          <DropdownMenuItem className="py-2.5" onClick={() => { setProfitEditorOrder(order); setIsProfitEditorVisible(true); }}>
+                            <TrendingUp className="mr-2 h-4 w-4" /> Profit details
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem className="py-2.5 text-rose-600" onClick={() => setOrderToDelete({ id: order.id, invoice: order.invoice })}>
+                          <Trash2 className="mr-2 h-4 w-4" /> Delete order
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </>
+                }
+              >
+                <MobileField label="Items" full>
+                  <span className={cn(m.isCanceledOrReturned && "line-through text-gray-400")}>{itemsText}</span>
+                </MobileField>
+                <MobileField label="Total (COD)">৳{m.codOrTotalAmount.toLocaleString()} · {methodLabel(order.method)}</MobileField>
+                <MobileField label="You receive"><span className={cn("font-bold", m.rcvColorClass)}>৳{m.netReceivable.toLocaleString()}</span></MobileField>
+                {isSuperAdmin && (
+                  <MobileField label="Net profit">
+                    <span className={cn("font-bold", m.totalOrderProfit >= 0 ? "text-emerald-700" : "text-rose-600")}>
+                      {m.orderItemCosts.length ? `৳${m.totalOrderProfit.toLocaleString()}` : "—"}
+                    </span>
+                  </MobileField>
+                )}
+                {(order as any).consignmentId && <MobileField label="Courier">#{(order as any).consignmentId}</MobileField>}
+                {order.shipping?.address && <MobileField label="Address" full>{order.shipping.address}</MobileField>}
+              </MobileCard>
+            );
+          })}
+        </MobileCardList>
+
+        {/* DESKTOP: table */}
+        <div className="hidden md:block overflow-x-auto w-full">
           <Table>
             <TableHeader className="bg-gray-50/75 border-b border-gray-200 text-gray-700">
               <TableRow>
@@ -1072,58 +1234,12 @@ const OrderList = () => {
               ) : (
                 sortedOrders.map((order) => {
                   const isSelected = selectedOrderIds.includes(order.id);
-                  const orderItems = order.items || order.orderItems || order.cartItems || [];
                   const isThisRowLoading = loadingInvoiceId === order.id;
-
-                  const shipping = Number(order.shippingCost || 0);
-                  const itemsSubtotal = orderItems.reduce((acc: any, it: any) => acc + (Number(it.price || 0) * Number(it.quantity || it.qty || 1)), 0);
-                  const productBill = itemsSubtotal > 0 ? itemsSubtotal : Math.max(0, Number(order.amount || 0) - shipping);
-
-                  const districtLower = String(order.shipping?.district || "").toLowerCase();
-                  const isDhaka = districtLower.includes("dhaka");
-                  const courierDeliveryCharge = shipping > 0 ? shipping : (isDhaka ? 55 : 115);
-
-                  const isShippingIncludedInCod = shipping > 0;
-                  const effectiveDeliveryDeduction = isShippingIncludedInCod ? 0 : courierDeliveryCharge;
-
-                  const isCod = String(order.method || "").toLowerCase().includes("cash") || String(order.method || "").toLowerCase().includes("cod");
-                  const codCharge = isCod ? Math.round(productBill * 0.01) : 0;
-
-                  const codOrTotalAmount = Number(order.amount || 0);
-                  const orderStatus = String(order.status || "").toUpperCase();
-                  const isCanceledOrReturned = orderStatus === "CANCELED" || orderStatus === "RETURNED";
-
-                  let netReceivable = Math.max(0, productBill - effectiveDeliveryDeduction - codCharge);
-
-                  let rcvColorClass = "text-green-700";
-                  if (orderStatus === "COMPLETED") {
-                    netReceivable = Math.max(0, productBill - effectiveDeliveryDeduction - codCharge);
-                    rcvColorClass = "text-green-600";
-                  } else if (orderStatus === "DELIVERED") {
-                    netReceivable = Math.max(0, productBill - effectiveDeliveryDeduction - codCharge);
-                    rcvColorClass = "text-blue-600";
-                  } else if (orderStatus === "SHIPPED") {
-                    netReceivable = Math.max(0, productBill - effectiveDeliveryDeduction - codCharge);
-                    rcvColorClass = "text-indigo-600";
-                  } else if (orderStatus === "PROCESSING") {
-                    netReceivable = Math.max(0, productBill - effectiveDeliveryDeduction - codCharge);
-                    rcvColorClass = "text-amber-500";
-                  } else if (orderStatus === "CANCELED") {
-                    netReceivable = 0;
-                    rcvColorClass = "text-black";
-                  } else if (orderStatus === "RETURNED") {
-                    netReceivable = -courierDeliveryCharge;
-                    rcvColorClass = "text-red-600";
-                  } else {
-                    netReceivable = Math.max(0, productBill - effectiveDeliveryDeduction - codCharge);
-                    rcvColorClass = "text-orange-500";
-                  }
-
-                  let rcvDisplayClass = `font-black text-xs ${rcvColorClass}`;
-
-                  // ✅ Calculate per-order profit for Super Admin
-                  const orderItemCosts = (order as any).orderItemCosts || [];
-                  const totalOrderProfit = orderItemCosts.reduce((sum: number, ic: any) => sum + Number(ic.profit || 0), 0);
+                  const {
+                    orderItems, shipping, productBill, courierDeliveryCharge, isShippingIncludedInCod, isCod, codCharge,
+                    codOrTotalAmount, isCanceledOrReturned, netReceivable, rcvColorClass, orderItemCosts, totalOrderProfit,
+                  } = getOrderRowMoney(order);
+                  const rcvDisplayClass = `font-black text-xs ${rcvColorClass}`;
 
                   return (
                     <TableRow key={order.id} className={`hover:bg-gray-50/85 transition-colors ${isSelected ? "bg-orange-50/40" : ""}`}>
