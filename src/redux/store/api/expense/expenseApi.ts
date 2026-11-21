@@ -33,6 +33,19 @@ const expenseApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['Expenses', 'Finance'],
     }),
+    // Full edit (admins): title, amount, date, method, category, status, paid…
+    editExpense: builder.mutation<any, { id: string; data: Record<string, unknown> }>({
+      query: ({ id, data }) => ({
+        url: `/expenses/update-expense/${id}`,
+        method: 'PATCH',
+        body: data,
+      }),
+      invalidatesTags: ['Expenses', 'Finance'],
+    }),
+    getExpenseCategories: builder.query<{ data: { value: string; label: string }[] }, void>({
+      query: () => '/expenses/categories',
+      keepUnusedDataFor: 3600,
+    }),
     deleteExpense: builder.mutation<any, string>({
       query: (id) => ({
         url: `/expenses/${id}`,
@@ -49,6 +62,8 @@ export const {
   useGetAllExpensesQuery,
   useGetExpenseDetailsQuery,
   useUpdateExpenseMutation,
+  useEditExpenseMutation,
+  useGetExpenseCategoriesQuery,
   useDeleteExpenseMutation,
 } = expenseApi;
 

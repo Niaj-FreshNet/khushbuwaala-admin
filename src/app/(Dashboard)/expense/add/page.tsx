@@ -31,7 +31,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { useAddExpenseMutation } from '@/redux/store/api/expense/expenseApi';
+import { useAddExpenseMutation, useGetExpenseCategoriesQuery } from '@/redux/store/api/expense/expenseApi';
 import { useAuth } from '@/redux/store/hooks/useAuth';
 
 // ───────────────────────── Config & Schema ─────────────────────────
@@ -48,7 +48,7 @@ const PAYMENT_METHODS = [
 const STATUS_OPTIONS = [
     { value: 'PENDING', label: 'Pending' },
     { value: 'COMPLETED', label: 'Completed' },
-    { value: 'CANCEL', label: 'Cancel' },
+    { value: 'CANCELED', label: 'Canceled' },
 ];
 
 const formSchema = z.object({
@@ -111,7 +111,10 @@ const AddExpensePage = () => {
     const [isPaid, setIsPaid] = useState(true);
     const [status, setStatus] = useState('COMPLETED');
     const [reference, setReference] = useState('');
+    const [category, setCategory] = useState('');
     const [attempted, setAttempted] = useState(false);
+    const { data: categoriesRes } = useGetExpenseCategoriesQuery();
+    const categories = categoriesRes?.data ?? [];
 
     const expenseBy = user?.name ?? '';
 
@@ -125,6 +128,7 @@ const AddExpensePage = () => {
         setIsPaid(true);
         setStatus('COMPLETED');
         setReference('');
+        setCategory('');
         setAttempted(false);
     };
 
@@ -156,6 +160,7 @@ const AddExpensePage = () => {
                 isPaid,
                 status,
                 reference: reference.trim() || undefined,
+                category: category || undefined,
                 expenseBy,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
@@ -244,6 +249,24 @@ const AddExpensePage = () => {
                                         placeholder="e.g. Office Rent, Utility Bill, Packaging Supplies"
                                         className={cn('h-9 focus-visible:ring-orange-500', attempted && errors.title && 'border-red-500')}
                                     />
+                                </Field>
+
+                                <Field label="Category" className="sm:col-span-2">
+                                    <Select value={category} onValueChange={setCategory}>
+                                        <SelectTrigger className="h-9 w-full focus:ring-orange-500">
+                                            <SelectValue placeholder="Choose a category (rent, ads, salaries…)" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {categories.map((c) => (
+                                                <SelectItem key={c.value} value={c.value}>
+                                                    {c.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="mt-1 text-[11px] text-gray-500">
+                                        Buying stock? Record it under Finance → Receive stock instead, so it becomes product cost.
+                                    </p>
                                 </Field>
 
                                 <Field 

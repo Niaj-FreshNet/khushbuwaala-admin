@@ -39,6 +39,7 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  Pencil,
 } from 'lucide-react';
 import {
   useDeleteExpenseMutation,
@@ -46,6 +47,8 @@ import {
   useUpdateExpenseMutation,
 } from '@/redux/store/api/expense/expenseApi';
 import ExpenseDetailsModal from './_components/ExpenseDetailsModal';
+import EditExpenseDialog from './_components/EditExpenseDialog';
+import { useGetExpenseCategoriesQuery } from '@/redux/store/api/expense/expenseApi';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import {
@@ -68,12 +71,13 @@ interface Expense {
   status: string;
   isPaid: boolean;
   title: string;
+  category?: string | null;
 }
 
 type SortField = 'expenseTime' | 'amount' | 'status' | 'title';
 type SortOrder = 'asc' | 'desc';
 
-const STATUS_OPTIONS = ['PENDING', 'COMPLETED', 'CANCEL'] as const;
+const STATUS_OPTIONS = ['PENDING', 'COMPLETED', 'CANCELED'] as const;
 const PAYMENT_OPTIONS = ['ALL', 'PAID', 'DUE'] as const;
 
 const METHOD_OPTIONS = [
@@ -121,6 +125,11 @@ const ExpenseListPage = () => {
   });
 
   const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
+  const [editExpenseId, setEditExpenseId] = useState<string | null>(null);
+  const [category, setCategory] = useState<string>('ALL');
+  const { data: categoriesRes } = useGetExpenseCategoriesQuery();
+  const categoryOptions = categoriesRes?.data ?? [];
+  const categoryLabel = (v?: string | null) => (v ? categoryOptions.find((c) => c.value === v)?.label ?? v : 'Uncategorized');
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   const [expenseToDelete, setExpenseToDelete] = useState<{ id: string; title: string } | null>(null);
@@ -184,10 +193,11 @@ const ExpenseListPage = () => {
     if (status !== 'ALL') args.status = status;
     if (payment !== 'ALL') args.isPaid = payment === 'PAID';
     if (method !== 'ALL') args.method = method;
+    if (category !== 'ALL') args.category = category;
     if (dateFrom) args.dateFrom = dateFrom;
     if (dateTo) args.dateTo = dateTo;
     return args;
-  }, [debouncedSearch, page, limit, status, payment, method, dateFrom, dateTo]);
+  }, [debouncedSearch, page, limit, status, payment, method, category, dateFrom, dateTo]);
 
   const { data, isLoading, isFetching, refetch } = useGetAllExpensesQuery(queryArgs);
   const [updateExpense] = useUpdateExpenseMutation();
@@ -318,7 +328,7 @@ const ExpenseListPage = () => {
   const statusBadgeClass = (s: string) => {
     return s === 'COMPLETED'
       ? 'bg-green-600 hover:bg-green-700 text-white shadow-sm font-bold'
-      : s === 'CANCEL'
+      : s === 'CANCELED'
         ? 'bg-red-600 hover:bg-red-700 text-white shadow-sm font-bold'
         : 'bg-orange-500 hover:bg-orange-600 text-white shadow-sm font-bold';
   };
@@ -558,6 +568,23 @@ const ExpenseListPage = () => {
               </Select>
             </div>
 
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Category</label>
+              <Select value={category} onValueChange={(v) => { setCategory(v); setPage(1); }}>
+                <SelectTrigger className={cn(
+                  'bg-white h-8 text-xs transition-colors py-0',
+                  category !== 'ALL' ? 'border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30' : 'border-gray-300 text-gray-700'
+                )}>
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Categories</SelectItem>
+                  <SelectItem value="UNCATEGORIZED">Uncategorized</SelectItem>
+                  {categoryOptions.map((c) => (<SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="grid grid-cols-2 gap-1">
               <div className="space-y-1">
                 <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">From</label>
@@ -764,6 +791,7 @@ const ExpenseListPage = () => {
 
                       <TableCell className="font-bold text-gray-900 align-middle py-3 max-w-[200px]">
                         <div className="truncate" title={expense.title}>{expense.title}</div>
+                        <div className="truncate text-[10px] font-medium text-gray-500">{categoryLabel(expense.category)}</div>
                       </TableCell>
 
                       <TableCell className="text-gray-700 font-medium align-middle py-3 text-xs">
@@ -822,6 +850,16 @@ const ExpenseListPage = () => {
                             title="View Details"
                           >
                             <Eye className="w-3.5 h-3.5" />
+                          </Button>
+
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-gray-700 hover:text-orange-700 hover:bg-orange-50"
+                            onClick={() => setEditExpenseId(expense.id)}
+                            title="Edit Expense"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
                           </Button>
 
                           <Button
@@ -937,6 +975,12 @@ const ExpenseListPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <EditExpenseDialog
+        expenseId={editExpenseId}
+        open={!!editExpenseId}
+        onOpenChange={(o) => { if (!o) setEditExpenseId(null); }}
+      />
 
       {/* Expense Details Modal */}
       <ExpenseDetailsModal
