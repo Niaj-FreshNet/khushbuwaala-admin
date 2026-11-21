@@ -56,7 +56,7 @@ type OrderApi = {
 
   amount: number;
   shippingCost?: number;
-  additionalNotes?: string;
+  additionalNotes?: string | null;
   discountAmount?: number;
   coupon?: string;
 
@@ -242,7 +242,7 @@ const OrderDetailsModal = ({
     skip: !orderId || !visible,
   });
 
-  const order: OrderApi | undefined = data?.data;
+  const order = data?.data as unknown as OrderApi | undefined;
   const [showInvoice, setShowInvoice] = useState(false);
 
   const orderDate = useMemo(() => {

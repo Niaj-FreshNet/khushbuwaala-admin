@@ -431,7 +431,7 @@ export const {
   useUpdateProductStockMutation,
   useGetProductAnalyticsQuery,
   useGetLowStockProductsQuery,
-  useGetBestSellersQuery,
+  useGetBestsellersQuery,
 } = productApi;
 
 export default productApi;

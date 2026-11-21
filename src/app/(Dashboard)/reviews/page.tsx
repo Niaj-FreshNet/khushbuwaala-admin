@@ -40,13 +40,13 @@ interface ReviewData {
 
 const ReviewList = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const { data, isLoading } = useGetAllReviewsAdminQuery({});
+  const { data, isLoading } = useGetAllReviewsAdminQuery();
   const [publishReview, { isLoading: isPublishing }] = usePublishReviewMutation();
   const [deleteReview] = useDeleteReviewMutation();
   const router = useRouter();
 
-  const allReviews: ReviewData[] = useMemo(() => data?.data?.data || [], [data]);
-  const meta = data?.data?.meta;
+  const allReviews: ReviewData[] = useMemo(() => (data as any)?.data?.data || [], [data]);
+  const meta = (data as any)?.data?.meta;
 
   const filteredReviews = useMemo(
     () =>

@@ -41,6 +41,7 @@ import {
   ArrowDown,
 } from 'lucide-react';
 import {
+  useDeleteExpenseMutation,
   useGetAllExpensesQuery,
   useUpdateExpenseMutation,
 } from '@/redux/store/api/expense/expenseApi';
@@ -190,6 +191,7 @@ const ExpenseListPage = () => {
 
   const { data, isLoading, isFetching, refetch } = useGetAllExpensesQuery(queryArgs);
   const [updateExpense] = useUpdateExpenseMutation();
+  const [deleteExpense, { isLoading: isDeleting }] = useDeleteExpenseMutation();
 
   const handleManualRefresh = () => {
     refetch();
@@ -267,38 +269,31 @@ const ExpenseListPage = () => {
   const handleDeleteExpenseConfirm = async () => {
     if (!expenseToDelete) return;
     try {
-      const res = await fetch(`/api/expenses/${expenseToDelete.id}`, { method: 'DELETE' });
-      const json = await res.json();
-      if (json?.success) {
-        toast.success(`Expense "${expenseToDelete.title}" deleted successfully`);
-        refetch();
-      } else {
-        toast.error(json?.message || 'Failed to delete expense');
-      }
-    } catch (e) {
-      toast.error('Error deleting expense');
+      const res = await deleteExpense(expenseToDelete.id).unwrap();
+      toast.success(res?.message || `Expense "${expenseToDelete.title}" deleted successfully`);
+    } catch (err: any) {
+      toast.error(err?.data?.message || 'Failed to delete expense');
     } finally {
       setExpenseToDelete(null);
     }
   };
 
   const handleBulkDeleteConfirm = async () => {
+    if (!selectedExpenseIds.length) return;
     try {
-      let successCount = 0;
-      for (const id of selectedExpenseIds) {
-        try {
-          const res = await fetch(`/api/expenses/${id}`, { method: 'DELETE' });
-          const json = await res.json();
-          if (json?.success) successCount++;
-        } catch (err) {
-          // continue
-        }
+      const results = await Promise.allSettled(
+        selectedExpenseIds.map((id) => deleteExpense(id).unwrap())
+      );
+      const successCount = results.filter((r) => r.status === 'fulfilled').length;
+
+      if (successCount > 0) {
+        toast.success(`Successfully deleted ${successCount} expense(s)`);
+      } else {
+        toast.error('Failed to delete selected expenses');
       }
-      toast.success(`Successfully deleted ${successCount} expense(s)`);
       setSelectedExpenseIds([]);
-      refetch();
-    } catch (e) {
-      toast.error('Error performing bulk deletion');
+    } catch (err: any) {
+      toast.error(err?.data?.message || 'Error performing bulk deletion');
     } finally {
       setIsBulkDeleteModalOpen(false);
     }

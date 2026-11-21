@@ -22,7 +22,8 @@ interface CartContextType {
   setCheckoutOnlyItem: (
     product: IProductResponse,
     quantity: number,
-    size: string
+    size: string,
+    selectedPrice: number
   ) => void;
   proceedToCartCheckout: () => void;
   clearCart: () => void;

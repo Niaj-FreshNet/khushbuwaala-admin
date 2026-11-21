@@ -34,7 +34,7 @@ import { useAuth } from "@/redux/store/hooks/useAuth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-interface ExtendedReview extends IReview {
+interface ExtendedReview extends Omit<IReview, "title" | "user"> {
   title?: string;
   imageUrl?: string;
   user?: {
@@ -232,11 +232,12 @@ export default function ProductAccordion({
 
   const { user } = useAuth();
 
-  const { data, isLoading: loadingReviews, refetch } = useGetProductReviewsQuery(product?.id, {
+  const { data, isLoading: loadingReviews, refetch } = useGetProductReviewsQuery(product?.id as string, {
     skip: !product?.id,
   });
 
-  const reviews: ExtendedReview[] = Array.isArray(data?.data) ? data.data : [];
+  const reviewsRaw: any = data;
+  const reviews: ExtendedReview[] = Array.isArray(reviewsRaw?.data) ? reviewsRaw.data : [];
   const [createReview] = useCreateReviewMutation();
 
   const toggleSection = (section: string) => {

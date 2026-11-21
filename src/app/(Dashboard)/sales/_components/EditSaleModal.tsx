@@ -100,6 +100,7 @@ export default function EditSaleModal({
     const [paymentValue, setPaymentValue] = useState<boolean>(false);
     const [methodValue, setMethodValue] = useState<string>("cash");
     const [platformValue, setPlatformValue] = useState<string>("");
+    const [orderSourceValue, setOrderSourceValue] = useState<"SHOWROOM" | "MANUAL">("SHOWROOM");
 
     const [editableItems, setEditableItems] = useState<any[]>([]);
     const [amountInput, setAmountInput] = useState<number>(0);
@@ -155,6 +156,15 @@ export default function EditSaleModal({
         setStatusValue(sale.status ?? "PENDING");
         setPaymentValue(Boolean(sale.isPaid));
         setMethodValue(sale.method ?? "cash");
+
+        const initialPlatform = sale.platform ?? "";
+        const isShowroom =
+            sale.orderSource === "SHOWROOM" ||
+            !initialPlatform ||
+            initialPlatform.toLowerCase() === "SHOWROOM";
+
+        setPlatformValue(isShowroom ? "" : initialPlatform);
+        setOrderSourceValue(isShowroom ? "SHOWROOM" : "MANUAL");
         setPlatformValue(sale.platform ?? "");
 
         const rawItems = sale.orderItems || sale.cartItems || [];
@@ -294,7 +304,8 @@ export default function EditSaleModal({
             status: statusValue,
             isPaid: paymentValue,
             method: methodValue,
-            platform: platformValue || "",
+            orderSource: orderSourceValue,
+            platform: orderSourceValue === "SHOWROOM" ? "" : platformValue,
             shippingCost: normalizeNumber(form.shippingCost),
             discountAmount: normalizeNumber(form.discountAmount),
             amount: normalizeNumber(amountInput),
@@ -357,8 +368,8 @@ export default function EditSaleModal({
                             disabled={!dirty || saving}
                             size="sm"
                             className={`h-7 text-xs gap-1.5 ${dirty
-                                    ? "bg-green-600 hover:bg-green-700 text-white shadow-sm"
-                                    : "bg-green-900 text-green-400 cursor-not-allowed"
+                                ? "bg-green-600 hover:bg-green-700 text-white shadow-sm"
+                                : "bg-green-900 text-green-400 cursor-not-allowed"
                                 }`}
                         >
                             {saving ? (
@@ -483,18 +494,27 @@ export default function EditSaleModal({
                                     </Select>
                                 </div>
 
-                                {/* Platform */}
+                                {/* Platform / Order Source */}
                                 <div>
-                                    <label className="text-[11px] text-gray-500 font-medium mb-1 block">
-                                        Platform
-                                    </label>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <label className="text-[11px] text-gray-500 font-medium">
+                                            Platform
+                                        </label>
+                                        <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">
+                                            {orderSourceValue}
+                                        </span>
+                                    </div>
 
                                     <Select
-                                        value={platformValue || "none"}
+                                        value={orderSourceValue === "SHOWROOM" ? "SHOWROOM" : platformValue || "SHOWROOM"}
                                         onValueChange={(val) => {
-                                            setPlatformValue(
-                                                val === "none" ? "" : val
-                                            );
+                                            if (val === "SHOWROOM" || val.toLowerCase() === "showroom") {
+                                                setOrderSourceValue("SHOWROOM");
+                                                setPlatformValue("");
+                                            } else {
+                                                setOrderSourceValue("MANUAL");
+                                                setPlatformValue(val);
+                                            }
                                             setDirty(true);
                                         }}
                                     >
@@ -503,14 +523,13 @@ export default function EditSaleModal({
                                         </SelectTrigger>
 
                                         <SelectContent>
-                                            <SelectItem
-                                                value="none"
-                                                className="text-xs"
-                                            >
-                                                No Platform
+                                            <SelectItem value="SHOWROOM" className="text-xs font-medium">
+                                                Showroom
                                             </SelectItem>
 
-                                            {PLATFORMS.map((platform) => (
+                                            {PLATFORMS.filter(
+                                                (p) => p.value.toLowerCase() !== "showroom"
+                                            ).map((platform) => (
                                                 <SelectItem
                                                     key={platform.value}
                                                     value={platform.value}

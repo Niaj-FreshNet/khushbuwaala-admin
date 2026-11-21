@@ -15,7 +15,7 @@ export default function mapProductResponseToProduct(
     description: product.description,
     primaryImage: product.primaryImage,
     otherImages: product.otherImages || [],
-    videoUrl: product.videoUrl,
+    videoUrl: (product as any).videoUrl,
     tags: product.tags || [],
     
     origin: product.origin,
@@ -82,5 +82,5 @@ export default function mapProductResponseToProduct(
     
     createdAt: formatDate(product.createdAt),
     updatedAt: formatDate(product.updatedAt),
-  };
+  } as unknown as IProduct;
 }

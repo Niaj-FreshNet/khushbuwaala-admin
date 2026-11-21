@@ -48,6 +48,7 @@ import {
   useGetAllSalesQuery,
   useUpdateSalesMutation,
   useGetSaleByIdQuery,
+  useDeleteSaleMutation,
 } from '@/redux/store/api/sales/salesApi';
 import { useSendOrderToSteadfastMutation } from '@/redux/store/api/steadfast/steadfastApi';
 import { useBackfillHistoricalCostsMutation, useOverrideOrderProfitMutation } from '@/redux/store/api/finance/financeApi';
@@ -251,6 +252,7 @@ const SaleListClient = () => {
 
   const { data, isLoading, isFetching, refetch } = useGetAllSalesQuery(queryArgs);
   const [updateSale] = useUpdateSalesMutation();
+  const [deleteSale, { isLoading: isDeleting }] = useDeleteSaleMutation();
 
   const { data: invoiceData } = useGetSaleByIdQuery(invoiceSaleId || '', {
     skip: !invoiceSaleId,
@@ -391,16 +393,15 @@ const SaleListClient = () => {
   const handleDeleteSaleConfirm = async () => {
     if (!saleToDelete) return;
     try {
-      const res = await fetch(`/api/sales/${saleToDelete.id}`, { method: 'DELETE' });
-      const json = await res.json();
-      if (json?.success) {
+      const res = await deleteSale(saleToDelete.id).unwrap();
+      if (res?.success) {
         toast.success(`Sale #${saleToDelete.invoice} deleted successfully`);
         refetch();
       } else {
-        toast.error(json?.message || 'Failed to delete sale');
+        toast.error("Failed to delete order");
       }
-    } catch (e) {
-      toast.error('Error deleting sale');
+    } catch (e: any) {
+      toast.error(e?.data?.message || "Error deleting order");
     } finally {
       setSaleToDelete(null);
     }
@@ -411,9 +412,8 @@ const SaleListClient = () => {
       let successCount = 0;
       for (const id of selectedSaleIds) {
         try {
-          const res = await fetch(`/api/sales/${id}`, { method: 'DELETE' });
-          const json = await res.json();
-          if (json?.success) successCount++;
+          await deleteSale(id).unwrap();
+          successCount++;
         } catch (err) {
           // continue
         }
@@ -993,19 +993,21 @@ const SaleListClient = () => {
 
                       <TableCell className="align-middle py-3">
                         <div className="flex flex-col items-start gap-1">
-                          <Badge
-                            variant="outline"
-                            className="text-[9px] font-semibold uppercase text-gray-700 border-gray-200"
-                          >
-                            {sale.orderSource || 'N/A'}
-                          </Badge>
+                          {sale.orderSource === 'SHOWROOM' && (
+                            <Badge
+                              variant="secondary"
+                              className="text-[9px] font-semibold uppercase text-gray-700 border-gray-200"
+                            >
+                              {sale.orderSource || 'N/A'}
+                            </Badge>
+                          )}
 
                           {sale.orderSource === 'MANUAL' && sale.platform && (
                             <Badge
                               variant="secondary"
-                              className="text-[9px] font-medium uppercase bg-orange-50 text-orange-700 border border-orange-100"
+                              className="text-[9px] font-semibold uppercase text-gray-700 border-gray-200"
                             >
-                              {sale.platform}
+                              {sale.platform.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase())}
                             </Badge>
                           )}
                         </div>

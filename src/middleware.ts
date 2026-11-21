@@ -54,8 +54,9 @@ export function middleware(request: NextRequest) {
     currentPath.startsWith("/reviews") ||
     currentPath.startsWith("/customer-list") ||
     currentPath.startsWith("/role-manager") ||
-    currentPath.startsWith("/investor");
-    currentPath.startsWith("/manage-investor");
+    currentPath.startsWith("/investor") ||
+    currentPath.startsWith("/manage-investor") ||
+    currentPath.startsWith("/price-list");
 
   if (isProtectedRoute) {
     if (!token) {
@@ -77,6 +78,12 @@ export function middleware(request: NextRequest) {
       const role = userInfo.role?.toUpperCase();
       if (role !== "SUPER_ADMIN" && role !== "ADMIN" && role !== 'SALESMAN' && role !== 'INVESTOR') {
         return NextResponse.redirect(new URL("/login", request.url));
+      }
+
+      // Price sheet: Super Admin and Admin only
+      if (currentPath.startsWith("/price-list") && role !== "SUPER_ADMIN" && role !== "ADMIN") {
+        const home = role === "SALESMAN" ? "/sales/add-sales" : role === "INVESTOR" ? "/investor" : "/login";
+        return NextResponse.redirect(new URL(home, request.url));
       }
     } catch {
       return NextResponse.redirect(new URL("/login", request.url));
@@ -106,5 +113,6 @@ export const config = {
     "/role-manager/:path*",
     "/investor/:path*",
     "/manage-investor/:path*",
+    "/price-list/:path*",
   ],
 };

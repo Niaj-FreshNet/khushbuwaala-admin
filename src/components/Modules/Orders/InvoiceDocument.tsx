@@ -89,7 +89,7 @@ const InvoiceDocument = forwardRef<HTMLDivElement, Props>(
     }, [order, breakdownItemMap]);
 
     const subtotal = useMemo(
-      () => lines.reduce((acc, l) => acc + l.lineOriginal, 0),
+      () => lines.reduce((acc: number, l: any) => acc + l.lineOriginal, 0),
       [lines]
     );
 
@@ -218,7 +218,7 @@ const InvoiceDocument = forwardRef<HTMLDivElement, Props>(
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {lines.map((x, i) => (
+                {lines.map((x: any, i: number) => (
                   <tr
                     key={x.id}
                     className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}

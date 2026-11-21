@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useFormContext } from 'react-hook-form';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,6 +47,25 @@ interface ReviewForm {
   rating: number;
 }
 
+// Rating select lives inside <FormWrapper>, so it reads the form from context
+const RatingSelect = () => {
+  const form = useFormContext();
+  return (
+    <Select onValueChange={(value) => form.setValue('rating', Number(value))} required>
+      <SelectTrigger className="border-[#FB923C] mt-1">
+        <SelectValue placeholder="Select rating" />
+      </SelectTrigger>
+      <SelectContent>
+        {[1, 2, 3, 4, 5].map((num) => (
+          <SelectItem key={num} value={num.toString()}>
+            {num} Star{num > 1 ? 's' : ''}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+};
+
 const UserOrderDetails = () => {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -55,7 +75,7 @@ const UserOrderDetails = () => {
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [selectedProductName, setSelectedProductName] = useState<string>('');
 
-  const orderData: OrderData = data?.data;
+  const orderData = data?.data as unknown as OrderData;
 
   if (isLoading) {
     return (
@@ -262,21 +282,7 @@ const UserOrderDetails = () => {
             />
             <div>
               <Label className="text-sm font-medium text-gray-700">Rating</Label>
-              <Select
-                onValueChange={(value) => form.setValue('rating', Number(value))}
-                required
-              >
-                <SelectTrigger className="border-[#FB923C] mt-1">
-                  <SelectValue placeholder="Select rating" />
-                </SelectTrigger>
-                <SelectContent>
-                  {[1, 2, 3, 4, 5].map((num) => (
-                    <SelectItem key={num} value={num.toString()}>
-                      {num} Star{num > 1 ? 's' : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <RatingSelect />
             </div>
           </FormWrapper>
         </DialogContent>

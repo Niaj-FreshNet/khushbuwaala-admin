@@ -282,7 +282,7 @@ export default function DiscountManagementPage() {
   const activeDiscount = (discountRes as any)?.data ?? discountRes;
 
   const methods = useForm<FormData>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as any,
     defaultValues: {
       scope: "PRODUCT",
       productId: "",
@@ -313,7 +313,7 @@ export default function DiscountManagementPage() {
     });
   }, [editingId, activeDiscount, methods]);
 
-  const discounts = useMemo(() => (Array.isArray(data) ? data : data?.data || []), [data]);
+  const discounts = useMemo(() => (Array.isArray(data) ? data : (data as any)?.data || []), [data]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();

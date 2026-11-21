@@ -130,8 +130,8 @@ export default function OrderInvoiceModal({
   }, [order, breakdownItemMap, totalOrderDiscount]);
 
   const totals = useMemo(() => {
-    const subtotalOriginal = lines.reduce((s, x) => s + x.lineOriginal, 0);
-    const itemDiscountsSum = lines.reduce((s, x) => s + x.save, 0);
+    const subtotalOriginal = lines.reduce((s: number, x: any) => s + x.lineOriginal, 0);
+    const itemDiscountsSum = lines.reduce((s: number, x: any) => s + x.save, 0);
     const displayDiscountAmount = Math.max(itemDiscountsSum, totalOrderDiscount);
 
     const coupon = order?.coupon ? String(order.coupon).toUpperCase() : null;
@@ -360,7 +360,7 @@ export default function OrderInvoiceModal({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {lines.map((item, idx) => (
+                  {lines.map((item: any, idx: number) => (
                     <tr key={item.id} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
                       <td className="py-1.5 px-3">
                         <div className="flex items-center gap-2">

@@ -93,7 +93,7 @@ const AddBlogClient = () => {
       toolbar: true,
       spellcheck: true,
       language: 'en',
-      toolbarButtonSize: 'middle',
+      toolbarButtonSize: 'middle' as const,
       toolbarAdaptive: false,
       showCharsCounter: true,
       showWordsCounter: true,

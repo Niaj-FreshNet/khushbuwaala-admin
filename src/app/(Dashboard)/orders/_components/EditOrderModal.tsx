@@ -262,7 +262,7 @@ export default function EditOrderModal({ orderId, visible, onClose }: EditOrderM
     };
 
     const onPaymentChange = async (val: string) => {
-        const next = val as "PAID" | "DUE" | "SHIPPED" | "RETURNED";
+        const next = val as "PAID" | "DUE";
         setPaymentValue(next);
         if (!orderId) return;
 

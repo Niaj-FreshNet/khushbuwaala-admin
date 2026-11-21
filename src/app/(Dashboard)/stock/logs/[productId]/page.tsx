@@ -16,7 +16,8 @@ const StockLogsPage = () => {
   const { data, isLoading } = useGetStockLogsQuery(productId as string);
 
   const stockLogs: StockLog[] = useMemo(() => {
-    return Array.isArray(data?.data) ? data.data : [];
+    const raw: any = data;
+    return Array.isArray(raw?.data) ? raw.data : [];
   }, [data]);
 
   const productName = stockLogs[0]?.product?.name || 'Product';

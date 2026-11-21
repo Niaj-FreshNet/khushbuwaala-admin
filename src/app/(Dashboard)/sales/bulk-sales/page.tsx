@@ -331,7 +331,7 @@ const BulkSalesPage = () => {
     setLoadingVariants((s) => ({ ...s, [productId]: true }));
     try {
       const res = await getProductVariants(productId).unwrap();
-      const list: IProductVariantResponse[] = Array.isArray(res) ? res : (res?.data ?? []);
+      const list: IProductVariantResponse[] = Array.isArray(res) ? res : ((res as any)?.data ?? []);
       setVariantsMap((m) => ({ ...m, [productId]: list }));
       if (list.length === 1) {
         patchLine(key, {

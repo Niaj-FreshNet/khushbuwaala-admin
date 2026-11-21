@@ -110,7 +110,7 @@ export function ProductQuickView({ product, trigger, open, onOpenChange }: Produ
   const isWishlisted = wishlist?.isInWishlist?.(product.id) ?? false
 
   const getCurrentVariant = React.useCallback((): IProductVariant | undefined => {
-    return sortedVariants.find((v) => `${v.size} ${String(v.unit || "").toLowerCase()}` === selectedSize)
+    return sortedVariants.find((v) => `${v.size} ${String(v.unit || "").toLowerCase()}` === selectedSize) as unknown as IProductVariant | undefined
   }, [sortedVariants, selectedSize])
 
   const currentVariant = getCurrentVariant()
@@ -499,7 +499,7 @@ export function ProductQuickView({ product, trigger, open, onOpenChange }: Produ
                           const variant = availableVariants.find(
                             (v) => `${v.size} ${String(v.unit || "").toLowerCase()}` === size
                           )
-                          const vDiscount = getActiveDiscountForVariant(variant)
+                          const vDiscount = getActiveDiscountForVariant(variant as unknown as IProductVariant | undefined)
                           const hasDiscount = !!vDiscount
 
                           return (

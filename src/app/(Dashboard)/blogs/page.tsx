@@ -130,10 +130,11 @@ const BlogList = () => {
   const isPublishValue = useWatch({ control, name: 'isPublish' });
 
   const allBlogs: BlogData[] = useMemo(() => {
-    return data?.data?.data || data?.data || [];
+    const raw: any = data;
+    return raw?.data?.data || raw?.data || [];
   }, [data]);
 
-  const meta = data?.data?.meta;
+  const meta = (data as any)?.data?.meta;
 
   const filteredBlogs = useMemo(() => {
     return allBlogs.filter((blog) =>

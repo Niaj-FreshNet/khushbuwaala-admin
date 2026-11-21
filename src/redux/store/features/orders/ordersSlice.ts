@@ -81,7 +81,8 @@ const ordersSlice = createSlice({
       .addMatcher(orderApi.endpoints.createOrder.matchFulfilled, (state, { payload }) => {
         state.loading = false
         state.lastOrder = payload
-        state.byId[payload.id] = payload
+        const newId = (payload as any)?.data?.id ?? (payload as any)?.id
+        if (newId) state.byId[newId] = payload
       })
       .addMatcher(orderApi.endpoints.createOrder.matchRejected, (state, { error }) => {
         state.loading = false
@@ -97,8 +98,8 @@ const ordersSlice = createSlice({
     //   })
     builder
       .addMatcher(orderApi.endpoints.getMyOrders.matchFulfilled, (state, { payload }) => {
-        const ordersArray = payload?.data?.data || [];
-        ordersArray.forEach((order) => {
+        const ordersArray: any[] = (payload as any)?.data?.data || [];
+        ordersArray.forEach((order: any) => {
           state.byId[order.id] = order;
         });
       });

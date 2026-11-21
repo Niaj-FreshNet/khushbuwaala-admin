@@ -8,7 +8,7 @@ const expenseApi = baseApi.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Expenses'],
+      invalidatesTags: ['Expenses', 'Finance'],
     }),
     getAllExpenses: builder.query({
       query: (params) => ({
@@ -31,7 +31,14 @@ const expenseApi = baseApi.injectEndpoints({
         method: 'PATCH',
         body: { status },
       }),
-      invalidatesTags: ['Expenses'],
+      invalidatesTags: ['Expenses', 'Finance'],
+    }),
+    deleteExpense: builder.mutation<any, string>({
+      query: (id) => ({
+        url: `/expenses/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Expenses', 'Finance'],
     }),
   }),
   overrideExisting: false,
@@ -42,6 +49,7 @@ export const {
   useGetAllExpensesQuery,
   useGetExpenseDetailsQuery,
   useUpdateExpenseMutation,
+  useDeleteExpenseMutation,
 } = expenseApi;
 
 export default expenseApi;

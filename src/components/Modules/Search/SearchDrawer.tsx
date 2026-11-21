@@ -387,16 +387,17 @@ export default function SearchDrawer({ visible, onClose }: SearchDrawerProps) {
                       const extraCount = Math.max(0, accords.length - visibleAccords.length);
 
                       const basePrice = product.minPrice ?? 0;
-                      const hasDiscount = Boolean(product.discount);
+                      const productDiscount: any = (product as any).discount;
+                      const hasDiscount = Boolean(productDiscount);
                       const finalPrice = hasDiscount
-                        ? computeDiscountedPrice(basePrice, product.discount)
+                        ? computeDiscountedPrice(basePrice, productDiscount)
                         : basePrice;
 
                       const discountBadgeText =
-                        product.discount?.type === "percentage"
-                          ? `-${Math.round(product.discount.value)}%`
-                          : product.discount?.type === "fixed"
-                            ? `-৳${Math.round(product.discount.value)}`
+                        productDiscount?.type === "percentage"
+                          ? `-${Math.round(productDiscount.value)}%`
+                          : productDiscount?.type === "fixed"
+                            ? `-৳${Math.round(productDiscount.value)}`
                             : null;
 
                       return (

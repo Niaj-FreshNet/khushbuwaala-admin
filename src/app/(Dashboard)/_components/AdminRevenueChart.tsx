@@ -69,7 +69,7 @@ const AdminRevenueChart: React.FC<RevenueChartProps> = ({
                             color: "#000",
                         }}
                         itemStyle={{ color: "#000" }}
-                        formatter={(value: number, name: string) => [
+                        formatter={(value: any, name: any) => [
                             <span key="value" className="font-bold">
                                 {name === "sales" ? `${value} BDT` : value}
                             </span>,

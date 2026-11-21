@@ -55,11 +55,13 @@ export default function RelatedProducts({ product }: RelatedProductsProps) {
   if (isLoading) return <RelatedProductsSkeleton />;
   if (isError || !data) return null;
 
-  const relatedProducts = [
-    ...(data.sameBrand ?? []),
-    ...(data.sameCategory ?? []),
-    ...(data.similarAccords ?? []),
-    ...(data.recentlyViewed ?? []),
+  // Response may arrive wrapped ({ data: {...} }) or already unwrapped
+  const groups: any = (data as any).data ?? data;
+  const relatedProducts: any[] = [
+    ...(groups.sameBrand ?? []),
+    ...(groups.sameCategory ?? []),
+    ...(groups.similarAccords ?? []),
+    ...(groups.recentlyViewed ?? []),
   ];
 
   // ✅ De-dupe + remove current product

@@ -236,7 +236,7 @@ export const OrderInvoice = forwardRef<HTMLDivElement, OrderInvoiceProps>(
                                             const hasDiscount = save > 0;
 
                                             return (
-                                                <TableRow key={item.id ?? `${pid}_${vid}_${index}`} className="text-sm">
+                                                <TableRow key={item.id ?? `${item.productId}_${item.variantId || item.variant?.id || ""}_${index}`} className="text-sm">
                                                     <TableCell className="text-center">{index + 1}</TableCell>
 
                                                     <TableCell>

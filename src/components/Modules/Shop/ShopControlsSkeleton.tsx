@@ -2,7 +2,10 @@
 
 import React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LiveSkeleton } from "@/app/(StoreFront)/shop/_components/LiveSkeleton";
+// Simple wrapper (the storefront's animated version isn't part of the admin app)
+function LiveSkeleton({ children, className }: { children: React.ReactNode; delayMs?: number; speedMs?: number; className?: string }) {
+    return <div className={className}>{children}</div>;
+}
 
 export function ShopControlsSkeleton() {
     return (
