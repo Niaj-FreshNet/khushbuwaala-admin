@@ -172,11 +172,12 @@ export const orderApi = baseApi.injectEndpoints({
       providesTags: (result, error, id) => [{ type: 'Order' as const, id }],
     }),
 
-    updateOrderStatus: builder.mutation<IOrderResponse, { id: string; status: string }>({
-      query: ({ id, status }) => ({
+    updateOrderStatus: builder.mutation<IOrderResponse, { id: string; status: string; returnChargeCollected?: number | null }>({
+      query: ({ id, status, returnChargeCollected }) => ({
         url: `/order/update-order-status/${id}`,
         method: 'PATCH',
-        body: { status },
+        // returnChargeCollected: only for a courier parcel that came back (see components/admin/courierReturn.ts)
+        body: returnChargeCollected === undefined ? { status } : { status, returnChargeCollected },
       }),
       invalidatesTags: ['Order'],
     }),

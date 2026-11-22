@@ -34,14 +34,14 @@ type Num = number | undefined;
 interface Metrics {
     grossSales?: Num; totalOrderDiscounts?: Num; totalRevenue?: Num;
     totalShippingCollected?: Num; totalCOGS?: Num; grossProfit?: Num;
-    grossMarginPercentage?: Num; returnedCourierLoss?: Num;
+    grossMarginPercentage?: Num; returnedCourierLoss?: Num; returnChargesCollected?: Num; netReturnLoss?: Num;
     freeShippingCourierCost?: Num; codFees?: Num; totalFulfillmentCosts?: Num;
     totalOperatingExpenses?: Num; netProfit?: Num; netMarginPercentage?: Num;
     totalInventoryInvestment?: Num;
 }
 interface Breakdown {
     totalLiquidCost?: Num; totalPackagingCost?: Num; expenseCount?: Num;
-    orderCount?: Num; returnedCount?: Num; missingCostItemCount?: Num;
+    orderCount?: Num; returnedCount?: Num; courierReturnCount?: Num; missingCostItemCount?: Num;
     missingCostOrderCount?: Num; unsyncedOrderCount?: Num;
 }
 interface LedgerRow {
@@ -285,7 +285,10 @@ function OverviewTab({ m, b, pm, loading, prevLoading, isError, onRetry, rangeVa
                         )}
                         <StatementRow label="Gross Profit" value={v.gross} loading={loading} tone="total" strong />
 
-                        <StatementRow label="Return losses (courier)" value={n(m.returnedCourierLoss)} loading={loading} tone="minus" indent />
+                        <StatementRow label="Courier fees on returned parcels" value={n(m.returnedCourierLoss)} loading={loading} tone="minus" indent hint="Parcels that came back: cancelled (delivery charge paid) and returned (unpaid)" />
+                        {n(m.returnChargesCollected) > 0 && (
+                            <StatementRow label="+ Delivery charges paid on returns" value={n(m.returnChargesCollected)} loading={loading} indent hint="What customers paid the rider when they refused the parcel; it offsets the courier fees" />
+                        )}
                         <StatementRow label="Free-shipping courier subsidy" value={n(m.freeShippingCourierCost)} loading={loading} tone="minus" indent />
                         <StatementRow label="COD collection fees (1%)" value={n(m.codFees)} loading={loading} tone="minus" indent />
                         <StatementRow label={`Operating expenses (${n(b.expenseCount)})`} value={v.opex} loading={loading} tone="minus" indent />
@@ -329,8 +332,8 @@ function OverviewTab({ m, b, pm, loading, prevLoading, isError, onRetry, rangeVa
                                 {loading ? <Skeleton className="h-4 w-16" /> : <span className="font-bold tabular-nums text-stone-900">{money(v.avgOrderValue)}</span>}</div>
                             <div className="flex justify-between items-center"><span className="text-stone-500">Avg. Profit / Order</span>
                                 {loading ? <Skeleton className="h-4 w-16" /> : <span className={cn('font-bold tabular-nums', v.avgProfitPerOrder >= 0 ? 'text-emerald-700' : 'text-rose-600')}>{money(v.avgProfitPerOrder)}</span>}</div>
-                            <div className="flex justify-between items-center"><span className="text-stone-500">Returned Orders</span>
-                                {loading ? <Skeleton className="h-4 w-8" /> : <span className="font-bold tabular-nums text-stone-900">{n(b.returnedCount)}</span>}</div>
+                            <div className="flex justify-between items-center"><span className="text-stone-500" title="Parcels that came back from the courier (returned unpaid + cancelled with the delivery charge paid)">Parcels returned</span>
+                                {loading ? <Skeleton className="h-4 w-8" /> : <span className="font-bold tabular-nums text-stone-900">{n(b.courierReturnCount ?? b.returnedCount)}</span>}</div>
                         </CardContent>
                     </Card>
                 </div>

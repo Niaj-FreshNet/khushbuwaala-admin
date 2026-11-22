@@ -21,6 +21,7 @@ import {
 } from "@/redux/store/api/order/ordersApi";
 import { useGetAllProductsQuery } from "@/redux/store/api/product/productApi";
 import OrderInvoice from "./OrderInvoice";
+import { useCourierReturnPrompt } from "@/components/admin/courierReturn";
 
 type Address = {
     name?: string | null;
@@ -248,13 +249,16 @@ export default function EditOrderModal({ orderId, visible, onClose }: EditOrderM
         refetch();
     };
 
+    const askReturnCharge = useCourierReturnPrompt();
     const onStatusChange = async (val: string) => {
         const next = val as OrderStatus;
-        setStatusValue(next);
         if (!orderId) return;
+        const extra = await askReturnCharge(order as any, next);
+        if (extra === null) return; // closed the question: change nothing
+        setStatusValue(next);
 
         try {
-            await updateStatus({ id: orderId, status: next }).unwrap();
+            await updateStatus({ id: orderId, status: next, ...(extra || {}) }).unwrap();
             refetch();
         } catch {
             setStatusValue((order?.status as OrderStatus) ?? "PENDING");

@@ -82,6 +82,7 @@ import { useAuth } from "@/redux/store/hooks/useAuth";
 import { useBackfillHistoricalCostsMutation } from "@/redux/store/api/finance/financeApi";
 import EditOrderModal from "./_components/EditOrderModal";
 import OrderProfitEditorModal from "../sales/_components/OrderProfitEditorModal";
+import { useCourierReturnPrompt } from "@/components/admin/courierReturn";
 
 interface OrderItem {
   id?: string;
@@ -492,10 +493,13 @@ const OrderList = () => {
     return sortOrder === "asc" ? <ArrowUp className="w-3.5 h-3.5 ml-1 inline text-[#FB923C]" /> : <ArrowDown className="w-3.5 h-3.5 ml-1 inline text-[#FB923C]" />;
   };
 
-  const handleUpdateStatus = async (id: string, nextStatus: string) => {
+  const askReturnCharge = useCourierReturnPrompt();
+  const handleUpdateStatus = async (id: string, nextStatus: string, order?: any) => {
+    const extra = await askReturnCharge(order, nextStatus);
+    if (extra === null) return; // closed the question: change nothing
     try {
       setUpdatingStatusId(id);
-      const res = await updateOrderStatus({ id, status: nextStatus }).unwrap();
+      const res = await updateOrderStatus({ id, status: nextStatus, ...(extra || {}) }).unwrap();
       if (res?.success) toast.success(`Order marked as ${nextStatus}`);
       else toast.error("Failed to update order");
     } catch (e) {
@@ -1102,7 +1106,7 @@ const OrderList = () => {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start">
                         {STATUS_OPTIONS.map((st) => (
-                          <DropdownMenuItem key={st} onClick={() => handleUpdateStatus(order.id, st)} className="py-2.5 text-sm">
+                          <DropdownMenuItem key={st} onClick={() => handleUpdateStatus(order.id, st, order)} className="py-2.5 text-sm">
                             <span className={`mr-2 inline-block rounded px-1.5 py-0.5 text-[10px] font-bold text-white ${statusBadgeClass(st)}`}>{st}</span>
                           </DropdownMenuItem>
                         ))}
@@ -1479,7 +1483,7 @@ const OrderList = () => {
                               <DropdownMenuItem
                                 key={s}
                                 disabled={updatingStatusId === order.id}
-                                onClick={() => handleUpdateStatus(order.id, s)}
+                                onClick={() => handleUpdateStatus(order.id, s, order)}
                                 className="text-xs font-medium cursor-pointer py-1"
                               >
                                 <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold text-white mr-1.5 ${statusBadgeClass(s)}`}>

@@ -52,6 +52,10 @@ type AddressInfo = {
 
 type OrderApi = {
   id: string;
+  consignmentId?: number | null;
+  courierStatus?: string | null;
+  deliveryCharge?: number | null;
+  returnChargeCollected?: number | null;
   invoice?: string;
   orderTime?: string;
   createdAt?: string;
@@ -493,6 +497,25 @@ const OrderDetailsModal = ({
                   </p>
                 </div>
               </div>
+
+              {/* Courier return result (D-025): parcel came back */}
+              {order && (order.status === 'RETURNED' || (order.status === 'CANCELED' && order.returnChargeCollected != null)) && order.orderSource !== 'SHOWROOM' && (() => {
+                const fee = Number(order.deliveryCharge) > 0 ? Number(order.deliveryCharge) : Number(order.shippingCost) || 0;
+                const paid = Number(order.returnChargeCollected) || 0;
+                const net = paid - fee;
+                return (
+                  <div className={`rounded-xl border p-3 text-xs ${net < 0 ? 'border-rose-200 bg-rose-50/60' : 'border-gray-200 bg-gray-50'}`}>
+                    <p className="font-bold text-gray-900">
+                      Parcel came back {order.status === 'CANCELED' ? '(delivery charge paid)' : '(unpaid)'}
+                      {order.courierStatus ? <span className="ml-1 font-normal text-gray-500">· Steadfast: {order.courierStatus}</span> : null}
+                    </p>
+                    <p className="mt-1 text-gray-700">
+                      Customer paid ৳{formatBDT(paid)} · courier fee ৳{formatBDT(fee)}{Number(order.deliveryCharge) > 0 ? '' : ' (estimate)'} ·{' '}
+                      <b className={net < 0 ? 'text-rose-700' : 'text-emerald-700'}>{net < 0 ? `loss ৳${formatBDT(-net)}` : net > 0 ? `gain ৳${formatBDT(net)}` : 'no loss'}</b>
+                    </p>
+                  </div>
+                );
+              })()}
 
               {/* Customer Addresses */}
               <section className="space-y-3">
