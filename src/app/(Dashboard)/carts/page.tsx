@@ -50,6 +50,9 @@ import {
   useRemoveCartItemMutation,
 } from "@/redux/store/api/cart/cartApi";
 import { toast } from "sonner";
+import { useConfirm } from '@/components/admin/ConfirmProvider';
+import { MobileCard, MobileCardList, MobileField } from "@/components/admin/MobileCards";
+import { formatTaka } from '@/lib/money';
 
 export default function AdminAllCartsPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -92,8 +95,9 @@ export default function AdminAllCartsPage() {
     return { pipelineValue, inCartCount, orderedCount, guestCount };
   }, [cartList]);
 
+  const confirmDialog = useConfirm();
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this cart record?")) return;
+    if (!(await confirmDialog({ title: "Delete this cart record?", danger: true }))) return;
     try {
       await removeCartItem(id).unwrap();
       toast.success("Cart item removed");
@@ -103,7 +107,7 @@ export default function AdminAllCartsPage() {
     }
   };
 
-  const formatBDT = (val: number) => `৳${Math.round(val || 0).toLocaleString("en-BD")}`;
+  const formatBDT = (val: number) => formatTaka(val);
 
   const renderStatusBadge = (status: string) => {
     switch (status) {
@@ -167,7 +171,7 @@ export default function AdminAllCartsPage() {
       </div>
 
       {/* KPI Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         <div className="bg-white p-2.5 rounded-lg border border-gray-200 shadow-2xs flex items-center justify-between">
           <div>
             <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider">Active Pipeline</p>
@@ -225,7 +229,7 @@ export default function AdminAllCartsPage() {
               setPage(1);
             }}
             className={cn(
-              "pl-8 h-7 text-xs bg-white shadow-2xs transition-colors",
+              "pl-8 h-10 sm:h-7 text-xs bg-white shadow-2xs transition-colors",
               searchTerm.trim() ? "border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30" : "border-gray-300 text-gray-700"
             )}
           />
@@ -240,7 +244,7 @@ export default function AdminAllCartsPage() {
             }}
           >
             <SelectTrigger className={cn(
-              "w-[160px] h-7 text-xs bg-white transition-colors",
+              "w-[160px] h-10 sm:h-7 text-xs bg-white transition-colors",
               statusFilter !== "ALL" ? "border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30" : "border-gray-300 text-gray-700"
             )}>
               <SelectValue placeholder="All Statuses" />
@@ -289,7 +293,45 @@ export default function AdminAllCartsPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto w-full">
+        {/* Phones: one card per cart line */}
+        <MobileCardList className="p-2" isLoading={isLoading} isEmpty={!isLoading && cartList.length === 0} emptyText="No carts match your filter.">
+          {cartList.map((item: any) => {
+            const lineTotal = Number(item.price || 0) * Number(item.quantity || 1);
+            const sizeLabel = `${item.size ?? item.variant?.size ?? ""} ${String(item.unit ?? item.variant?.unit ?? "").toUpperCase()}`.trim();
+            return (
+              <MobileCard
+                key={item.id}
+                title={item.product?.name || "Unlisted product"}
+                subtitle={[sizeLabel, item.variant?.sku].filter(Boolean).join(" · ") || undefined}
+                badge={renderStatusBadge(item.status)}
+                onOpen={() => setInspectItem(item)}
+                actions={
+                  <>
+                    {item.order?.invoice && (
+                      <Link href={`/orders/${item.order.id}`} className="inline-flex h-9 items-center gap-1 rounded-md px-2 text-xs font-bold text-blue-600 hover:bg-blue-50">
+                        Invoice #{item.order.invoice} <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    )}
+                    <Button variant="outline" size="sm" className="ml-auto h-9 text-xs" onClick={() => setInspectItem(item)}>
+                      <Eye className="mr-1 h-4 w-4" /> Details
+                    </Button>
+                    <Button variant="outline" size="sm" className="h-9 text-xs text-rose-600 border-rose-200" disabled={isDeleting} onClick={() => handleDelete(item.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </>
+                }
+              >
+                <MobileField label="Shopper">{item.user ? item.user.name || item.user.email : "Guest"}</MobileField>
+                <MobileField label="Phone">{item.user?.phone || "—"}</MobileField>
+                <MobileField label="Price × qty">{formatBDT(item.price)} × {item.quantity}</MobileField>
+                <MobileField label="Line total"><b>{formatBDT(lineTotal)}</b></MobileField>
+                <MobileField label="Last change" full>{item.updatedAt ? format(new Date(item.updatedAt), "dd MMM yyyy, p") : "—"}</MobileField>
+              </MobileCard>
+            );
+          })}
+        </MobileCardList>
+
+        <div className="hidden md:block overflow-x-auto w-full">
           <Table>
             <TableHeader className="bg-gray-50/75 border-b border-gray-200 text-gray-700">
               <TableRow>
@@ -469,7 +511,7 @@ export default function AdminAllCartsPage() {
 
         {/* Pagination Footer */}
         {meta.totalPage > 1 && (
-          <div className="flex items-center justify-between px-3 py-2.5 bg-gray-50/50 border-t border-gray-200">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 bg-gray-50/50 border-t border-gray-200">
             <p className="text-xs text-gray-600 font-semibold">
               Showing <span className="font-bold text-gray-900">{cartList.length}</span> of{" "}
               <span className="font-bold text-gray-900">{meta.total}</span> records
@@ -480,7 +522,7 @@ export default function AdminAllCartsPage() {
                 size="sm"
                 disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="bg-white border-gray-300 text-gray-700 h-7 text-xs px-3 font-semibold"
+                className="bg-white border-gray-300 text-gray-700 h-9 sm:h-7 text-xs px-3 font-semibold"
               >
                 Previous
               </Button>
@@ -492,7 +534,7 @@ export default function AdminAllCartsPage() {
                 size="sm"
                 disabled={page >= meta.totalPage}
                 onClick={() => setPage((p) => Math.min(meta.totalPage, p + 1))}
-                className="bg-white border-gray-300 text-gray-700 h-7 text-xs px-3 font-semibold"
+                className="bg-white border-gray-300 text-gray-700 h-9 sm:h-7 text-xs px-3 font-semibold"
               >
                 Next
               </Button>
@@ -504,7 +546,7 @@ export default function AdminAllCartsPage() {
       {/* Quick Inspect Modal */}
       {inspectItem && (
         <Dialog open={Boolean(inspectItem)} onOpenChange={() => setInspectItem(null)}>
-          <DialogContent className="max-w-md rounded-xl p-5">
+          <DialogContent className="w-[calc(100vw-1.5rem)] max-w-md rounded-xl p-4 sm:p-5 max-h-[90vh] overflow-y-auto">
             <DialogHeader className="space-y-1 pb-3 border-b border-gray-100">
               <DialogTitle className="text-base font-bold flex items-center gap-2">
                 <Package className="h-4 w-4 text-red-600" />

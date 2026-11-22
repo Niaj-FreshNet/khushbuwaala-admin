@@ -98,6 +98,8 @@ const num = (x: any) => { const n = Number(x); return Number.isFinite(n) ? n : 0
 const money = (x: any) => (x === null || x === undefined || x === '' ? '' : `৳${num(x).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`);
 const vKey = (v: any) => `${num(v.size)}_${String(v.unit || 'ML').toUpperCase()}`;
 const pStock = (p: any) => num(p.totalStock ?? p.stock);
+// Stock is kept per product (ml/gm); a size has no stock of its own. Bottles of this size the stock can still fill:
+const bottlesLeft = (p: any, v: any) => (num(v?.size) > 0 ? Math.floor(Math.max(0, pStock(p)) / num(v.size)) : 0);
 const fmtDate = (d: any) => (d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }) : '');
 const roundTo = (n: number, step: number) => (step > 1 ? Math.round(n / step) * step : Math.round(n));
 const marginOf = (v: any) => {
@@ -338,9 +340,9 @@ function buildColumns(sizeCols: { key: string; label: string }[], categories: an
         { id: 'cost', label: 'Cost Price', width: 104, align: 'right', views: V, superOnly: true, mono: true, money: true, zeroEmpty: true, get: (r) => r.v.costPrice, edit: vEdit('costPrice', 'number') },
         { id: 'margin', label: 'Margin ৳', width: 96, align: 'right', views: V, superOnly: true, mono: true, get: (r) => marginOf(r.v)?.amt ?? null, render: (_r, raw) => (raw === null ? <span className="opacity-30">—</span> : money(raw)) },
         { id: 'marginpct', label: 'Margin %', width: 92, align: 'right', views: V, superOnly: true, mono: true, get: (r) => marginOf(r.v)?.pct ?? null, render: (_r, raw) => (raw === null ? <span className="opacity-30">—</span> : <span className={cn('font-bold', mTone(raw))}>{raw.toFixed(1)}%</span>) },
-        { id: 'vstock', label: 'Stock', width: 84, align: 'right', views: V, mono: true, get: (r) => num(r.v.stock), edit: vEdit('stock', 'number'), render: (r, raw) => <span className={cn(raw <= 0 ? 'text-rose-500 font-bold' : raw <= num(r.v.lowStockAlert ?? 5) && 'text-amber-500 font-bold')}>{raw}</span> },
+        { id: 'vstock', label: 'Bottles left', width: 96, align: 'right', views: V, mono: true, get: (r) => bottlesLeft(r.p, r.v), render: (r, raw) => <span title={`${pStock(r.p)} ${r.p.category?.unit || ''} in stock ÷ ${r.v.size}`} className={cn(raw <= 0 ? 'text-rose-500 font-bold' : raw <= 5 && 'text-amber-500 font-bold')}>{raw}</span> },
         { id: 'vlive', label: 'Live', width: 64, align: 'center', views: V, get: (r) => r.v.published !== false, edit: vEdit('published', 'bool'), render: (r) => liveNode(r.v.published !== false) },
-        { id: 'lowalert', label: 'Low-stock alert', width: 112, align: 'right', views: V, off: true, mono: true, get: (r) => r.v.lowStockAlert, edit: vEdit('lowStockAlert', 'number') },
+        { id: 'lowalert', label: 'Low-stock alert (not used)', width: 112, align: 'right', views: V, off: true, mono: true, get: (r) => r.v.lowStockAlert, edit: vEdit('lowStockAlert', 'number') },
         { id: 'barcode', label: 'Barcode', width: 130, views: V, off: true, mono: true, get: (r) => r.v.barcode, edit: vEdit('barcode', 'text') },
         { id: 'gtin', label: 'GTIN', width: 130, views: V, off: true, mono: true, get: (r) => r.v.gtin, edit: vEdit('gtin', 'text') },
         { id: 'mpn', label: 'MPN', width: 110, views: V, off: true, mono: true, get: (r) => r.v.mpn, edit: vEdit('mpn', 'text') },
@@ -496,7 +498,7 @@ function ProductDrawer({ p, categories, isSuper, save, onClose, onFull }: { p: a
                 {tab === 'variants' && (
                     <div className="overflow-x-auto">
                         <table className="w-full min-w-[860px]">
-                            <thead><tr className="text-left text-[10px] uppercase opacity-60">{['Size', 'Unit', 'SKU', 'Selling', 'Regular', ...(isSuper ? ['Cost', 'Margin'] : []), 'Stock', 'Alert', 'Barcode', 'Live'].map((h) => <th key={h} className="px-1.5 py-1 font-bold">{h}</th>)}</tr></thead>
+                            <thead><tr className="text-left text-[10px] uppercase opacity-60">{['Size', 'Unit', 'SKU', 'Selling', 'Regular', ...(isSuper ? ['Cost', 'Margin'] : []), 'Bottles left', 'Barcode', 'Live'].map((h) => <th key={h} className="px-1.5 py-1 font-bold">{h}</th>)}</tr></thead>
                             <tbody>
                                 {p.variants.map((v: any) => {
                                     const m = marginOf(v);
@@ -510,8 +512,7 @@ function ProductDrawer({ p, categories, isSuper, save, onClose, onFull }: { p: a
                                             <td className="p-1 w-24"><MiniField type="number" zeroEmpty value={v.compareAtPrice} onSave={(x) => sv('compareAtPrice', x, v.compareAtPrice)} /></td>
                                             {isSuper && <td className="p-1 w-24"><MiniField type="number" zeroEmpty value={v.costPrice} onSave={(x) => sv('costPrice', x, v.costPrice)} /></td>}
                                             {isSuper && <td className="p-1 w-24 font-mono text-right">{m ? <span className={m.pct < 15 ? 'text-rose-500' : m.pct < 30 ? 'text-amber-500' : 'text-emerald-500'}>{m.pct.toFixed(0)}%</span> : '—'}</td>}
-                                            <td className="p-1 w-20"><MiniField type="number" value={v.stock} onSave={(x) => sv('stock', x, v.stock)} /></td>
-                                            <td className="p-1 w-16"><MiniField type="number" value={v.lowStockAlert} onSave={(x) => sv('lowStockAlert', x, v.lowStockAlert)} /></td>
+                                            <td className="p-1 w-20 font-mono text-right pr-2">{bottlesLeft(p, v)}</td>
                                             <td className="p-1 w-32"><MiniField value={v.barcode} onSave={(x) => sv('barcode', x, v.barcode)} /></td>
                                             <td className="p-1"><Switch on={v.published !== false} onChange={(x) => sv('published', x, v.published !== false)} /></td>
                                         </tr>
@@ -864,7 +865,7 @@ export default function DedicatedPriceListPage() {
                     const live = p.published && v.published !== false;
                     if (filters.status === 'LIVE' && !live) continue;
                     if (filters.status === 'HIDDEN' && live) continue;
-                    if (!stockOk(num(v.stock))) continue;
+                    if (!stockOk(bottlesLeft(p, v))) continue;
                     if (!variantPass(p, v)) continue;
                     out.push({ id: v.id, p, v });
                 }
@@ -1119,7 +1120,7 @@ export default function DedicatedPriceListPage() {
     }, [defsFor, sizeCols]);
     const builtins: Preset[] = useMemo(() => [
         { id: 'b_daily', name: 'Daily pricing', desc: 'Product × size price grid. Best for quick price updates.', view: 'products', col: makeCol('products', ['name', 'category', 'live', '@sizes', 'range']), sort: [{ id: 'name', dir: 'asc' }] },
-        { id: 'b_stock', name: 'Stock check', desc: 'Variants with stock, alerts and live status.', view: 'variants', col: makeCol('variants', ['vname', 'size', 'sku', 'vstock', 'lowalert', 'vlive']), sort: [{ id: 'vstock', dir: 'asc' }] },
+        { id: 'b_stock', name: 'Stock check', desc: 'Each size with the bottles its product stock can still fill, and live status.', view: 'variants', col: makeCol('variants', ['vname', 'size', 'sku', 'vstock', 'vlive']), sort: [{ id: 'vstock', dir: 'asc' }] },
         { id: 'b_cost', name: 'Costing & margin', desc: 'Price, cost and margin side by side. Lowest margin first.', view: 'variants', superOnly: true, col: makeCol('variants', ['vname', 'size', 'price', 'cost', 'margin', 'marginpct', 'compare', 'vstock']), sort: [{ id: 'marginpct', dir: 'asc' }] },
         { id: 'b_offers', name: 'Offers & markdowns', desc: 'Regular price, markdown % and active offer price.', view: 'variants', col: makeCol('variants', ['vname', 'size', 'price', 'compare', 'discpct', 'offer', 'vlive']), sort: [{ id: 'discpct', dir: 'desc' }] },
         { id: 'b_audit', name: 'Catalog audit', desc: 'SKU, barcode, GTIN, MPN, weight: spot missing data.', view: 'variants', col: makeCol('variants', ['vname', 'size', 'sku', 'barcode', 'gtin', 'mpn', 'weight', 'vlive']), sort: [{ id: 'vname', dir: 'asc' }] },

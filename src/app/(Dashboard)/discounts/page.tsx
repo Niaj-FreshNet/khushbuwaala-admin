@@ -37,6 +37,7 @@ import {
 } from '@/redux/store/api/product/productApi';
 import FormInput from '@/components/ReusableUI/FormInput';
 import { cn } from '@/lib/utils';
+import { useConfirm } from '@/components/admin/ConfirmProvider';
 
 /* ================= TYPES & ZOD SCHEMA ================= */
 const localInputToISO = (value?: string) => {
@@ -94,9 +95,9 @@ function computeDiscountPreview(opts: { originalPrice: number; type: "percentage
   if (!parsedValue || parsedValue <= 0 || originalPrice <= 0) {
     return { originalPrice: Math.round(originalPrice), discountAmount: 0, discountPercent: 0, finalPrice: Math.round(originalPrice) };
   }
-  let discountAmount = type === "percentage" ? (originalPrice * parsedValue) / 100 : parsedValue;
-  let finalPrice = Math.max(0, originalPrice - discountAmount);
-  let discountPercent = type === "percentage" ? parsedValue : (discountAmount / originalPrice) * 100;
+  const discountAmount = type === "percentage" ? (originalPrice * parsedValue) / 100 : parsedValue;
+  const finalPrice = Math.max(0, originalPrice - discountAmount);
+  const discountPercent = type === "percentage" ? parsedValue : (discountAmount / originalPrice) * 100;
 
   return {
     originalPrice: Math.round(originalPrice),
@@ -197,7 +198,7 @@ const ProductSearchAndVariantPicker = () => {
                 <span>Searching products...</span>
               </div>
             ) : products.length === 0 ? (
-              <div className="p-3 text-center text-gray-400 text-xs">No products found matching "{productSearch}"</div>
+              <div className="p-3 text-center text-gray-400 text-xs">No products found matching &ldquo;{productSearch}&rdquo;</div>
             ) : (
               products.map((p: any) => (
                 <div
@@ -325,8 +326,9 @@ export default function DiscountManagementPage() {
     });
   }, [discounts, search]);
 
+  const confirmDialog = useConfirm();
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this discount?')) return;
+    if (!(await confirmDialog({ title: "Delete this discount?", description: "Customers can no longer use it.", danger: true }))) return;
     try {
       await deleteDiscount(id).unwrap();
       toast.success('Discount deleted successfully.');
@@ -535,7 +537,7 @@ export default function DiscountManagementPage() {
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-12 text-gray-500">
                     <p className="font-semibold text-xs">No active discounts found.</p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">Click "Add Discount" above to set up a new campaign.</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">Click &ldquo;Add Discount&rdquo; above to set up a new campaign.</p>
                   </TableCell>
                 </TableRow>
               ) : (

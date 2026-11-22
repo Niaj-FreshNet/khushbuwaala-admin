@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { useGetInvestorDashboardQuery, useRequestWithdrawalMutation } from '@/redux/store/api/investor/investorApi';
 import { toast } from 'sonner';
 import { LedgerAccessCard, MonthlyProfitHistory } from './_components/InvestorExtras';
+import { formatTaka } from '@/lib/money';
 
 type Num = number | undefined;
 
@@ -30,7 +31,7 @@ const n = (v: unknown): number => {
     const x = Number(v);
     return Number.isFinite(x) ? x : 0;
 };
-const money = (v: unknown) => `${n(v) < 0 ? '-' : ''}৳${Math.abs(n(v)).toLocaleString('en-BD', { maximumFractionDigits: 0 })}`;
+const money = (v: unknown) => formatTaka(n(v));
 
 const todayYmd = () => new Date().toLocaleDateString('en-CA', { timeZone: TZ });
 const parseYmd = (s: string) => {

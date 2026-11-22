@@ -139,7 +139,7 @@ export default function OrderProfitEditorModal({
                         <div>
                             <p className="text-[10px] sm:text-[11px] font-semibold text-emerald-800 uppercase tracking-wider">Calculated Net Profit</p>
                             <h3 className="text-lg sm:text-xl font-black text-emerald-700 mt-0.5">
-                                ৳{parseFloat(manualOverrideProfit || '0').toLocaleString()}
+                                ৳{parseFloat(manualOverrideProfit || '0').toLocaleString('en-US', { maximumFractionDigits: 2 })}
                             </h3>
                         </div>
                         <div className="text-right">
@@ -210,7 +210,7 @@ export default function OrderProfitEditorModal({
                                                 <div>
                                                     <label className="text-[10px] font-medium text-gray-500 block mb-1">Line Profit </label>
                                                     <div className={`h-8 px-2.5 flex items-center font-bold rounded text-xs border ${itemProfit >= 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-600 border-rose-200'}`}>
-                                                        ৳{itemProfit.toLocaleString()}
+                                                        ৳{itemProfit.toLocaleString('en-US', { maximumFractionDigits: 2 })}
                                                     </div>
                                                 </div>
                                             </div>

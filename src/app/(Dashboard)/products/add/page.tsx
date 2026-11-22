@@ -613,7 +613,7 @@ const AddProductPage = () => {
 
       if (Array.isArray(errorSources) && errorSources.length > 0) {
         errorSources.forEach((err: { path: string | string[]; message: string }) => {
-          let formPath = Array.isArray(err.path) ? err.path.join('.') : err.path;
+          const formPath = Array.isArray(err.path) ? err.path.join('.') : err.path;
 
           if (formPath === 'price' && values.variants?.length > 0) {
             values.variants.forEach((_, idx) => {

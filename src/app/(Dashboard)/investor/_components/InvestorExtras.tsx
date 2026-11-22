@@ -5,9 +5,10 @@ import { toast } from 'sonner';
 import { CheckCircle2, Clock, KeyRound, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useGetMyLedgerAccessQuery, useRequestLedgerAccessMutation } from '@/redux/store/api/investor/investorApi';
+import { formatTaka } from '@/lib/money';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const money = (v: unknown) => `৳${Number(v || 0).toLocaleString('en-BD', { maximumFractionDigits: 2 })}`;
+const money = (v: unknown) => formatTaka(v, 2);
 const when = (d?: string | null) =>
   d ? new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true }) : '';
 

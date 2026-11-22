@@ -84,7 +84,7 @@ export default function PaymentManagementPage() {
                         {payments.map((payment: any) => (
                             <MobileCard
                                 key={payment.id}
-                                title={`৳${Number(payment.amount || 0).toLocaleString()} · ${payment.provider}`}
+                                title={`৳${Number(payment.amount || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })} · ${payment.provider}`}
                                 subtitle={`${payment.order?.invoice ? `Order #${payment.order.invoice}` : 'No order'} · ${payment.createdAt ? new Date(payment.createdAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true }) : ''}`}
                                 badge={
                                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${payment.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800' : payment.status === 'FAILED' || payment.status === 'CANCELED' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-800'}`}>

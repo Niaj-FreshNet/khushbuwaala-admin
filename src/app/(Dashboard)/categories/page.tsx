@@ -38,6 +38,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useFormContext } from 'react-hook-form';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { useConfirm } from '@/components/admin/ConfirmProvider';
+import { MobileCard, MobileCardList } from '@/components/admin/MobileCards';
 
 const BASE_SIZES = [
     "0.5", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13",
@@ -186,8 +188,18 @@ export default function CategoryList() {
         return allCategories.filter((cat: any) => String(cat.categoryName || '').toLowerCase().includes(q));
     }, [searchTerm, allCategories]);
 
+    const togglePublished = async (id: string, checked: boolean) => {
+        try {
+            await updateCategory({ id, updatedData: { published: checked } }).unwrap();
+            toast.success('Status updated successfully');
+        } catch {
+            toast.error('Failed to update status');
+        }
+    };
+
+    const confirmDialog = useConfirm();
     const handleDelete = async (id: string) => {
-        const confirmed = window.confirm('Are you sure you want to delete this category?');
+        const confirmed = (await confirmDialog({ title: "Delete this category?", danger: true }));
         if (!confirmed) return;
 
         try {
@@ -347,7 +359,42 @@ export default function CategoryList() {
 
             {/* Table Container */}
             <div className="bg-white border border-gray-200/80 rounded-xl shadow-2xs overflow-hidden">
-                <div className="overflow-x-auto w-full">
+                {/* Phones: one card per category */}
+                <MobileCardList className="p-2" isLoading={isLoading} isEmpty={!isLoading && filteredCategories.length === 0} emptyText="No categories found.">
+                    {filteredCategories.map((category: any) => {
+                        const productCount = category._count?.Product ?? 0;
+                        return (
+                            <MobileCard
+                                key={category.id}
+                                leading={
+                                    <div className="relative h-11 w-11 overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
+                                        <Image src={category.imageUrl || '/placeholder.svg'} alt="" fill sizes="44px" className="object-cover" />
+                                    </div>
+                                }
+                                title={String(category.categoryName || '')}
+                                subtitle={(category.sizes || []).length ? `${(category.sizes || []).join(', ')} ${category.unit || ''}` : 'No sizes'}
+                                badge={<Badge variant="outline" className="bg-green-50 text-green-800 border-green-200 text-[11px]">{productCount} {productCount === 1 ? 'product' : 'products'}</Badge>}
+                                onOpen={() => handleEdit(category)}
+                                actions={
+                                    <>
+                                        <label className="flex h-9 items-center gap-2 text-xs font-semibold text-gray-700">
+                                            <Switch checked={!!category.published} onCheckedChange={(checked) => togglePublished(category.id, checked)} className="data-[state=checked]:bg-[#4CD964]" />
+                                            {category.published ? 'Live' : 'Hidden'}
+                                        </label>
+                                        <Button variant="outline" size="sm" className="ml-auto h-9 text-xs" onClick={() => handleEdit(category)}>
+                                            <Edit className="w-4 h-4 mr-1" /> Edit
+                                        </Button>
+                                        <Button variant="outline" size="sm" className={cn('h-9 text-xs text-rose-600 border-rose-200', productCount > 0 && 'opacity-50')} onClick={() => handleDelete(category.id)} title={productCount > 0 ? 'Cannot delete category with linked products' : 'Delete'}>
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                    </>
+                                }
+                            />
+                        );
+                    })}
+                </MobileCardList>
+
+                <div className="hidden md:block overflow-x-auto w-full">
                     <Table>
                         <TableHeader className="bg-gray-50/80 border-b border-gray-200 text-gray-700">
                             <TableRow>
@@ -443,17 +490,7 @@ export default function CategoryList() {
                                             <TableCell className="py-3">
                                                 <Switch
                                                     checked={!!category.published}
-                                                    onCheckedChange={async (checked) => {
-                                                        try {
-                                                            await updateCategory({
-                                                                id: category.id,
-                                                                updatedData: { published: checked },
-                                                            }).unwrap();
-                                                            toast.success('Status updated successfully');
-                                                        } catch {
-                                                            toast.error('Failed to update status');
-                                                        }
-                                                    }}
+                                                    onCheckedChange={(checked) => togglePublished(category.id, checked)}
                                                     className="data-[state=checked]:bg-[#4CD964]"
                                                 />
                                             </TableCell>
@@ -495,14 +532,14 @@ export default function CategoryList() {
 
             {/* Add Category Modal */}
             <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
-                <DialogContent className="sm:max-w-[600px] p-0 rounded-xl overflow-hidden">
-                    <DialogHeader className="px-6 pt-5 pb-3 border-b bg-gray-50/75">
+                <DialogContent className="w-[calc(100vw-1rem)] sm:max-w-[600px] p-0 rounded-xl overflow-hidden">
+                    <DialogHeader className="px-4 sm:px-6 pt-5 pb-3 border-b bg-gray-50/75">
                         <DialogTitle className="text-sm font-bold text-gray-900 flex items-center gap-2">
                             <Sparkles className="w-4 h-4 text-green-600" /> Add New Category
                         </DialogTitle>
                     </DialogHeader>
 
-                    <div className="px-6 py-4 max-h-[75vh] overflow-y-auto">
+                    <div className="px-4 sm:px-6 py-4 max-h-[75vh] overflow-y-auto">
                         <FormWrapper
                             resolver={zodResolver(categorySchema)}
                             defaultValues={{
@@ -604,14 +641,14 @@ export default function CategoryList() {
                     }
                 }}
             >
-                <DialogContent className="sm:max-w-[600px] p-0 rounded-xl overflow-hidden">
-                    <DialogHeader className="px-6 pt-5 pb-3 border-b bg-gray-50/75">
+                <DialogContent className="w-[calc(100vw-1rem)] sm:max-w-[600px] p-0 rounded-xl overflow-hidden">
+                    <DialogHeader className="px-4 sm:px-6 pt-5 pb-3 border-b bg-gray-50/75">
                         <DialogTitle className="text-sm font-bold text-gray-900 flex items-center gap-2">
                             <Edit className="w-4 h-4 text-green-600" /> Edit Category
                         </DialogTitle>
                     </DialogHeader>
 
-                    <div className="px-6 py-4 max-h-[75vh] overflow-y-auto">
+                    <div className="px-4 sm:px-6 py-4 max-h-[75vh] overflow-y-auto">
                         <FormWrapper
                             resolver={zodResolver(categorySchema)}
                             defaultValues={{

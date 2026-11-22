@@ -7,17 +7,15 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { useRouter } from 'next/navigation';
-import { Search, FileText, Package, PackagePlus, Layers, Loader2 } from 'lucide-react';
+import { Search, FileText, Package, PackagePlus, Layers } from 'lucide-react';
 import { MobileCard, MobileCardList, MobileField } from '@/components/admin/MobileCards';
 import { useGetAllProductsAdminQuery } from '@/redux/store/api/product/productApi';
 import { IProductResponse } from '@/types/product.types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { useGetLiveWACQuery, useReceiveStockPurchaseMutation } from '@/redux/store/api/finance/financeApi';
+import RestockDialog from '@/components/admin/RestockDialog';
 import { useAuth } from '@/redux/store/hooks/useAuth';
 
 const StockManagementPage = () => {
@@ -31,19 +29,10 @@ const StockManagementPage = () => {
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
-  // Procurement Modal State
+  // Restock form (shared with Low Stock; cost fields for super admin only)
   const [restockModalOpen, setRestockModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<IProductResponse | null>(null);
-
-  // Financial Procurement Fields
-  const [quantity, setQuantity] = useState<number | ''>('');
-  const [supplier, setSupplier] = useState('');
-  const [billNo, setBillNo] = useState('');
-  const [note, setNote] = useState(''); // <-- Added note state
-  const [stockLines, setStockLines] = useState([
-    { category: 'STOCK_BILL', amount: 0, label: 'Main Liquid Bill' },
-    { category: 'CARRYING', amount: 0, label: 'Shipping / Courier to Warehouse' }
-  ]);
+  const canRestock = isSuperAdmin || user?.role === 'ADMIN';
 
   const router = useRouter();
   const { data, isLoading, refetch } = useGetAllProductsAdminQuery({
@@ -54,9 +43,6 @@ const StockManagementPage = () => {
     stock: stockFilter === 'all' ? undefined : stockFilter,
   });
 
-  const { data: wacData } = useGetLiveWACQuery(selectedProduct?.id || '', { skip: !selectedProduct?.id });
-  const [receiveStock, { isLoading: isUpdating }] = useReceiveStockPurchaseMutation();
-
   const allProducts: IProductResponse[] = useMemo(() => data?.data || [], [data]);
   const meta = data?.meta;
 
@@ -66,55 +52,8 @@ const StockManagementPage = () => {
 
   const handleOpenRestock = (product: IProductResponse) => {
     setSelectedProduct(product);
-    setQuantity('');
-    setSupplier(product.supplier || '');
-    setBillNo('');
-    setNote(''); // <-- Reset note state
-    setStockLines([
-      { category: 'STOCK_BILL', amount: 0, label: 'Main Liquid Bill' },
-      { category: 'CARRYING', amount: 0, label: 'Shipping / Courier to Warehouse' }
-    ]);
     setRestockModalOpen(true);
   };
-
-  const handleUpdateLineAmount = (index: number, amount: number) => {
-    const updated = [...stockLines];
-    updated[index].amount = amount;
-    setStockLines(updated);
-  };
-
-  const handleRestockSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedProduct) return;
-    if (!quantity || Number(quantity) <= 0) {
-      toast.error('Quantity must be greater than 0');
-      return;
-    }
-
-    try {
-      await receiveStock({
-        productId: selectedProduct.id,
-        payload: {
-          quantity: Number(quantity),
-          unit: selectedProduct.unit as string || 'ML',
-          supplier,
-          billNo,
-          note, // <-- Include note in payload
-          costLines: stockLines as any,
-        },
-      }).unwrap();
-
-      toast.success(`Successfully added ${quantity} units and recalculated WAC for ${selectedProduct.name}!`);
-      setRestockModalOpen(false);
-      refetch();
-    } catch (error: any) {
-      console.error('Failed to update stock:', error);
-      toast.error(error?.data?.message || 'Failed to update product stock & financials.');
-    }
-  };
-
-  const totalProcurementCost = stockLines.reduce((sum, line) => sum + Number(line.amount || 0), 0);
-  const currentWAC = wacData?.data?.avgCostPerUnit || 0;
 
   return (
     <div className="w-full h-[calc(100vh-60px)] bg-gray-50/50 px-3 sm:px-4 py-2.5 flex flex-col overflow-hidden text-xs">
@@ -197,9 +136,9 @@ const StockManagementPage = () => {
                     <Button variant="outline" size="sm" className="h-10 flex-1 text-xs" onClick={() => handleViewLogs(product.id)}>
                       <FileText className="mr-1 h-4 w-4" /> Stock history
                     </Button>
-                    {isSuperAdmin && (
+                    {canRestock && (
                       <Button size="sm" className="h-10 flex-1 bg-emerald-600 text-xs text-white hover:bg-emerald-700" onClick={() => handleOpenRestock(product)}>
-                        <PackagePlus className="mr-1 h-4 w-4" /> Receive stock
+                        <PackagePlus className="mr-1 h-4 w-4" /> Restock
                       </Button>
                     )}
                   </>
@@ -317,14 +256,14 @@ const StockManagementPage = () => {
                             <FileText className="w-3.5 h-3.5 mr-1 text-gray-500" /> Logs
                           </Button>
 
-                          {/* Only Super Admin can access financial restock / procurement */}
-                          {isSuperAdmin && (
+                          {/* Super admin: purchase with cost. Admin: add stock without cost (RestockDialog) */}
+                          {canRestock && (
                             <Button
                               size="sm"
                               className="h-7 text-[11px] px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs transition-colors"
                               onClick={() => handleOpenRestock(product)}
                             >
-                              <PackagePlus className="w-3.5 h-3.5 mr-1" /> Receive Stock
+                              <PackagePlus className="w-3.5 h-3.5 mr-1" /> Restock
                             </Button>
                           )}
                         </div>
@@ -365,115 +304,7 @@ const StockManagementPage = () => {
         )}
       </div>
 
-      {/* PROCUREMENT / RESTOCK MODAL DIALOG (SUPER ADMIN ONLY) */}
-      <Dialog open={restockModalOpen} onOpenChange={setRestockModalOpen}>
-        <DialogContent className="sm:max-w-[420px] rounded-xl p-5 text-xs bg-white overflow-y-auto max-h-[95vh]">
-          <DialogHeader className="border-b pb-3 mb-3">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
-                <PackagePlus className="w-4 h-4 text-emerald-600" /> Receive Stock: {selectedProduct?.name}
-              </DialogTitle>
-              <div className="text-right bg-blue-50 px-2 py-1 rounded border border-blue-100">
-                <p className="text-[9px] text-blue-600 font-bold uppercase">Current WAC</p>
-                <p className="text-xs font-black text-gray-900">৳{currentWAC.toFixed(2)} <span className="text-[10px] font-normal text-gray-500">/ {selectedProduct?.unit || 'ML'}</span></p>
-              </div>
-            </div>
-          </DialogHeader>
-
-          <form onSubmit={handleRestockSubmit} className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-gray-700">Quantity to Receive ({selectedProduct?.unit || 'ML'}) *</label>
-                <Input
-                  type="number"
-                  min={1}
-                  required
-                  value={quantity}
-                  onChange={(e) => setQuantity(Number(e.target.value))}
-                  className="h-8 text-xs border-gray-300 bg-white"
-                  placeholder="e.g. 1000"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-gray-700">Supplier Name</label>
-                <Input
-                  value={supplier}
-                  onChange={(e) => setSupplier(e.target.value)}
-                  className="h-8 text-xs border-gray-300 bg-white"
-                  placeholder="e.g. Lattafa UAE"
-                />
-              </div>
-            </div>
-
-            {/* Note Input Row Added */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-gray-700">Bill / Invoice No</label>
-                <Input
-                  value={billNo}
-                  onChange={(e) => setBillNo(e.target.value)}
-                  className="h-8 text-xs border-gray-300 bg-white"
-                  placeholder="e.g. INV-9982"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-gray-700">Internal Note</label>
-                <Input
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  className="h-8 text-xs border-gray-300 bg-white"
-                  placeholder="Optional note"
-                />
-              </div>
-            </div>
-
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-2">
-              <p className="text-[11px] font-bold text-gray-800 border-b pb-1">Procurement Cost Breakdown</p>
-              {stockLines.map((line, idx) => (
-                <div key={idx} className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] text-gray-600 w-1/2">{line.label}</span>
-                  <div className="relative w-1/2">
-                    <span className="absolute left-2 top-2 text-gray-400 font-bold text-xs">৳</span>
-                    <Input
-                      type="number"
-                      min={0}
-                      required
-                      value={line.amount || ''}
-                      onChange={(e) => handleUpdateLineAmount(idx, Number(e.target.value))}
-                      className="h-7 text-xs pl-6 text-right font-semibold bg-white"
-                    />
-                  </div>
-                </div>
-              ))}
-              <div className="flex justify-between items-center pt-2 border-t font-bold text-gray-900 text-xs">
-                <span>Total Procurement Cost:</span>
-                <span className="text-emerald-700">৳{totalProcurementCost.toFixed(2)}</span>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2 border-t border-gray-100">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setRestockModalOpen(false)}
-                className="h-8 sm:h-7 text-[11px] border-gray-300 w-full sm:w-auto"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={isUpdating}
-                className="h-8 sm:h-7 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-semibold w-full sm:w-auto"
-              >
-                {isUpdating && <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />}
-                {isUpdating ? 'Processing...' : 'Confirm & Update WAC'}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <RestockDialog product={selectedProduct} open={restockModalOpen} onOpenChange={setRestockModalOpen} onDone={refetch} />
     </div>
   );
 };

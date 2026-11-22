@@ -23,6 +23,7 @@ import { useGetFinancialSummaryQuery, useGetLedgerQuery, useBackfillHistoricalCo
 import { toast } from 'sonner';
 import { useAuth } from '@/redux/store/hooks/useAuth';
 import { LedgerAccessCard } from '../../investor/_components/InvestorExtras';
+import { formatTaka } from '@/lib/money';
 
 /* =========================================================================
    Types & Utilities
@@ -54,7 +55,7 @@ type Preset = 'TODAY' | 'LAST_7_DAYS' | 'LAST_30_DAYS' | 'THIS_MONTH' | 'LAST_MO
 const TZ = 'Asia/Dhaka';
 
 const n = (v: unknown): number => { const x = Number(v); return Number.isFinite(x) ? x : 0; };
-const money = (v: unknown) => `${n(v) < 0 ? '-' : ''}৳${Math.abs(n(v)).toLocaleString('en-BD', { maximumFractionDigits: 0 })}`;
+const money = (v: unknown) => formatTaka(n(v));
 const pct = (v: unknown) => `${n(v).toFixed(1)}%`;
 
 const todayYmd = () => new Date().toLocaleDateString('en-CA', { timeZone: TZ });
@@ -655,7 +656,7 @@ export default function FinanceHub() {
                             <AlertDialogHeader>
                                 <AlertDialogTitle className="font-bold text-stone-900">Synchronize Cost Snapshots?</AlertDialogTitle>
                                 <AlertDialogDescription className="text-stone-500">
-                                    This builds cost records for orders that have none, using today's average costs.
+                                    This builds cost records for orders that have none, using today&rsquo;s average costs.
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>

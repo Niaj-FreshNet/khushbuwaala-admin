@@ -318,7 +318,7 @@ export default function Page() {
             )}
 
             {/* Top Minimal Header */}
-            <div className="flex items-center justify-between bg-white p-2.5 rounded-lg border shadow-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2 bg-white p-2.5 rounded-lg border shadow-xs">
                 <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleBack}>
                         <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Back
@@ -328,8 +328,8 @@ export default function Page() {
                     </Button>
                 </div>
 
-                <div className="flex items-center gap-2.5">
-                    <span className="text-xs text-gray-500 font-medium">Invoice #{order.invoice}</span>
+                <div className="flex flex-wrap items-center gap-2.5 ml-auto">
+                    <span className="text-xs text-gray-500 font-medium whitespace-nowrap">Invoice #{order.invoice}</span>
                     {dirty && (
                         <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">
                             Unsaved
@@ -348,14 +348,14 @@ export default function Page() {
             </div>
 
             {/* Quick Details & Status Bar */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5 bg-white p-3 rounded-lg border shadow-xs">
+            <div className="grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-4 gap-2.5 bg-white p-3 rounded-lg border shadow-xs">
                 <div>
                     <label className="text-[11px] text-gray-500 font-medium mb-1 flex items-center justify-between">
                         <span>Order Status</span>
                         {updatingStatus && <Loader2 className="w-3 h-3 animate-spin text-orange-500" />}
                     </label>
                     <Select value={statusValue} onValueChange={onStatusChange} disabled={updatingStatus}>
-                        <SelectTrigger className="h-8 text-xs">
+                        <SelectTrigger className="h-8 w-full text-xs">
                             <SelectValue placeholder="Status" />
                         </SelectTrigger>
                         <SelectContent>
@@ -372,7 +372,7 @@ export default function Page() {
                         {updatingPayment && <Loader2 className="w-3 h-3 animate-spin text-orange-500" />}
                     </label>
                     <Select value={paymentValue} onValueChange={onPaymentChange} disabled={updatingPayment}>
-                        <SelectTrigger className="h-8 text-xs">
+                        <SelectTrigger className="h-8 w-full text-xs">
                             <SelectValue placeholder="Payment" />
                         </SelectTrigger>
                         <SelectContent>
@@ -387,7 +387,7 @@ export default function Page() {
                 <div>
                     <label className="text-[11px] text-gray-500 font-medium mb-1 block">Payment Method</label>
                     <Select value={(form.method ?? "") as any} onValueChange={(val) => setField("method", val as any)}>
-                        <SelectTrigger className="h-8 text-xs border-orange-300">
+                        <SelectTrigger className="h-8 w-full text-xs border-orange-300">
                             <SelectValue placeholder="Method" />
                         </SelectTrigger>
                         <SelectContent>
@@ -458,7 +458,7 @@ export default function Page() {
 
             {/* Order Items Card */}
             <Card className="shadow-xs">
-                <CardHeader className="py-2.5 px-3.5 flex flex-row items-center justify-between border-b">
+                <CardHeader className="py-2.5 px-3.5 flex flex-row flex-wrap items-center justify-between gap-2 border-b">
                     <CardTitle className="text-xs font-semibold">Order Items ({editableItems.length}) - Subtotal: {computedItemsTotal} BDT</CardTitle>
                     <Button variant="outline" size="sm" onClick={() => setIsProductModalOpen(true)} className="h-7 text-xs gap-1 border-orange-400 text-orange-600 hover:bg-orange-50">
                         <Plus className="w-3.5 h-3.5" /> Add Product
@@ -474,7 +474,7 @@ export default function Page() {
                             const lineTotal = price * normalizeNumber(qty);
 
                             return (
-                                <div key={item.id} className="flex items-center gap-2.5 border p-2 rounded-md bg-gray-50/50">
+                                <div key={item.id} className="flex flex-wrap items-center gap-2.5 border p-2 rounded-md bg-gray-50/50">
                                     <Image
                                         src={item.product?.primaryImage || "/placeholder.png"}
                                         alt={item.product?.name || "Product"}
@@ -483,32 +483,32 @@ export default function Page() {
                                         className="rounded object-cover border"
                                     />
 
-                                    <div className="flex-1 min-w-0">
+                                    <div className="flex-1 min-w-[210px]">
                                         <p className="font-medium text-xs text-gray-900 truncate">{item.product?.name || "Product Item"}</p>
                                         <div className="flex items-center gap-2 mt-1">
-                                            <div className="w-14">
+                                            <div className="w-16">
                                                 <span className="text-[9px] text-gray-400 block">Size</span>
                                                 <Input
                                                     type="number"
-                                                    className="h-6 text-xs px-1"
+                                                    className="h-9 sm:h-6 text-xs px-1"
                                                     value={String(item.size ?? "")}
                                                     onChange={(e) => handleItemFieldChange(item.id, "size", e.target.value)}
                                                 />
                                             </div>
-                                            <div className="w-14">
+                                            <div className="w-16">
                                                 <span className="text-[9px] text-gray-400 block">Unit</span>
                                                 <Input
                                                     type="text"
-                                                    className="h-6 text-xs px-1"
+                                                    className="h-9 sm:h-6 text-xs px-1"
                                                     value={String(item.unit ?? "")}
                                                     onChange={(e) => handleItemFieldChange(item.id, "unit", e.target.value)}
                                                 />
                                             </div>
-                                            <div className="w-20">
+                                            <div className="w-24">
                                                 <span className="text-[9px] text-gray-400 block">Price</span>
                                                 <Input
                                                     type="number"
-                                                    className="h-6 text-xs px-1"
+                                                    className="h-9 sm:h-6 text-xs px-1"
                                                     value={String(item.price ?? "")}
                                                     onChange={(e) => handleItemFieldChange(item.id, "price", e.target.value)}
                                                 />
@@ -516,13 +516,13 @@ export default function Page() {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-2.5">
-                                        <div className="w-14 text-center">
+                                    <div className="flex items-center gap-2.5 ml-auto">
+                                        <div className="w-16 text-center">
                                             <span className="text-[9px] text-gray-400 block mb-0.5">Qty</span>
                                             <Input
                                                 type="number"
                                                 min={1}
-                                                className="h-6 text-xs text-center px-1"
+                                                className="h-9 sm:h-6 text-xs text-center px-1"
                                                 value={String(qty)}
                                                 onChange={(e) => handleItemFieldChange(item.id, "quantity", e.target.value)}
                                             />
@@ -536,7 +536,7 @@ export default function Page() {
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                            className="h-9 w-9 sm:h-6 sm:w-6 text-red-500 hover:text-red-700 hover:bg-red-50"
                                             onClick={() => handleRemoveItem(item.id)}
                                         >
                                             <Trash2 className="w-3.5 h-3.5" />

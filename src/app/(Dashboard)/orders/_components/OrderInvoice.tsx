@@ -61,7 +61,7 @@ export default function OrderInvoice({ order, visible, onClose }: OrderInvoicePr
             const productId = it.productId || it.product?.id || "";
             const variantId = it.variantId || it.variant?.id || "";
 
-            let unitOriginal = Number(it.originalPrice ?? it.variant?.price ?? it.price ?? 0);
+            const unitOriginal = Number(it.originalPrice ?? it.variant?.price ?? it.price ?? 0);
             let unitSold = Number(it.price ?? unitOriginal);
 
             const hasExplicitSavedPrices = it.originalPrice !== undefined && it.originalPrice !== null;

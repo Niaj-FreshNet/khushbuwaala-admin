@@ -18,8 +18,9 @@ import {
 import { cn } from "@/lib/utils";
 import ProfitDistributionPanel from "./_components/ProfitDistributionPanel";
 import LedgerAccessPanel from "./_components/LedgerAccessPanel";
+import { formatTaka } from '@/lib/money';
 
-const money = (v: any) => `৳${Number(v || 0).toLocaleString('en-BD', { maximumFractionDigits: 2 })}`;
+const money = (v: any) => formatTaka(v, 2);
 
 type WithdrawalAction = { id: string; status: 'APPROVED' | 'REJECTED' | 'COMPLETED'; name: string; amount: number };
 const ACTION_TEXT: Record<WithdrawalAction['status'], string> = {

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import TopBar from "@/components/Shared/Dashboard/TopBar";
@@ -8,6 +7,7 @@ import { useAuth } from "@/redux/store/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import Cookies from "js-cookie";
 import SideBar from "@/components/Shared/Dashboard/Sidebar";
+import { ConfirmProvider } from "@/components/admin/ConfirmProvider";
 
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
     const [isOpen, setIsOpen] = useState(false);
@@ -43,6 +43,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     }, []);
 
     return (
+        <ConfirmProvider>
         <div className="min-h-screen w-full bg-slate-50 relative font-sans text-slate-900">
             {/* Backdrop for mobile drawer */}
             <div
@@ -98,5 +99,6 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                 </main>
             </div>
         </div>
+        </ConfirmProvider>
     );
 }

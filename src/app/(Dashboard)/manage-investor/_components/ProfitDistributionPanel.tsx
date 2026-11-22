@@ -10,8 +10,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useApproveProfitMonthMutation, useGetProfitPreviewQuery } from '@/redux/store/api/investor/investorApi';
 import { cn } from '@/lib/utils';
+import { formatTaka } from '@/lib/money';
 
-const money = (v: unknown) => `৳${Number(v || 0).toLocaleString('en-BD', { maximumFractionDigits: 2 })}`;
+const money = (v: unknown) => formatTaka(v, 2);
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 // Default to last month: the latest month that can be approved.

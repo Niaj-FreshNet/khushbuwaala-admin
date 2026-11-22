@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
+import { ExternalLink } from 'lucide-react';
 import {
   Receipt,
   Loader2,
@@ -348,8 +350,8 @@ const OrderDetailsModal = ({
         <DialogContent className="flex max-h-[92vh] max-w-4xl flex-col gap-0 overflow-hidden rounded-2xl border border-gray-200 bg-white p-0 shadow-2xl">
 
           {/* Header */}
-          <DialogHeader className="shrink-0 border-b border-gray-200 bg-white px-6 py-4">
-            <div className="flex flex-row items-center justify-between gap-4">
+          <DialogHeader className="shrink-0 border-b border-gray-200 bg-white px-4 py-3 pr-12 sm:px-6 sm:py-4 sm:pr-12 text-left">
+            <div className="flex flex-row flex-wrap items-center justify-between gap-x-4 gap-y-2">
               <div className="min-w-0 flex items-center gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
@@ -371,7 +373,7 @@ const OrderDetailsModal = ({
                 </div>
               </div>
 
-              <div className="flex shrink-0 items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {order && (
                   <>
                     <Badge
@@ -389,6 +391,14 @@ const OrderDetailsModal = ({
                       <Receipt className="h-3.5 w-3.5" />
                       Invoice
                     </Button>
+                    {/* Full page: editable, and its address can be shared (A-23) */}
+                    <Link
+                      href={`/orders/${order.id}`}
+                      title="Open the full order page"
+                      className="inline-flex h-8 items-center gap-1 rounded-md border border-gray-200 px-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" /> Full page
+                    </Link>
                   </>
                 )}
               </div>

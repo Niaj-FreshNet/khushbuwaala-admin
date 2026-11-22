@@ -73,6 +73,7 @@ import {
 import OrderProfitEditorModal from './OrderProfitEditorModal';
 import { PLATFORMS } from '../add-sales/page';
 import EditSaleModal from './EditSaleModal';
+import { usePrompt } from '@/components/admin/ConfirmProvider';
 
 interface SaleItem {
   id?: string;
@@ -286,12 +287,20 @@ const SaleListClient = () => {
     }
   };
 
+  const askValue = usePrompt();
   const handleQuickEditProfit = async (saleId: string, currentProfit: number) => {
-    const newProfitStr = prompt('Enter correct net profit amount (৳):', String(currentProfit));
+    const newProfitStr = await askValue({
+      title: 'Correct net profit',
+      description: 'Replaces the calculated profit for this sale in Finance.',
+      label: 'Net profit (৳)',
+      inputType: 'number',
+      defaultValue: String(currentProfit),
+      confirmText: 'Save',
+    });
     if (newProfitStr === null) return;
 
     const profit = Number(newProfitStr);
-    if (isNaN(profit)) {
+    if (newProfitStr.trim() === '' || isNaN(profit)) {
       toast.error('Please enter a valid number');
       return;
     }
@@ -829,7 +838,7 @@ const SaleListClient = () => {
         <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
           <div>
             <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Total COD</p>
-            <h3 className="text-xs sm:text-sm font-bold text-gray-900">৳{summaryMetrics.totalCodAmount.toLocaleString()}</h3>
+            <h3 className="text-xs sm:text-sm font-bold text-gray-900">৳{summaryMetrics.totalCodAmount.toLocaleString('en-US', { maximumFractionDigits: 2 })}</h3>
           </div>
           <div className="p-1.5 bg-amber-50 text-amber-600 rounded-lg">
             <Truck className="w-3.5 h-3.5" />
@@ -839,7 +848,7 @@ const SaleListClient = () => {
         <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
           <div>
             <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Total Bill</p>
-            <h3 className="text-xs sm:text-sm font-bold text-blue-600">৳{summaryMetrics.totalBillAmount.toLocaleString()}</h3>
+            <h3 className="text-xs sm:text-sm font-bold text-blue-600">৳{summaryMetrics.totalBillAmount.toLocaleString('en-US', { maximumFractionDigits: 2 })}</h3>
           </div>
           <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
             <FileText className="w-3.5 h-3.5" />
@@ -849,7 +858,7 @@ const SaleListClient = () => {
         <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
           <div>
             <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Total RCV</p>
-            <h3 className="text-xs sm:text-sm font-bold text-green-700">৳{summaryMetrics.totalRcvAmount.toLocaleString()}</h3>
+            <h3 className="text-xs sm:text-sm font-bold text-green-700">৳{summaryMetrics.totalRcvAmount.toLocaleString('en-US', { maximumFractionDigits: 2 })}</h3>
           </div>
           <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
             <DollarSign className="w-3.5 h-3.5" />
@@ -882,7 +891,7 @@ const SaleListClient = () => {
             <div>
               <p className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider">Net Profit</p>
               <h3 className={cn("text-xs sm:text-sm font-black", filteredNetProfit >= 0 ? "text-emerald-700" : "text-rose-600")}>
-                ৳{filteredNetProfit.toLocaleString()}
+                ৳{filteredNetProfit.toLocaleString('en-US', { maximumFractionDigits: 2 })}
               </h3>
             </div>
             <div className="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg">
@@ -994,13 +1003,13 @@ const SaleListClient = () => {
                   <span className={cn(['CANCELED', 'RETURNED'].includes(String(sale.status)) && 'line-through text-gray-400')}>{itemsText}</span>
                 </MobileField>
                 <MobileField label="Amount">
-                  <span className="font-bold">৳{Number(sale.amount || 0).toLocaleString()}</span>{' '}
+                  <span className="font-bold">৳{Number(sale.amount || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}</span>{' '}
                   <span className={cn('ml-1 rounded px-1 text-[10px] font-bold text-white', sale.isPaid ? 'bg-emerald-600' : 'bg-rose-600')}>{sale.isPaid ? 'PAID' : 'DUE'}</span>
                 </MobileField>
                 {isSuperAdmin ? (
                   <MobileField label="Net profit">
                     <span className={cn('font-bold', profit >= 0 ? 'text-emerald-700' : 'text-rose-600')}>
-                      {orderItemCosts.length ? `৳${profit.toLocaleString()}` : '—'}
+                      {orderItemCosts.length ? `৳${profit.toLocaleString('en-US', { maximumFractionDigits: 2 })}` : '—'}
                     </span>
                   </MobileField>
                 ) : (
@@ -1228,7 +1237,7 @@ const SaleListClient = () => {
                       </TableCell>
 
                       <TableCell className="font-bold text-gray-900 tabular-nums align-middle py-3">
-                        <div>৳{Number(sale.amount || 0).toLocaleString()}</div>
+                        <div>৳{Number(sale.amount || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}</div>
                         <div className="text-[10px] text-gray-500 capitalize font-medium">
                           {sale.method ? sale.method.replace(/([A-Z])/g, ' $1').toLowerCase() : 'Cash'}
                         </div>
@@ -1253,7 +1262,7 @@ const SaleListClient = () => {
                           >
                             <TrendingUp className="w-3.5 h-3.5" />
                             <span className="font-black text-xs">
-                              {orderItemCosts.length > 0 ? `৳${totalOrderProfit.toLocaleString()}` : 'Sync / Edit'}
+                              {orderItemCosts.length > 0 ? `৳${totalOrderProfit.toLocaleString('en-US', { maximumFractionDigits: 2 })}` : 'Sync / Edit'}
                             </span>
                           </div>
                         </TableCell>

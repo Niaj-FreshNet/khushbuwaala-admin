@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Search, Plus, Edit, Trash2, Sparkles, Layers } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { useConfirm } from '@/components/admin/ConfirmProvider';
 
 const materialSchema = z.object({
     materialName: z.string().min(1, 'Material name is required'),
@@ -53,8 +54,9 @@ export default function MaterialList() {
         }
     }, [searchTerm, data]);
 
+    const confirmDialog = useConfirm();
     const handleDelete = async (id: string) => {
-        const confirmed = window.confirm('Are you sure you want to delete this material?');
+        const confirmed = (await confirmDialog({ title: "Delete this material?", danger: true }));
         if (confirmed) {
             try {
                 await deleteMaterial(id).unwrap();
@@ -121,13 +123,13 @@ export default function MaterialList() {
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className={cn(
-                                "pl-8 h-7 text-xs bg-white transition-colors shadow-2xs",
+                                "pl-8 h-10 sm:h-7 text-xs bg-white transition-colors shadow-2xs",
                                 searchTerm.trim() ? "border-green-600 text-green-900 font-semibold bg-green-50/20" : "border-gray-300 text-gray-700"
                             )}
                         />
                     </div>
                     <Button
-                        className="bg-green-600 hover:bg-green-700 active:bg-green-800 text-white h-7 text-xs px-3 font-semibold shrink-0 shadow-2xs transition-colors"
+                        className="bg-green-600 hover:bg-green-700 active:bg-green-800 text-white h-10 sm:h-7 text-xs px-3 font-semibold shrink-0 shadow-2xs transition-colors"
                         onClick={() => setAddModalOpen(true)}
                     >
                         <Plus className="w-3.5 h-3.5 mr-1" /> Add
@@ -138,7 +140,7 @@ export default function MaterialList() {
             {/* Scrollable Compact Grid Container */}
             <div className="flex-1 bg-white border border-gray-200/80 rounded-xl shadow-2xs p-3 overflow-y-auto max-h-[calc(100vh-130px)]">
                 {isLoading ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                    <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
                         {Array.from({ length: 8 }).map((_, i) => (
                             <Skeleton key={i} className="h-12 w-full rounded-lg" />
                         ))}
@@ -149,20 +151,20 @@ export default function MaterialList() {
                         <p className="text-[10px] text-gray-400 mt-0.5">Try searching for something else or add a new material.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                    <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
                         {filteredMaterials.map((material: any) => (
                             <div
                                 key={material.id}
                                 className="flex items-center justify-between p-2.5 rounded-lg border border-gray-100 bg-gray-50/40 hover:bg-green-50/30 hover:border-green-200 transition-all group"
                             >
-                                <span className="capitalize font-semibold text-xs text-gray-900 truncate pr-2">
+                                <span className="capitalize font-semibold text-sm sm:text-xs text-gray-900 truncate pr-2">
                                     {material.materialName}
                                 </span>
                                 <div className="flex items-center gap-0.5 opacity-95 sm:opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-7 w-7 text-blue-600 hover:bg-blue-50"
+                                        className="h-9 w-9 sm:h-7 sm:w-7 text-blue-600 hover:bg-blue-50"
                                         onClick={() => handleEdit(material)}
                                         title="Edit"
                                     >
@@ -171,7 +173,7 @@ export default function MaterialList() {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-7 w-7 text-rose-600 hover:bg-rose-50"
+                                        className="h-9 w-9 sm:h-7 sm:w-7 text-rose-600 hover:bg-rose-50"
                                         onClick={() => handleDelete(material.id)}
                                         title="Delete"
                                     >
@@ -186,7 +188,7 @@ export default function MaterialList() {
 
             {/* Add Material Modal */}
             <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
-                <DialogContent className="sm:max-w-[400px] rounded-xl p-4">
+                <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-[400px] rounded-xl p-4">
                     <DialogHeader className="border-b pb-2 mb-2">
                         <DialogTitle className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
                             <Sparkles className="w-3.5 h-3.5 text-green-600" /> Add New Material
@@ -207,7 +209,7 @@ export default function MaterialList() {
                             label="Material Name"
                             placeholder="e.g., Oud, Amber, Sandalwood"
                             required
-                            inputClassName="border-gray-300 text-xs h-7 bg-white"
+                            inputClassName="border-gray-300 text-xs h-10 sm:h-7 bg-white"
                         />
                     </FormWrapper>
                 </DialogContent>
@@ -215,7 +217,7 @@ export default function MaterialList() {
 
             {/* Edit Material Modal */}
             <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
-                <DialogContent className="sm:max-w-[400px] rounded-xl p-4">
+                <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-[400px] rounded-xl p-4">
                     <DialogHeader className="border-b pb-2 mb-2">
                         <DialogTitle className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
                             <Edit className="w-3.5 h-3.5 text-green-600" /> Edit Material
@@ -236,7 +238,7 @@ export default function MaterialList() {
                             label="Material Name"
                             placeholder="e.g., Oud, Amber"
                             required
-                            inputClassName="border-gray-300 text-xs h-7 bg-white"
+                            inputClassName="border-gray-300 text-xs h-10 sm:h-7 bg-white"
                         />
                     </FormWrapper>
                 </DialogContent>

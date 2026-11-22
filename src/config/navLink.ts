@@ -175,19 +175,20 @@ export const navLinks: NavLink[] = [
     name: "Expenses",
     href: "#",
     icon: Wallet,
-    roles: ["ADMIN", "SUPER_ADMIN"],
+    // Salesmen record shop expenses and see their own (the API limits them to their own records)
+    roles: ["SALESMAN", "ADMIN", "SUPER_ADMIN"],
     subItems: [
       {
         name: "Add Expense",
         href: "/expense/add",
         icon: Plus,
-        roles: ["ADMIN", "SUPER_ADMIN"],
+        roles: ["SALESMAN", "ADMIN", "SUPER_ADMIN"],
       },
       {
         name: "Expense List",
         href: "/expense",
         icon: List,
-        roles: ["ADMIN", "SUPER_ADMIN"],
+        roles: ["SALESMAN", "ADMIN", "SUPER_ADMIN"],
       },
     ],
   },
@@ -203,7 +204,8 @@ export const navLinks: NavLink[] = [
     name: "Customers",
     href: "/customer-list",
     icon: Users2,
-    roles: ["SUPER_ADMIN"],
+    // Admins handle orders and customers; the API already allowed them
+    roles: ["ADMIN", "SUPER_ADMIN"],
   },
   {
     name: "Reviews",

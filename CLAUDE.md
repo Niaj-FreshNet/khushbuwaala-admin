@@ -16,9 +16,17 @@ USER, SALESMAN, ADMIN, SUPER_ADMIN, INVESTOR.
 - All `tsc --noEmit` errors fixed; `npm run build` passes (Next 16.4.6).
 - `middleware.ts` migrated to `proxy.ts`.
 
-## Known leftovers
-- Many storefront files (cart, shop, search, related products) were copied into this admin app and are unused. They were only made type-safe, not cleaned up.
-- `src/app/(Dashboard)/ledger/page.tsx` is a placeholder returning null.
+## Shared admin building blocks
+- `src/components/admin/MobileCards.tsx`: phone card layout. List pages render the desktop table in `hidden md:block` and the same rows as cards (`md:hidden`). Check new pages at 390px: 0px sideways overflow.
+- `src/components/admin/ConfirmProvider.tsx`: `useConfirm()` / `usePrompt()` instead of window.confirm/prompt (mounted in DashboardShell).
+- `src/components/admin/RestockDialog.tsx`: the one restock form (super admin: purchase with cost + average cost; admin: count only).
+- `src/lib/money.ts`: `formatTaka` / `formatNumber`. Always pass a locale when formatting numbers (a phone set to Bangla changes the output otherwise).
+- Stock is kept per PRODUCT in ml/gm (`Product.stock`); variant `stock` / `lowStockAlert` are not used.
+
+## Housekeeping
+- Unused storefront copies were removed 2026-11-22 (import-graph check from every page/layout/route). Before deleting anything else, check it is unreachable the same way.
+- `/ledger` redirects to `/finance?tab=ledger`.
+- Tracking docs for all three projects: `D:\Projects\khushbuwaala\KHUSHBUWAALA_*.md`.
 
 ## Commands
-`npm run dev`, `npm run build`, `npx tsc --noEmit`. Backend lives in `D:\Projects\khushbuwaala-backend`.
+`npm run dev`, `npm run build`, `npx tsc --noEmit`, `npm run lint` (eslint; 0 errors expected, legacy `any` types are warnings). Backend lives in `D:\Projects\khushbuwaala\khushbuwaala-backend`.

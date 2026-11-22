@@ -989,7 +989,7 @@ const OrderList = () => {
         <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-xs flex items-center justify-between">
           <div>
             <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Total COD</p>
-            <h3 className="text-xs sm:text-sm font-bold text-gray-900">৳{summaryMetrics.totalCodAmount.toLocaleString()}</h3>
+            <h3 className="text-xs sm:text-sm font-bold text-gray-900">৳{summaryMetrics.totalCodAmount.toLocaleString('en-US', { maximumFractionDigits: 2 })}</h3>
           </div>
           <div className="p-1.5 bg-amber-50 text-amber-600 rounded-lg">
             <Truck className="w-3.5 h-3.5" />
@@ -999,7 +999,7 @@ const OrderList = () => {
         <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-xs flex items-center justify-between">
           <div>
             <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Total Bill</p>
-            <h3 className="text-xs sm:text-sm font-bold text-blue-600">৳{summaryMetrics.totalBillAmount.toLocaleString()}</h3>
+            <h3 className="text-xs sm:text-sm font-bold text-blue-600">৳{summaryMetrics.totalBillAmount.toLocaleString('en-US', { maximumFractionDigits: 2 })}</h3>
           </div>
           <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
             <FileText className="w-3.5 h-3.5" />
@@ -1009,7 +1009,7 @@ const OrderList = () => {
         <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-xs flex items-center justify-between">
           <div>
             <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Total RCV</p>
-            <h3 className="text-xs sm:text-sm font-bold text-green-700">৳{summaryMetrics.totalRcvAmount.toLocaleString()}</h3>
+            <h3 className="text-xs sm:text-sm font-bold text-green-700">৳{summaryMetrics.totalRcvAmount.toLocaleString('en-US', { maximumFractionDigits: 2 })}</h3>
           </div>
           <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
             <DollarSign className="w-3.5 h-3.5" />
@@ -1042,7 +1042,7 @@ const OrderList = () => {
             <div>
               <p className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider">Net Profit</p>
               <h3 className={cn("text-xs sm:text-sm font-black", filteredNetProfit >= 0 ? "text-emerald-700" : "text-rose-600")}>
-                ৳{filteredNetProfit.toLocaleString()}
+                ৳{filteredNetProfit.toLocaleString('en-US', { maximumFractionDigits: 2 })}
               </h3>
             </div>
             <div className="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg">
@@ -1158,12 +1158,12 @@ const OrderList = () => {
                 <MobileField label="Items" full>
                   <span className={cn(m.isCanceledOrReturned && "line-through text-gray-400")}>{itemsText}</span>
                 </MobileField>
-                <MobileField label="Total (COD)">৳{m.codOrTotalAmount.toLocaleString()} · {methodLabel(order.method)}</MobileField>
-                <MobileField label="You receive"><span className={cn("font-bold", m.rcvColorClass)}>৳{m.netReceivable.toLocaleString()}</span></MobileField>
+                <MobileField label="Total (COD)">৳{m.codOrTotalAmount.toLocaleString('en-US', { maximumFractionDigits: 2 })} · {methodLabel(order.method)}</MobileField>
+                <MobileField label="You receive"><span className={cn("font-bold", m.rcvColorClass)}>৳{m.netReceivable.toLocaleString('en-US', { maximumFractionDigits: 2 })}</span></MobileField>
                 {isSuperAdmin && (
                   <MobileField label="Net profit">
                     <span className={cn("font-bold", m.totalOrderProfit >= 0 ? "text-emerald-700" : "text-rose-600")}>
-                      {m.orderItemCosts.length ? `৳${m.totalOrderProfit.toLocaleString()}` : "—"}
+                      {m.orderItemCosts.length ? `৳${m.totalOrderProfit.toLocaleString('en-US', { maximumFractionDigits: 2 })}` : "—"}
                     </span>
                   </MobileField>
                 )}
@@ -1455,7 +1455,7 @@ const OrderList = () => {
                           >
                             <TrendingUp className="w-3.5 h-3.5" />
                             <span className="font-black text-xs">
-                              {orderItemCosts.length > 0 ? `৳${totalOrderProfit.toLocaleString()}` : 'Edit'}
+                              {orderItemCosts.length > 0 ? `৳${totalOrderProfit.toLocaleString('en-US', { maximumFractionDigits: 2 })}` : 'Edit'}
                             </span>
                           </div>
                         </TableCell>

@@ -52,6 +52,7 @@ import EditExpenseDialog from './_components/EditExpenseDialog';
 import { useGetExpenseCategoriesQuery } from '@/redux/store/api/expense/expenseApi';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/redux/store/hooks/useAuth';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -127,6 +128,9 @@ const ExpenseListPage = () => {
 
   const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
   const [editExpenseId, setEditExpenseId] = useState<string | null>(null);
+  // Salesmen see their own expenses and can set status; edit/delete are admin-only (the API enforces this too)
+  const { user } = useAuth();
+  const canManage = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
   const [category, setCategory] = useState<string>('ALL');
   const { data: categoriesRes } = useGetExpenseCategoriesQuery();
   const categoryOptions = categoriesRes?.data ?? [];
@@ -408,7 +412,7 @@ const ExpenseListPage = () => {
         </div>
 
         <div className="flex items-center justify-between sm:justify-end gap-1.5 pt-1 sm:pt-0 border-t sm:border-t-0 border-gray-100">
-          {selectedExpenseIds.length > 0 && (
+          {canManage && selectedExpenseIds.length > 0 && (
             <Button
               variant="destructive"
               size="sm"
@@ -647,7 +651,7 @@ const ExpenseListPage = () => {
         <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
           <div>
             <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Total Outlay</p>
-            <h3 className="text-xs sm:text-sm font-bold text-orange-600">৳{summaryMetrics.totalAmount.toLocaleString()}</h3>
+            <h3 className="text-xs sm:text-sm font-bold text-orange-600">৳{summaryMetrics.totalAmount.toLocaleString('en-US', { maximumFractionDigits: 2 })}</h3>
           </div>
           <div className="p-1.5 bg-orange-50 text-orange-600 rounded-lg">
             <TrendingDown className="w-3.5 h-3.5" />
@@ -657,7 +661,7 @@ const ExpenseListPage = () => {
         <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
           <div>
             <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Paid Amount</p>
-            <h3 className="text-xs sm:text-sm font-bold text-emerald-600">৳{summaryMetrics.paidAmount.toLocaleString()}</h3>
+            <h3 className="text-xs sm:text-sm font-bold text-emerald-600">৳{summaryMetrics.paidAmount.toLocaleString('en-US', { maximumFractionDigits: 2 })}</h3>
           </div>
           <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
             <DollarSign className="w-3.5 h-3.5" />
@@ -667,7 +671,7 @@ const ExpenseListPage = () => {
         <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
           <div>
             <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Due Amount</p>
-            <h3 className="text-xs sm:text-sm font-bold text-rose-600">৳{summaryMetrics.dueAmount.toLocaleString()}</h3>
+            <h3 className="text-xs sm:text-sm font-bold text-rose-600">৳{summaryMetrics.dueAmount.toLocaleString('en-US', { maximumFractionDigits: 2 })}</h3>
           </div>
           <div className="p-1.5 bg-rose-50 text-rose-600 rounded-lg">
             <Clock className="w-3.5 h-3.5" />
@@ -728,9 +732,11 @@ const ExpenseListPage = () => {
                 badge={<Badge className={`${statusBadgeClass(expense.status)} text-[10px] px-2 py-0.5`}>{expense.status}</Badge>}
                 actions={
                   <>
+                    {canManage && (
                     <Button variant="outline" size="sm" className="h-10 flex-1 text-xs" onClick={() => setEditExpenseId(expense.id)}>
                       <Pencil className="mr-1 h-4 w-4" /> Edit
                     </Button>
+                    )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm" className="h-10 flex-1 text-xs">Status</Button>
@@ -743,6 +749,7 @@ const ExpenseListPage = () => {
                         ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
+                    {canManage && (
                     <Button
                       variant="outline"
                       size="icon"
@@ -752,11 +759,12 @@ const ExpenseListPage = () => {
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
+                    )}
                   </>
                 }
               >
                 <MobileField label="Amount">
-                  <span className="font-bold">৳{Number(expense.amount || 0).toLocaleString()}</span>{' '}
+                  <span className="font-bold">৳{Number(expense.amount || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}</span>{' '}
                   <span className={cn('ml-1 rounded px-1 text-[10px] font-bold text-white', expense.isPaid ? 'bg-emerald-600' : 'bg-rose-600')}>
                     {expense.isPaid ? 'PAID' : 'DUE'}
                   </span>
@@ -876,7 +884,7 @@ const ExpenseListPage = () => {
                       </TableCell>
 
                       <TableCell className="font-bold text-orange-600 tabular-nums align-middle py-3">
-                        ৳{Number(expense.amount || 0).toLocaleString()}
+                        ৳{Number(expense.amount || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}
                       </TableCell>
 
                       <TableCell className="align-middle py-3">
@@ -925,6 +933,8 @@ const ExpenseListPage = () => {
                             <Eye className="w-3.5 h-3.5" />
                           </Button>
 
+                          {canManage && (
+                          <>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -944,6 +954,8 @@ const ExpenseListPage = () => {
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>
+                          </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

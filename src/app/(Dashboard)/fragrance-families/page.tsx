@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Search, Plus, Edit, Trash2, Sparkles, Tags } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { useConfirm } from '@/components/admin/ConfirmProvider';
 
 const fragranceSchema = z.object({
     fragranceName: z.string().min(1, 'Fragrance name is required'),
@@ -53,8 +54,9 @@ export default function FragranceList() {
         }
     }, [searchTerm, data]);
 
+    const confirmDialog = useConfirm();
     const handleDelete = async (id: string) => {
-        const confirmed = window.confirm('Are you sure you want to delete this fragrance?');
+        const confirmed = (await confirmDialog({ title: "Delete this fragrance family?", danger: true }));
         if (confirmed) {
             try {
                 await deleteFragrance(id).unwrap();
@@ -121,13 +123,13 @@ export default function FragranceList() {
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className={cn(
-                                "pl-8 h-7 text-xs bg-white transition-colors shadow-2xs",
+                                "pl-8 h-10 sm:h-7 text-xs bg-white transition-colors shadow-2xs",
                                 searchTerm.trim() ? "border-green-600 text-green-900 font-semibold bg-green-50/20" : "border-gray-300 text-gray-700"
                             )}
                         />
                     </div>
                     <Button
-                        className="bg-green-600 hover:bg-green-700 active:bg-green-800 text-white h-7 text-xs px-3 font-semibold shrink-0 shadow-2xs transition-colors"
+                        className="bg-green-600 hover:bg-green-700 active:bg-green-800 text-white h-10 sm:h-7 text-xs px-3 font-semibold shrink-0 shadow-2xs transition-colors"
                         onClick={() => setAddModalOpen(true)}
                     >
                         <Plus className="w-3.5 h-3.5 mr-1" /> Add
@@ -155,14 +157,14 @@ export default function FragranceList() {
                                 key={fragrance.id}
                                 className="flex items-center justify-between p-2.5 rounded-lg border border-gray-100 bg-gray-50/40 hover:bg-green-50/30 hover:border-green-200 transition-all group"
                             >
-                                <span className="capitalize font-semibold text-xs text-gray-900 truncate pr-2">
+                                <span className="capitalize font-semibold text-sm sm:text-xs text-gray-900 truncate pr-2">
                                     {fragrance.fragranceName}
                                 </span>
                                 <div className="flex items-center gap-0.5 opacity-95 sm:opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-7 w-7 text-blue-600 hover:bg-blue-50"
+                                        className="h-9 w-9 sm:h-7 sm:w-7 text-blue-600 hover:bg-blue-50"
                                         onClick={() => handleEdit(fragrance)}
                                         title="Edit"
                                     >
@@ -171,7 +173,7 @@ export default function FragranceList() {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-7 w-7 text-rose-600 hover:bg-rose-50"
+                                        className="h-9 w-9 sm:h-7 sm:w-7 text-rose-600 hover:bg-rose-50"
                                         onClick={() => handleDelete(fragrance.id)}
                                         title="Delete"
                                     >
@@ -186,7 +188,7 @@ export default function FragranceList() {
 
             {/* Add Fragrance Modal */}
             <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
-                <DialogContent className="sm:max-w-[400px] rounded-xl p-4">
+                <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-[400px] rounded-xl p-4">
                     <DialogHeader className="border-b pb-2 mb-2">
                         <DialogTitle className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
                             <Sparkles className="w-3.5 h-3.5 text-green-600" /> Add New Fragrance Family
@@ -207,7 +209,7 @@ export default function FragranceList() {
                             label="Fragrance Name"
                             placeholder="e.g., Woody, Floral, Oriental"
                             required
-                            inputClassName="border-gray-300 text-xs h-7 bg-white"
+                            inputClassName="border-gray-300 text-xs h-10 sm:h-7 bg-white"
                         />
                     </FormWrapper>
                 </DialogContent>
@@ -215,7 +217,7 @@ export default function FragranceList() {
 
             {/* Edit Fragrance Modal */}
             <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
-                <DialogContent className="sm:max-w-[400px] rounded-xl p-4">
+                <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-[400px] rounded-xl p-4">
                     <DialogHeader className="border-b pb-2 mb-2">
                         <DialogTitle className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
                             <Edit className="w-3.5 h-3.5 text-green-600" /> Edit Fragrance Family
@@ -236,7 +238,7 @@ export default function FragranceList() {
                             label="Fragrance Name"
                             placeholder="e.g., Woody, Floral"
                             required
-                            inputClassName="border-gray-300 text-xs h-7 bg-white"
+                            inputClassName="border-gray-300 text-xs h-10 sm:h-7 bg-white"
                         />
                     </FormWrapper>
                 </DialogContent>

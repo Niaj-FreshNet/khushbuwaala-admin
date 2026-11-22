@@ -115,7 +115,7 @@ export default function AdminSalesOrdersBreakdownChart({
         return { totalSales, totalOrders, totalNetReceivable };
     }, [activeData]);
 
-    const formatBDT = (v: number) => `${Number(v || 0).toLocaleString()} BDT`;
+    const formatBDT = (v: number) => `${Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })} BDT`;
 
     const salesTick = (v: number) => {
         const n = Number(v || 0);

@@ -23,6 +23,7 @@ import {
   useDeleteReviewMutation,
 } from '@/redux/store/api/review/reviewApi';
 import { toast } from 'sonner';
+import { useConfirm } from '@/components/admin/ConfirmProvider';
 
 interface ReviewData {
   id: string;
@@ -69,8 +70,9 @@ const ReviewList = () => {
     }
   };
 
+  const confirmDialog = useConfirm();
   const handleDelete = async (id: string) => {
-    const confirmed = window.confirm('Are you sure you want to delete this review?');
+    const confirmed = (await confirmDialog({ title: "Delete this review?", description: "It disappears from the product page.", danger: true }));
     if (confirmed) {
       try {
         await deleteReview(id).unwrap();

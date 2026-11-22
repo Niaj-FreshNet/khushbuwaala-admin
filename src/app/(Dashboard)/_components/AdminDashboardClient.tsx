@@ -28,7 +28,7 @@ export default function AdminDashboardClient() {
     };
 
     const metricsData = data?.data;
-    const formatBDT = (v: number) => `৳${Number(v || 0).toLocaleString()}`;
+    const formatBDT = (v: number) => `৳${Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
     const todayData = (metricsData as any)?.today ?? (metricsData as any)?.today;
     const weekData = (metricsData as any)?.thisWeek ?? (metricsData as any)?.weekly;

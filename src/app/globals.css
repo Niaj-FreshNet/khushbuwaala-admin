@@ -659,7 +659,8 @@
   }
 
   /* Better mobile tap targets */
-  button,
+  /* switches and checkboxes are <button>s too; stretching them to 44px distorts them */
+  button:not([role="switch"]):not([role="checkbox"]):not([role="radio"]),
   .btn {
     min-height: 44px;
     touch-action: manipulation;

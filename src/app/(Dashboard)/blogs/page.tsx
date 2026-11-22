@@ -36,6 +36,8 @@ import {
   useDeleteBlogMutation,
 } from '@/redux/store/api/blog/blogApi';
 import { uploadToCloudinary } from '@/lib/helper/uploadToCloudinary';
+import { useConfirm } from '@/components/admin/ConfirmProvider';
+import { MobileCard, MobileCardList } from '@/components/admin/MobileCards';
 
 const JoditEditor = dynamic(() => import('jodit-react'), { ssr: false });
 
@@ -181,8 +183,9 @@ const BlogList = () => {
     setValue('isPublish', blog.isPublish);
   };
 
+  const confirmDialog = useConfirm();
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to permanently delete this article?')) {
+    if (!(await confirmDialog({ title: "Delete this article?", description: "It is removed from the website for good.", danger: true }))) {
       return;
     }
 
@@ -318,13 +321,13 @@ const BlogList = () => {
               placeholder="Search by title..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8 border-gray-300 text-xs h-7 bg-white focus-visible:ring-emerald-600"
+              className="pl-8 border-gray-300 text-xs h-10 sm:h-7 bg-white focus-visible:ring-emerald-600"
             />
           </div>
 
           <Button
             size="sm"
-            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1 text-xs h-7 px-3 shadow-2xs shrink-0"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1 text-xs h-10 sm:h-7 px-3 shadow-2xs shrink-0"
             onClick={() => router.push('/blogs/add')}
           >
             <Plus className="w-3.5 h-3.5" /> Add New Blog
@@ -334,7 +337,44 @@ const BlogList = () => {
 
       {/* Responsive Blog Table Card */}
       <div className="rounded-xl border border-gray-200/85 bg-white overflow-hidden shadow-2xs">
-        <div className="overflow-x-auto w-full">
+        {/* Phones: one card per article */}
+        <MobileCardList className="p-2" isLoading={isLoading} isEmpty={!isLoading && filteredBlogs.length === 0} emptyText="No articles found.">
+          {filteredBlogs.map((blog) => (
+            <MobileCard
+              key={blog.id}
+              leading={
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={blog.imageUrl || '/images/placeholder.webp'} alt="" className="h-12 w-14 rounded-md border border-gray-200 object-cover" />
+              }
+              title={blog.title}
+              subtitle={new Date(blog.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+              onOpen={() => handleEdit(blog)}
+              actions={
+                <>
+                  <label className="flex h-9 items-center gap-2 text-xs font-semibold text-gray-700">
+                    {togglingId === blog.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                    ) : (
+                      <Switch checked={blog.isPublish} onCheckedChange={(checked) => handlePublishToggle(checked, blog)} className="data-[state=checked]:bg-emerald-600" />
+                    )}
+                    {blog.isPublish ? 'Published' : 'Draft'}
+                  </label>
+                  <a href={`https://khushbuwaala.com/blog/${blog.slug || blog.id}`} target="_blank" rel="noopener noreferrer" className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-md border border-gray-200 text-gray-600" title="Open on website">
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                  <Button variant="outline" size="sm" className="h-9 text-xs" onClick={() => handleEdit(blog)}>
+                    <Edit className="w-4 h-4 mr-1" /> Edit
+                  </Button>
+                  <Button variant="outline" size="sm" className="h-9 text-xs text-rose-600 border-rose-200" onClick={() => handleDelete(blog.id)} title="Delete">
+                    <Trash className="w-4 h-4" />
+                  </Button>
+                </>
+              }
+            />
+          ))}
+        </MobileCardList>
+
+        <div className="hidden md:block overflow-x-auto w-full">
           <Table>
             <TableHeader className="bg-gray-50/80">
               <TableRow>
@@ -482,7 +522,7 @@ const BlogList = () => {
               size="sm"
               disabled={currentPage <= 1 || isFetching}
               onClick={() => handlePageChange(currentPage - 1)}
-              className="text-xs h-7 border-gray-300"
+              className="text-xs h-9 sm:h-7 border-gray-300"
             >
               Previous
             </Button>
@@ -491,7 +531,7 @@ const BlogList = () => {
               size="sm"
               disabled={currentPage >= meta.totalPage || isFetching}
               onClick={() => handlePageChange(currentPage + 1)}
-              className="text-xs h-7 border-gray-300"
+              className="text-xs h-9 sm:h-7 border-gray-300"
             >
               Next
             </Button>
@@ -501,7 +541,7 @@ const BlogList = () => {
 
       {/* Edit Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs">
+        <DialogContent className="w-[calc(100vw-1rem)] sm:max-w-2xl max-h-[92vh] overflow-y-auto text-xs p-3 sm:p-6">
           <DialogHeader className="pb-2 border-b border-gray-100">
             <DialogTitle className="text-sm font-bold text-gray-900">
               Edit Article Guide
@@ -679,7 +719,7 @@ const BlogList = () => {
                   setEditingBlog(null);
                   reset();
                 }}
-                className="text-xs h-7 border-gray-300"
+                className="text-xs h-9 sm:h-7 border-gray-300"
               >
                 Cancel
               </Button>
