@@ -74,6 +74,7 @@ import OrderProfitEditorModal from './OrderProfitEditorModal';
 import { PLATFORMS } from '../add-sales/page';
 import EditSaleModal from './EditSaleModal';
 import { usePrompt } from '@/components/admin/ConfirmProvider';
+import { useConfirm } from '@/components/admin/ConfirmProvider';
 
 interface SaleItem {
   id?: string;
@@ -439,10 +440,11 @@ const SaleListClient = () => {
     }
   };
 
-  const handleSendToSteadfast = async (saleId: string, invoice: string) => {
+  const confirmRebook = useConfirm();
+  const handleSendToSteadfast = async (saleId: string, invoice: string, force = false): Promise<void> => {
     try {
       setSendingSaleId(saleId);
-      const res = await sendToSteadfast(saleId).unwrap();
+      const res = await sendToSteadfast({ orderId: saleId, force }).unwrap();
       if (res?.success) {
         toast.success(`Sale #${invoice} successfully submitted to Steadfast!`);
         refetch();
@@ -450,6 +452,12 @@ const SaleListClient = () => {
         toast.error('Failed to send order to Steadfast');
       }
     } catch (err: any) {
+      if (err?.status === 409 && !force) {
+        setSendingSaleId(null);
+        const again = await confirmRebook({ title: `#${invoice} is already with Steadfast`, description: `${err?.data?.message || ''} Booking again creates a new parcel and a new delivery charge.`, confirmText: 'Book again', danger: true });
+        if (again) return handleSendToSteadfast(saleId, invoice, true);
+        return;
+      }
       toast.error(err?.data?.message || 'Error submitting order to Steadfast');
     } finally {
       setSendingSaleId(null);

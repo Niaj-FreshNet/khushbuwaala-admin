@@ -83,6 +83,7 @@ import { useBackfillHistoricalCostsMutation } from "@/redux/store/api/finance/fi
 import EditOrderModal from "./_components/EditOrderModal";
 import OrderProfitEditorModal from "../sales/_components/OrderProfitEditorModal";
 import { useCourierReturnPrompt } from "@/components/admin/courierReturn";
+import { useConfirm } from "@/components/admin/ConfirmProvider";
 
 interface OrderItem {
   id?: string;
@@ -558,16 +559,24 @@ const OrderList = () => {
     }
   };
 
-  const handleSendToSteadfast = async (orderId: string, invoice: string) => {
+  const confirmRebook = useConfirm();
+  const handleSendToSteadfast = async (orderId: string, invoice: string, force = false): Promise<void> => {
     try {
       setSendingOrderId(orderId);
-      const res = await sendToSteadfast(orderId).unwrap();
+      const res = await sendToSteadfast({ orderId, force }).unwrap();
       if (res?.success) {
         toast.success(`Order #${invoice} successfully sent to Steadfast!`);
       } else {
         toast.error("Failed to send order to Steadfast");
       }
     } catch (err: any) {
+      // Already booked: a second booking means a second parcel and a second delivery charge
+      if (err?.status === 409 && !force) {
+        setSendingOrderId(null);
+        const again = await confirmRebook({ title: `#${invoice} is already with Steadfast`, description: `${err?.data?.message || ''} Booking again creates a new parcel and a new delivery charge.`, confirmText: 'Book again', danger: true });
+        if (again) return handleSendToSteadfast(orderId, invoice, true);
+        return;
+      }
       toast.error(err?.data?.message || "Error submitting order to Steadfast");
     } finally {
       setSendingOrderId(null);

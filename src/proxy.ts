@@ -62,6 +62,7 @@ export function proxy(request: NextRequest) {
     currentPath.startsWith("/carts") ||
     currentPath.startsWith("/materials") ||
     currentPath.startsWith("/fragrance-families") ||
+    currentPath.startsWith("/courier-payouts") ||
     currentPath.startsWith("/ledger");
 
   if (isProtectedRoute) {
@@ -126,6 +127,7 @@ export const config = {
     "/carts/:path*",
     "/materials/:path*",
     "/fragrance-families/:path*",
+    "/courier-payouts/:path*",
     "/ledger/:path*",
   ],
 };

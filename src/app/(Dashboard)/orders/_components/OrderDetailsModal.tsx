@@ -56,6 +56,11 @@ type OrderApi = {
   courierStatus?: string | null;
   deliveryCharge?: number | null;
   returnChargeCollected?: number | null;
+  courierPayoutId?: string | null;
+  courierPaidAt?: string | null;
+  courierCodCollected?: number | null;
+  courierReview?: string | null;
+  trackingCode?: string | null;
   invoice?: string;
   orderTime?: string;
   createdAt?: string;
@@ -497,6 +502,22 @@ const OrderDetailsModal = ({
                   </p>
                 </div>
               </div>
+
+              {/* Steadfast settlement (D-026) */}
+              {order && (order.consignmentId || order.courierPayoutId || order.courierReview) && (
+                <div className={`rounded-xl border p-3 text-xs ${order.courierReview ? 'border-rose-200 bg-rose-50/60' : 'border-gray-200 bg-white'}`}>
+                  <p className="font-bold text-gray-900">
+                    Steadfast{order.courierStatus ? `: ${order.courierStatus.replace(/_/g, ' ')}` : ''}
+                    {order.consignmentId ? <span className="ml-1 font-mono font-normal text-gray-500">#{order.consignmentId}</span> : null}
+                  </p>
+                  <p className="mt-1 text-gray-700">
+                    {order.courierPayoutId
+                      ? <>Cleared in <b>{order.courierPayoutId}</b>{order.courierPaidAt ? ` on ${new Date(order.courierPaidAt).toLocaleDateString('en-GB', { timeZone: 'Asia/Dhaka', day: '2-digit', month: 'short', year: 'numeric' })}` : ''}{order.courierCodCollected != null ? <> · collected ৳{formatBDT(order.courierCodCollected)}</> : null}</>
+                      : 'Not paid out by Steadfast yet.'}
+                  </p>
+                  {order.courierReview && <p className="mt-1 font-semibold text-rose-800">Check: {order.courierReview}</p>}
+                </div>
+              )}
 
               {/* Courier return result (D-025): parcel came back */}
               {order && (order.status === 'RETURNED' || (order.status === 'CANCELED' && order.returnChargeCollected != null)) && order.orderSource !== 'SHOWROOM' && (() => {

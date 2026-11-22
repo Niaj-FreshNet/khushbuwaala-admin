@@ -24,7 +24,8 @@ import {
   Users2,
   UserCog,
   Settings,
-  UserCircle2
+  UserCircle2,
+  Truck,
 } from "lucide-react";
 
 import { MdCategory, MdReviews } from "react-icons/md";
@@ -169,6 +170,13 @@ export const navLinks: NavLink[] = [
     name: "Payments",
     href: "/payments",
     icon: CreditCard,
+    roles: ["ADMIN", "SUPER_ADMIN"],
+  },
+  {
+    // Money Steadfast has paid us; cleared parcels become Completed + Paid (D-026)
+    name: "Courier Payouts",
+    href: "/courier-payouts",
+    icon: Truck,
     roles: ["ADMIN", "SUPER_ADMIN"],
   },
   {
