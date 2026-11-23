@@ -34,3 +34,6 @@ USER, SALESMAN, ADMIN, SUPER_ADMIN, INVESTOR.
 
 ## Commands
 `npm run dev`, `npm run build`, `npx tsc --noEmit`, `npm run lint` (eslint; 0 problems, fails on any warning; `any` and unused code are errors). Backend lives in `D:\Projects\khushbuwaala\khushbuwaala-backend`.
+
+## Storefront content (2026-11-23)
+- `/storefront` ("Home page content", ADMIN + SUPER_ADMIN): announcement bar, hero banners and home page product rows. API: `src/redux/store/api/storefront/storefrontApi.ts` → backend `/api/storefront/settings`. The backend checks every save and names what is wrong; show its message.
