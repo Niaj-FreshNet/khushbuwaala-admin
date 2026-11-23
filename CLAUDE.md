@@ -21,6 +21,10 @@ USER, SALESMAN, ADMIN, SUPER_ADMIN, INVESTOR.
 - `src/components/admin/ConfirmProvider.tsx`: `useConfirm()` / `usePrompt()` instead of window.confirm/prompt (mounted in DashboardShell).
 - `src/components/admin/RestockDialog.tsx`: the one restock form (super admin: purchase with cost + average cost; admin: count only).
 - `src/lib/money.ts`: `formatTaka` / `formatNumber`. Always pass a locale when formatting numbers (a phone set to Bangla changes the output otherwise).
+- Typed API: every endpoint in `src/redux/store/api/` has request/response types; shared types in `src/types/` (`api.types.ts` envelopes, `order.types.ts` with `orderDisplayLines` / `toEditableLines`, `investor.types.ts`, `expense.types.ts`).
+- `src/lib/apiError.ts`: `apiErrorMessage(err, fallback)` for toasts. `src/lib/paymentMethods.ts`: the one payment-method list and labels (handles legacy names). `src/lib/salePlatforms.ts`: sale platforms.
+- `src/components/admin/Thumb.tsx`: product images (next/image; unoptimized for other hosts and blob/data URLs).
+- `FormWrapper` is generic: `onSubmit(data, form)`, so server field errors can be set on the form.
 - Stock is kept per PRODUCT in ml/gm (`Product.stock`); variant `stock` / `lowStockAlert` are not used.
 
 ## Housekeeping
@@ -29,4 +33,4 @@ USER, SALESMAN, ADMIN, SUPER_ADMIN, INVESTOR.
 - Tracking docs for all three projects: `D:\Projects\khushbuwaala\KHUSHBUWAALA_*.md`.
 
 ## Commands
-`npm run dev`, `npm run build`, `npx tsc --noEmit`, `npm run lint` (eslint; 0 errors expected, legacy `any` types are warnings). Backend lives in `D:\Projects\khushbuwaala\khushbuwaala-backend`.
+`npm run dev`, `npm run build`, `npx tsc --noEmit`, `npm run lint` (eslint; 0 problems, fails on any warning; `any` and unused code are errors). Backend lives in `D:\Projects\khushbuwaala\khushbuwaala-backend`.
