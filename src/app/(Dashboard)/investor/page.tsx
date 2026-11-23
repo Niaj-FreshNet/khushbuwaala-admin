@@ -14,6 +14,7 @@ import { useGetInvestorDashboardQuery, useRequestWithdrawalMutation } from '@/re
 import { toast } from 'sonner';
 import { LedgerAccessCard, MonthlyProfitHistory } from './_components/InvestorExtras';
 import { formatTaka } from '@/lib/money';
+import { apiErrorMessage } from "@/lib/apiError";
 
 type Num = number | undefined;
 
@@ -53,7 +54,6 @@ const monthEnd = (s: string, offset = 0) => {
     return fmtYmd(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + offset + 1, 0)));
 };
 const daysBetween = (a: string, b: string) => Math.round((parseYmd(b).getTime() - parseYmd(a).getTime()) / 86400000);
-const labelYmd = (s: string) => s ? parseYmd(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—';
 
 const PRESETS: { id: Exclude<Preset, 'CUSTOM'>; label: string }[] = [
     { id: 'TODAY', label: 'Today' }, { id: 'LAST_7_DAYS', label: '7 Days' },
@@ -156,6 +156,8 @@ function InvestorHub() {
     const responseData = cur.data?.data;
     // We only need balance and profit share for the top-level view now
     const profile = responseData?.investorProfile ?? { name: 'Investor', profitSharePercentage: 0, currentBalance: 0 };
+    // A super admin opening this page has no investor profile, so the name can be missing
+    const displayName = profile.name?.trim() || 'Investor';
     const m: Metrics = responseData?.metrics ?? {};
     const pm: Metrics = prv.data?.data?.metrics ?? {};
     const withdrawals = responseData?.recentWithdrawals ?? [];
@@ -175,8 +177,8 @@ function InvestorHub() {
             await requestWithdrawal({ amount: Number(withdrawAmount), method: 'Bank Transfer' }).unwrap();
             toast.success("Withdrawal request submitted successfully!");
             setWithdrawAmount("");
-        } catch (error: any) {
-            toast.error(error?.data?.message || "Failed to submit withdrawal request.");
+        } catch (error) {
+            toast.error(apiErrorMessage(error, "Failed to submit withdrawal request."));
         }
     };
 
@@ -189,10 +191,10 @@ function InvestorHub() {
                     <div>
                         <div className="flex items-center gap-2">
                             <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
-                                {profile.name.charAt(0)}
+                                {displayName.charAt(0)}
                             </div>
                             <h1 className="text-xl font-bold tracking-tight text-stone-900 sm:text-2xl">
-                                Welcome, {profile.name.split(' ')[0]}
+                                Welcome, {displayName.split(' ')[0]}
                             </h1>
                             <span className="ml-2 inline-flex items-center rounded-md bg-stone-100 px-2 py-1 text-[10px] font-semibold text-stone-600 border border-stone-200">
                                 {profile.profitSharePercentage}% Share
@@ -352,7 +354,7 @@ function InvestorHub() {
                                 </div>
                             ) : (
                                 <div className="divide-y divide-stone-50 max-h-[360px] overflow-y-auto px-6 py-2 custom-scrollbar">
-                                    {withdrawals.map((w: any) => (
+                                    {withdrawals.map((w) => (
                                         <div key={w.id} className="group py-3.5 flex items-center justify-between hover:bg-stone-50/50 -mx-2 px-2 rounded-lg transition-colors">
                                             <div className="flex items-center gap-3">
                                                 <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full border", w.status === 'APPROVED' || w.status === 'COMPLETED' ? "border-emerald-200 bg-emerald-50 text-emerald-600" : w.status === 'PENDING' ? "border-amber-200 bg-amber-50 text-amber-600" : "border-rose-200 bg-rose-50 text-rose-600")}>

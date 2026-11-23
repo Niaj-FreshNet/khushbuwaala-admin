@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import 'jodit/es5/jodit.min.css';
@@ -38,6 +37,7 @@ import {
 import { uploadToCloudinary } from '@/lib/helper/uploadToCloudinary';
 import { useConfirm } from '@/components/admin/ConfirmProvider';
 import { MobileCard, MobileCardList } from '@/components/admin/MobileCards';
+import Thumb from "@/components/admin/Thumb";
 
 const JoditEditor = dynamic(() => import('jodit-react'), { ssr: false });
 
@@ -131,12 +131,9 @@ const BlogList = () => {
 
   const isPublishValue = useWatch({ control, name: 'isPublish' });
 
-  const allBlogs: BlogData[] = useMemo(() => {
-    const raw: any = data;
-    return raw?.data?.data || raw?.data || [];
-  }, [data]);
+  const allBlogs: BlogData[] = useMemo(() => data?.data?.data ?? [], [data]);
 
-  const meta = (data as any)?.data?.meta;
+  const meta = data?.data?.meta;
 
   const filteredBlogs = useMemo(() => {
     return allBlogs.filter((blog) =>
@@ -343,8 +340,7 @@ const BlogList = () => {
             <MobileCard
               key={blog.id}
               leading={
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={blog.imageUrl || '/images/placeholder.webp'} alt="" className="h-12 w-14 rounded-md border border-gray-200 object-cover" />
+                <Thumb src={blog.imageUrl || '/images/placeholder.webp'} alt="" size={56} className="h-12 w-14 rounded-md border border-gray-200 object-cover" />
               }
               title={blog.title}
               subtitle={new Date(blog.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -430,12 +426,7 @@ const BlogList = () => {
                     <TableRow key={blog.id} className="hover:bg-gray-50/50 transition-colors">
                       <TableCell className="py-2">
                         <div className="h-9 w-11 relative rounded-md overflow-hidden bg-gray-100 border border-gray-200 shrink-0">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={blog.imageUrl || '/images/placeholder.webp'}
-                            alt={blog.title}
-                            className="h-full w-full object-cover"
-                          />
+                          <Thumb src={blog.imageUrl || '/images/placeholder.webp'} alt={blog.title} size={56} className="h-full w-full object-cover" />
                         </div>
                       </TableCell>
                       <TableCell className="py-2">
@@ -625,7 +616,7 @@ const BlogList = () => {
               {imagePreview && (
                 <div className="mt-2 flex items-center gap-2 p-1.5 bg-gray-50 border rounded-lg">
                   <div className="relative w-12 h-9 rounded overflow-hidden border bg-white shrink-0">
-                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                    <Thumb src={imagePreview} alt="Preview" size={48} className="w-full h-full object-cover" />
                     <button
                       type="button"
                       onClick={() => {

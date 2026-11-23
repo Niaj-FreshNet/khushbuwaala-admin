@@ -7,11 +7,8 @@ import {
   List,
   Tags,
   ShoppingCart,
-  Receipt,
   Warehouse,
-  Percent,
   Newspaper,
-  Users,
   Calculator,
   Wallet,
   BookOpen,
@@ -32,15 +29,18 @@ import { MdCategory, MdReviews } from "react-icons/md";
 import { GiPerfumeBottle } from "react-icons/gi";
 import { GoReport } from "react-icons/go";
 
+/** lucide-react and react-icons components (both take className) */
+type NavIcon = React.ComponentType<{ className?: string }>;
+
 interface NavLink {
   name: string;
   href: string;
-  icon: React.ComponentType<any>;
+  icon: NavIcon;
   roles: string[];
   subItems?: {
     name: string;
     href: string;
-    icon: React.ComponentType<any>;
+    icon: NavIcon;
     roles: string[];
   }[];
 }

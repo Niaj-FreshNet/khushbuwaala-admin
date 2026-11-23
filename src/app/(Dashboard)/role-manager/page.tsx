@@ -6,13 +6,14 @@ import { jwtDecode } from "jwt-decode";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, ShieldCheck, UserCheck, UserX, Percent, Wallet, BadgeDollarSign } from "lucide-react";
+import { Loader2, ShieldCheck, UserCheck, UserX} from "lucide-react";
 import { TUser, UserRole } from "@/types/auth.types";
 import { useGetAllUsersQuery } from "@/redux/store/api/user/userApi";
 import { useApproveOrUpdateRoleMutation, useRefreshTokenMutation } from "@/redux/store/api/auth/authApi";
 import { RootState } from "@/redux/store/store";
 import { setUser } from "@/redux/store/features/auth/authSlice";
 import { toast } from "sonner";
+import { apiErrorMessage } from "@/lib/apiError";
 
 interface JwtPayload {
   id?: string;
@@ -40,8 +41,8 @@ export default function RoleManager() {
     { role: "USER", searchTerm: debouncedSearch, limit: 8 },
     { skip: debouncedSearch.length < 3 }
   );
-  const customers: any[] = debouncedSearch.length < 3 ? [] : (customerRes as any)?.data || [];
-  const [pickedCustomer, setPickedCustomer] = useState<any>(null);
+  const customers: TUser[] = debouncedSearch.length < 3 ? [] : customerRes?.data || [];
+  const [pickedCustomer, setPickedCustomer] = useState<TUser | null>(null);
 
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [role, setRole] = useState<UserRole>("USER");
@@ -53,15 +54,15 @@ export default function RoleManager() {
   const auth = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch();
 
-  const rawUsers = Array.isArray(usersRes) ? usersRes : (usersRes as any)?.data || [];
+  const rawUsers = useMemo(() => usersRes?.data ?? [], [usersRes]);
 
   const users = useMemo(() => {
-    const staff = rawUsers.filter((user: any) => user.role !== "USER");
+    const staff = rawUsers.filter((user) => user.role !== "USER");
     // A customer picked from the search is listed too, so it can be selected and saved
-    return pickedCustomer && !staff.some((u: any) => u.id === pickedCustomer.id) ? [pickedCustomer, ...staff] : staff;
+    return pickedCustomer && !staff.some((u) => u.id === pickedCustomer.id) ? [pickedCustomer, ...staff] : staff;
   }, [rawUsers, pickedCustomer]);
 
-  const pickCustomer = (c: any) => {
+  const pickCustomer = (c: TUser) => {
     setPickedCustomer(c);
     setSelectedUserId(c.id); // role/approval are then filled from the account; choose the new role below
     setCustomerSearch("");
@@ -70,7 +71,7 @@ export default function RoleManager() {
   // Auto-fill role, approval status, and all investor fields
   useEffect(() => {
     if (selectedUserId) {
-      const selected = users.find((u: any) => u.id === selectedUserId);
+      const selected = users.find((u) => u.id === selectedUserId);
       if (selected) {
         setRole(selected.role || "USER");
         setIsApproved(selected.isApproved ? "true" : "false");
@@ -127,9 +128,9 @@ export default function RoleManager() {
       }
 
       setSelectedUserId("");
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error updating user:", err);
-      toast.error(err?.data?.message || "Failed to update user profile.");
+      toast.error(apiErrorMessage(err, "Failed to update user profile."));
     }
   };
 
@@ -180,7 +181,7 @@ export default function RoleManager() {
                 <p className="px-3 py-2.5 text-xs text-stone-500">No customer found.</p>
               )}
               {!isSearching &&
-                customers.map((c: any) => (
+                customers.map((c) => (
                   <button
                     key={c.id}
                     type="button"
@@ -206,7 +207,7 @@ export default function RoleManager() {
             </SelectTrigger>
 
             <SelectContent className="max-w-[calc(100vw-2rem)] z-50 bg-white">
-              {users.map((user: any) => (
+              {users.map((user) => (
                 <SelectItem
                   key={user.id}
                   value={user.id}
@@ -224,7 +225,7 @@ export default function RoleManager() {
 
                     <div className="flex items-center gap-1.5 shrink-0">
                       <span className="text-[10px] text-stone-500 bg-stone-100 px-2 py-0.5 rounded font-mono">
-                        {user.role.replace(/_/g, " ")}
+                        {(user.role ?? "USER").replace(/_/g, " ")}
                       </span>
 
                       {/* Updated from investorProfile to investor */}

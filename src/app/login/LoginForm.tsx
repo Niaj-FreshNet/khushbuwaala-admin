@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState } from 'react';
@@ -17,6 +16,7 @@ import { TUser } from '@/types/auth.types';
 import FormInput from '@/components/ReusableUI/FormInput';
 import { useLogInMutation } from '@/redux/store/api/auth/authApi';
 import { setUser } from '@/redux/store/features/auth/authSlice';
+import { apiErrorMessage } from "@/lib/apiError";
 
 export default function LoginForm() {
     const searchParams = useSearchParams();
@@ -85,11 +85,9 @@ export default function LoginForm() {
             router.push(targetPath);
             router.refresh();
 
-        } catch (error: any) {
+        } catch (error) {
             toast.error(
-                error?.data?.message ||
-                error?.message ||
-                'Login failed. Please check your credentials.'
+                apiErrorMessage(error, 'Login failed. Please check your credentials.')
             );
         }
     };

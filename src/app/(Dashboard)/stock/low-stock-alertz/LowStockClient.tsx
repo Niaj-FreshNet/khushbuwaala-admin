@@ -83,7 +83,7 @@ export default function LowStockAlertPageClient() {
   const all: IProductResponse[] = useMemo(() => data?.data || [], [data]);
 
   const lowList = useMemo(
-    () => all.filter((p) => (showHidden || (p as any).published !== false) && (p.totalStock ?? 0) <= threshold),
+    () => all.filter((p) => (showHidden || p.published !== false) && (p.totalStock ?? 0) <= threshold),
     [all, threshold, showHidden]
   );
   const critical = useMemo(() => lowList.filter((p) => (p.totalStock ?? 0) <= 0), [lowList]);

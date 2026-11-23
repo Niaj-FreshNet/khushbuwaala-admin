@@ -11,6 +11,7 @@ import {
 import { useApproveProfitMonthMutation, useGetProfitPreviewQuery } from '@/redux/store/api/investor/investorApi';
 import { cn } from '@/lib/utils';
 import { formatTaka } from '@/lib/money';
+import { apiErrorMessage } from "@/lib/apiError";
 
 const money = (v: unknown) => formatTaka(v, 2);
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -40,14 +41,14 @@ export default function ProfitDistributionPanel() {
     setMonth(m); setYear(y);
   };
 
-  const pendingTotal = (p?.investors || []).filter((r: any) => !r.credited).reduce((s: number, r: any) => s + r.proposedShare, 0);
+  const pendingTotal = (p?.investors || []).filter((r) => !r.credited).reduce((s, r) => s + r.proposedShare, 0);
 
   const doApprove = async () => {
     try {
       const res = await approve({ year, month }).unwrap();
       toast.success(res?.message || 'Profit credited');
-    } catch (e: any) {
-      toast.error(e?.data?.message || 'Could not approve this month');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Could not approve this month'));
     } finally {
       setConfirmOpen(false);
     }
@@ -83,7 +84,7 @@ export default function ProfitDistributionPanel() {
           </div>
 
           <ul className="divide-y divide-gray-100 rounded-lg border border-gray-100">
-            {p.investors.map((r: any) => (
+            {p.investors.map((r) => (
               <li key={r.investorId} className="flex items-center justify-between gap-2 p-3">
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold text-gray-900">{r.name}</div>

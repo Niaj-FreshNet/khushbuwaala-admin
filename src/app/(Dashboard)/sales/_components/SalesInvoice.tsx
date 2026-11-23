@@ -4,13 +4,31 @@ import React, { useMemo, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
-import Link from "next/link";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import type { Order } from "@/types/order.types";
+import { paymentMethodLabel } from "@/lib/paymentMethods";
+
+/** A line from orderItems or from the JSON copy (cartItems) older sales kept */
+type InvoiceLine = {
+    id?: string;
+    productId?: string;
+    variantId?: string | null;
+    name?: string;
+    primaryImage?: string;
+    quantity?: number;
+    price?: number;
+    originalPrice?: number | null;
+    size?: number | string | null;
+    unit?: string | null;
+    product?: { id?: string; name?: string; primaryImage?: string } | null;
+    variant?: { id?: string; price?: number; size?: number; unit?: string } | null;
+};
+export type InvoiceSale = Omit<Order, "orderItems" | "cartItems"> & { orderItems?: InvoiceLine[]; cartItems?: InvoiceLine[] | null };
 
 interface SalesInvoiceProps {
-    sale: any;
+    sale: InvoiceSale | null | undefined;
     visible: boolean;
     onClose: () => void;
 }
@@ -34,14 +52,8 @@ export default function SalesInvoice({ sale, visible, onClose }: SalesInvoicePro
         return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
     };
 
-    const paymentLabel = useMemo(() => {
-        const m = String(sale?.method || "").toLowerCase();
-        if (m === "cashondelivery" || m.includes("cash")) return "Cash On Delivery";
-        if (m.includes("bkash")) return "bKash";
-        if (m.includes("nagad")) return "Nagad";
-        if (!m) return "N/A";
-        return formatText(m);
-    }, [sale?.method]);
+    // (used to print "Cash On Delivery" for every plain cash showroom sale)
+    const paymentLabel = sale?.method ? paymentMethodLabel(sale.method) : "N/A";
 
     const bill = sale?.billing || sale?.shipping;
     const billName = bill?.name || sale?.name || sale?.customer?.name || "Walk-in Customer";
@@ -53,9 +65,9 @@ export default function SalesInvoice({ sale, visible, onClose }: SalesInvoicePro
     const totalSaleDiscount = Math.max(0, Number(sale?.discountAmount ?? 0));
 
     const lines = useMemo(() => {
-        const rawItems = sale?.orderItems ?? (Array.isArray(sale?.cartItems) ? sale.cartItems : []) ?? [];
+        const rawItems: InvoiceLine[] = sale?.orderItems ?? (Array.isArray(sale?.cartItems) ? sale.cartItems : []);
 
-        return rawItems.map((it: any, idx: number) => {
+        return rawItems.map((it, idx: number) => {
             const qty = Math.max(1, Number(it.quantity || 1));
             const productId = it.productId || it.product?.id || "";
             const variantId = it.variantId || it.variant?.id || "";
@@ -85,15 +97,15 @@ export default function SalesInvoice({ sale, visible, onClose }: SalesInvoicePro
                 hasDiscount: save > 0,
             };
         });
-    }, [sale, totalSaleDiscount]);
+    }, [sale]);
 
     const totals = useMemo(() => {
-        const subtotalOriginal = lines.reduce((s: any, x: { lineOriginal: any; }) => s + x.lineOriginal, 0);
-        const itemDiscountsSum = lines.reduce((s: any, x: { save: any; }) => s + x.save, 0);
+        const subtotalOriginal = lines.reduce((s, x) => s + x.lineOriginal, 0);
+        const itemDiscountsSum = lines.reduce((s, x) => s + x.save, 0);
         const displayDiscountAmount = Math.max(itemDiscountsSum, totalSaleDiscount);
 
         const shipping = Math.max(0, Number(sale?.shippingCost ?? 0));
-        const tax = Math.max(0, Number(sale?.estimatedTaxes ?? 0));
+        const tax = 0; // sales carry no tax (this read a storefront field that sales never had)
 
         const totalPayable = Math.max(
             0,
@@ -324,11 +336,11 @@ export default function SalesInvoice({ sale, visible, onClose }: SalesInvoicePro
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {lines.map((item: any, idx: number) => (
+                                    {lines.map((item, idx: number) => (
                                         <tr key={item.id} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
                                             <td className="py-1.5 px-3">
                                                 <div className="flex items-center gap-2">
-                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                    {/* eslint-disable-next-line @next/next/no-img-element -- the PDF capture (html2canvas) needs the picture loaded now; <Image> loads lazily */}
                                                     <img
                                                         src={item.image}
                                                         alt={item.name}

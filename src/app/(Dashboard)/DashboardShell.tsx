@@ -64,7 +64,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                     isShort ? "lg:ml-20" : "lg:ml-64"
                 )}
             >
-                <TopBar dark setIsOpen={setIsOpen} isOpen={isOpen} />
+                <TopBar setIsOpen={setIsOpen} isOpen={isOpen} />
 
                 <main className="flex-1 min-w-0 bg-slate-50 sm:p-2 p-1">
                     {/* <BreadCrumb /> */}

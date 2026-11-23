@@ -53,16 +53,17 @@ import { toast } from "sonner";
 import { useConfirm } from '@/components/admin/ConfirmProvider';
 import { MobileCard, MobileCardList, MobileField } from "@/components/admin/MobileCards";
 import { formatTaka } from '@/lib/money';
+import type { AdminCartItem, CartListQuery } from '@/redux/store/api/cart/cartApi';
 
 export default function AdminAllCartsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [page, setPage] = useState(1);
-  const [inspectItem, setInspectItem] = useState<any | null>(null);
+  const [inspectItem, setInspectItem] = useState<AdminCartItem | null>(null);
   const limit = 100;
 
   const queryParams = useMemo(() => {
-    const p: Record<string, any> = { page, limit };
+    const p: CartListQuery = { page, limit };
     if (statusFilter !== "ALL") p.status = statusFilter;
     if (searchTerm.trim()) p.searchTerm = searchTerm.trim();
     return p;
@@ -71,8 +72,8 @@ export default function AdminAllCartsPage() {
   const { data: response, isLoading, isFetching, refetch } = useGetAllCartsQuery(queryParams);
   const [removeCartItem, { isLoading: isDeleting }] = useRemoveCartItemMutation();
 
-  const cartList: any[] = response?.data || [];
-  const meta = response?.meta || { page: 1, total: 0, totalPage: 1 };
+  const cartList = useMemo(() => response?.data ?? [], [response]);
+  const meta = { page: response?.meta?.page ?? 1, total: response?.meta?.total ?? 0, totalPage: response?.meta?.totalPage ?? 1 };
 
   // Calculate top KPI totals from the current view / set
   const metrics = useMemo(() => {
@@ -295,7 +296,7 @@ export default function AdminAllCartsPage() {
 
         {/* Phones: one card per cart line */}
         <MobileCardList className="p-2" isLoading={isLoading} isEmpty={!isLoading && cartList.length === 0} emptyText="No carts match your filter.">
-          {cartList.map((item: any) => {
+          {cartList.map((item) => {
             const lineTotal = Number(item.price || 0) * Number(item.quantity || 1);
             const sizeLabel = `${item.size ?? item.variant?.size ?? ""} ${String(item.unit ?? item.variant?.unit ?? "").toUpperCase()}`.trim();
             return (
@@ -303,7 +304,7 @@ export default function AdminAllCartsPage() {
                 key={item.id}
                 title={item.product?.name || "Unlisted product"}
                 subtitle={[sizeLabel, item.variant?.sku].filter(Boolean).join(" · ") || undefined}
-                badge={renderStatusBadge(item.status)}
+                badge={renderStatusBadge(item.status ?? 'IN_CART')}
                 onOpen={() => setInspectItem(item)}
                 actions={
                   <>
@@ -367,7 +368,7 @@ export default function AdminAllCartsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                cartList.map((item: any) => {
+                cartList.map((item) => {
                   const lineTotal = Number(item.price || 0) * Number(item.quantity || 1);
                   const sizeLabel = `${item.size ?? item.variant?.size ?? ""} ${String(item.unit ?? item.variant?.unit ?? "").toUpperCase()}`.trim();
 
@@ -415,7 +416,7 @@ export default function AdminAllCartsPage() {
                             </div>
                             <div className="min-w-0">
                               <p className="text-xs font-bold text-gray-900 truncate" title={item.user.name}>{item.user.name}</p>
-                              <p className="text-xs font-semibold text-gray-700 truncate" title={item.user.phone}>{item.user.phone || "No phone"}</p>
+                              <p className="text-xs font-semibold text-gray-700 truncate" title={item.user.phone ?? undefined}>{item.user.phone || "No phone"}</p>
                               <p className="text-[10px] text-gray-500 truncate" title={item.user.email}>{item.user.email}</p>
                             </div>
                           </div>
@@ -458,7 +459,7 @@ export default function AdminAllCartsPage() {
                       {/* Status */}
                       <TableCell className="py-2.5 align-top">
                         <div className="flex flex-col gap-1 items-start">
-                          {renderStatusBadge(item.status)}
+                          {renderStatusBadge(item.status ?? 'IN_CART')}
                           {item.order?.invoice && (
                             <Link
                               href={`/orders/${item.order.id}`}

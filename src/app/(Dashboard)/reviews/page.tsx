@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -15,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Trash, Star, MessageSquareText, CheckCircle2 } from 'lucide-react';
+import { Search, Trash, Star, MessageSquareText} from 'lucide-react';
 import { MobileCard, MobileCardList, MobileField } from '@/components/admin/MobileCards';
 import {
   useGetAllReviewsAdminQuery,
@@ -24,21 +23,9 @@ import {
 } from '@/redux/store/api/review/reviewApi';
 import { toast } from 'sonner';
 import { useConfirm } from '@/components/admin/ConfirmProvider';
+import type { IReview } from "@/types/product.types";
 
-interface ReviewData {
-  id: string;
-  title: string;
-  comment: string;
-  rating: number;
-  isPublished: boolean;
-  createdAt: string;
-  user: {
-    name: string;
-  };
-  product: {
-    name: string;
-  };
-}
+type ReviewData = IReview;
 
 const ReviewList = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -47,8 +34,8 @@ const ReviewList = () => {
   const [deleteReview] = useDeleteReviewMutation();
   const router = useRouter();
 
-  const allReviews: ReviewData[] = useMemo(() => (data as any)?.data?.data || [], [data]);
-  const meta = (data as any)?.data?.meta;
+  const allReviews: ReviewData[] = useMemo(() => data?.data?.data ?? [], [data]);
+  const meta = data?.data?.meta;
 
   const filteredReviews = useMemo(
     () =>
@@ -275,7 +262,7 @@ const ReviewList = () => {
               <Button
                 variant="outline"
                 size="sm"
-                disabled={meta.page >= meta.totalPage}
+                disabled={meta.page >= (meta.totalPage ?? 1)}
                 onClick={() => router.push(`/reviews?page=${meta.page + 1}`)}
                 className="text-xs h-7 border-gray-300"
               >

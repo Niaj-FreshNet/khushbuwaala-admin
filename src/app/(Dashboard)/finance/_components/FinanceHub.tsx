@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { skipToken } from '@reduxjs/toolkit/query/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,30 +20,21 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGetFinancialSummaryQuery, useGetLedgerQuery, useBackfillHistoricalCostsMutation } from '@/redux/store/api/finance/financeApi';
+import type { FinanceBreakdown, FinanceMetrics } from '@/redux/store/api/finance/financeApi';
 import { toast } from 'sonner';
 import { useAuth } from '@/redux/store/hooks/useAuth';
 import { LedgerAccessCard } from '../../investor/_components/InvestorExtras';
 import { formatTaka } from '@/lib/money';
+import { apiErrorMessage, apiErrorStatus } from "@/lib/apiError";
 
 /* =========================================================================
    Types & Utilities
    ========================================================================= */
 
-type Num = number | undefined;
-
-interface Metrics {
-    grossSales?: Num; totalOrderDiscounts?: Num; totalRevenue?: Num;
-    totalShippingCollected?: Num; totalCOGS?: Num; grossProfit?: Num;
-    grossMarginPercentage?: Num; returnedCourierLoss?: Num; returnChargesCollected?: Num; netReturnLoss?: Num;
-    freeShippingCourierCost?: Num; codFees?: Num; totalFulfillmentCosts?: Num;
-    totalOperatingExpenses?: Num; netProfit?: Num; netMarginPercentage?: Num;
-    totalInventoryInvestment?: Num;
-}
-interface Breakdown {
-    totalLiquidCost?: Num; totalPackagingCost?: Num; expenseCount?: Num;
-    orderCount?: Num; returnedCount?: Num; courierReturnCount?: Num; missingCostItemCount?: Num;
-    missingCostOrderCount?: Num; unsyncedOrderCount?: Num;
-}
+// Partial: the summary is empty while it loads
+type Metrics = Partial<FinanceMetrics>;
+type Breakdown = Partial<FinanceBreakdown>;
+type CashTotals = { credits: number; debits: number; net: number };
 interface LedgerRow {
     id: string; ts: number; date: string; reference: string; description: string;
     source: string; method: string; type: 'CREDIT' | 'DEBIT'; amount: number; balance: number;
@@ -89,7 +80,38 @@ const rangeForPreset = (preset: Exclude<Preset, 'CUSTOM'>) => {
     }
 };
 
-const prettyMethod = (m: string) => (m ? m.replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').trim() : '—');
+/** Credits, debits and their difference for a list of ledger rows */
+const sumCash = (rows: LedgerRow[]): CashTotals => {
+    let credits = 0, debits = 0;
+    for (const r of rows) {
+        if (r.type === 'CREDIT') credits += r.amount;
+        else debits += r.amount;
+    }
+    return { credits, debits, net: credits - debits };
+};
+
+/** Download rows as a CSV file (opens in Excel / Google Sheets) */
+const downloadLedgerCsv = (rows: LedgerRow[], fileName: string) => {
+    const cell = (v: string | number) => {
+        const s = String(v);
+        return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const header = ['Date', 'Time', 'Reference', 'Description', 'Source', 'Method', 'Debit (out)', 'Credit (in)', 'Running balance'];
+    const lines = rows.map((r) => [
+        fmtDate(r.date), fmtTime(r.date), r.reference, r.description, r.source, r.method,
+        r.type === 'DEBIT' ? r.amount : '', r.type === 'CREDIT' ? r.amount : '', r.balance,
+    ].map(cell).join(','));
+    // The BOM makes Excel read ৳ and Bangla text correctly
+    const blob = new Blob(['\uFEFF' + [header.join(','), ...lines].join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+};
 
 /* =========================================================================
    UI Components
@@ -161,7 +183,13 @@ function Notice({ tone, children }: { tone: 'amber' | 'blue' | 'rose'; children:
    OVERVIEW TAB
    ========================================================================= */
 
-function OverviewTab({ m, b, pm, loading, prevLoading, isError, onRetry, rangeValid, cash, cashLoading, cashLocked }: any) {
+interface OverviewTabProps {
+    m: Metrics; b: Breakdown; pm?: Metrics;
+    loading: boolean; prevLoading: boolean; isError: boolean; onRetry: () => void; rangeValid: boolean;
+    cash: CashTotals; cashLoading: boolean; cashLocked: boolean;
+}
+
+function OverviewTab({ m, b, pm, loading, prevLoading, isError, onRetry, rangeValid, cash, cashLoading, cashLocked }: OverviewTabProps) {
     const v = useMemo(() => {
         const revenue = n(m.totalRevenue);
         const cogs = n(m.totalCOGS);
@@ -393,29 +421,31 @@ function OverviewTab({ m, b, pm, loading, prevLoading, isError, onRetry, rangeVa
    LEDGER TAB
    ========================================================================= */
 
-function LedgerTab({ rows, loading, isError, onRetry, range }: any) {
+interface LedgerTabProps {
+    rows: LedgerRow[]; loading: boolean; isError: boolean; onRetry: () => void; range: { start: string; end: string };
+}
+
+const PAGE_SIZE = 50;
+
+function LedgerTab({ rows, loading, isError, onRetry, range }: LedgerTabProps) {
     const [type, setType] = useState<'ALL' | 'CREDIT' | 'DEBIT'>('ALL');
     const [source, setSource] = useState('ALL');
     const [q, setQ] = useState('');
-    const [pageSize, setPageSize] = useState(50);
+    const pageSize = PAGE_SIZE;
     const [page, setPage] = useState(1);
 
-    const sources = useMemo(() => Array.from(new Set(rows.map((r: any) => r.source))).sort(), [rows]);
+    const sources = useMemo(() => Array.from(new Set(rows.map((r) => r.source))).sort(), [rows]);
 
     const filtered = useMemo(() => {
         const needle = q.trim().toLowerCase();
-        return rows.filter((r: any) =>
+        return rows.filter((r) =>
             (type === 'ALL' || r.type === type) &&
             (source === 'ALL' || r.source === source) &&
             (!needle || `${r.reference} ${r.description} ${r.source}`.toLowerCase().includes(needle)),
         ); // Keeping it naturally sorted DATE_DESC from backend
     }, [rows, type, source, q]);
 
-    const totals = useMemo(() => {
-        let credits = 0, debits = 0;
-        for (const r of filtered) r.type === 'CREDIT' ? (credits += r.amount) : (debits += r.amount);
-        return { credits, debits, net: credits - debits };
-    }, [filtered]);
+    const totals = useMemo(() => sumCash(filtered), [filtered]);
 
     const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
     const safePage = Math.min(page, pages);
@@ -464,7 +494,7 @@ function LedgerTab({ rows, loading, isError, onRetry, range }: any) {
                     />
                     {q && <button onClick={() => setQ('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700"><X className="h-4 w-4" /></button>}
                 </div>
-                <Select value={type} onValueChange={upd((v: string) => setType(v as any))}>
+                <Select value={type} onValueChange={upd((v: string) => setType(v === 'CREDIT' || v === 'DEBIT' ? v : 'ALL'))}>
                     <SelectTrigger className="h-10 w-full md:w-40 rounded-xl bg-stone-50 text-sm font-semibold"><SelectValue /></SelectTrigger>
                     <SelectContent>
                         <SelectItem value="ALL">All Flows</SelectItem>
@@ -476,10 +506,10 @@ function LedgerTab({ rows, loading, isError, onRetry, range }: any) {
                     <SelectTrigger className="h-10 w-full md:w-40 rounded-xl bg-stone-50 text-sm font-semibold"><SelectValue placeholder="Source" /></SelectTrigger>
                     <SelectContent>
                         <SelectItem value="ALL">All Sources</SelectItem>
-                        {(sources as string[]).map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        {sources.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                 </Select>
-                <Button size="sm" variant="outline" disabled={!filtered.length} className="h-10 rounded-xl px-4 text-sm font-semibold">
+                <Button size="sm" variant="outline" disabled={!filtered.length} onClick={() => downloadLedgerCsv(filtered, `ledger_${range.start}_to_${range.end}.csv`)} className="h-10 rounded-xl px-4 text-sm font-semibold">
                     <Download className="mr-2 h-4 w-4" /> CSV
                 </Button>
             </div>
@@ -502,7 +532,7 @@ function LedgerTab({ rows, loading, isError, onRetry, range }: any) {
                             [...Array(6)].map((_, i) => <TableRow key={i}><TableCell colSpan={6} className="py-4 px-5"><Skeleton className="h-6 w-full" /></TableCell></TableRow>)
                         ) : pageRows.length === 0 ? (
                             <TableRow><TableCell colSpan={6} className="py-16 text-center text-stone-500 font-medium">No transactions found.</TableCell></TableRow>
-                        ) : pageRows.map((r: any, idx: any) => (
+                        ) : pageRows.map((r, idx) => (
                             <TableRow key={`${r.id}-${idx}`} className={cn('transition-colors hover:bg-stone-50/70', r.type === 'CREDIT' && 'bg-emerald-50/10')}>
                                 <TableCell className="px-5 py-3 text-xs font-medium text-stone-600 whitespace-nowrap">{fmtDate(r.date)} <span className="text-stone-400 block">{fmtTime(r.date)}</span></TableCell>
                                 <TableCell className="px-5 py-3 max-w-[280px]">
@@ -526,7 +556,7 @@ function LedgerTab({ rows, loading, isError, onRetry, range }: any) {
                 {loading ? [...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-2xl" />) :
                     pageRows.length === 0 ? (
                         <div className="rounded-2xl border border-dashed border-stone-300 bg-white p-8 text-center text-sm text-stone-500 font-medium">No transactions match your filters.</div>
-                    ) : pageRows.map((r: any, idx: any) => (
+                    ) : pageRows.map((r, idx) => (
                         <div key={`${r.id}-${idx}`} className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
                             <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
@@ -597,12 +627,12 @@ export default function FinanceHub() {
     const cur = useGetFinancialSummaryQuery(rangeValid ? { startDate: range.start, endDate: range.end } : skipToken, { refetchOnMountOrArgChange: true });
     const prv = useGetFinancialSummaryQuery(prevRange ? { startDate: prevRange.start, endDate: prevRange.end } : skipToken, { refetchOnMountOrArgChange: true });
     const led = useGetLedgerQuery(rangeValid ? { startDate: range.start, endDate: range.end, type: 'ALL' } : skipToken, { refetchOnMountOrArgChange: true });
-    const ledgerLocked = (led.error as any)?.status === 403;
+    const ledgerLocked = apiErrorStatus(led.error) === 403;
 
     const [backfillCosts, { isLoading: isBackfilling }] = useBackfillHistoricalCostsMutation();
 
     const ledgerRows: LedgerRow[] = useMemo(() => {
-        const raw = (led.data?.data?.data ?? []) as any[];
+        const raw = led.data?.data?.data ?? [];
         const list = raw.map((t, i) => ({
             id: String(t.id ?? i),
             ts: new Date(t.date).getTime() || 0,
@@ -619,15 +649,11 @@ export default function FinanceHub() {
         return list.map((r) => { bal += r.type === 'CREDIT' ? r.amount : -r.amount; return { ...r, balance: bal }; });
     }, [led.data]);
 
-    const cash = useMemo(() => {
-        let credits = 0, debits = 0;
-        for (const r of ledgerRows) r.type === 'CREDIT' ? (credits += r.amount) : (debits += r.amount);
-        return { credits, debits, net: credits - debits };
-    }, [ledgerRows]);
+    const cash = useMemo(() => sumCash(ledgerRows), [ledgerRows]);
 
     const handleBackfill = async () => {
         try { await backfillCosts().unwrap(); toast.success('Cost snapshots synchronized.'); cur.refetch(); prv.refetch(); led.refetch(); }
-        catch (e: any) { toast.error(e?.data?.message || 'Failed to sync historical costs'); }
+        catch (e) { toast.error(apiErrorMessage(e, 'Failed to sync historical costs')); }
     };
 
     return (

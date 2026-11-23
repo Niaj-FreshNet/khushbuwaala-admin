@@ -68,15 +68,15 @@ export default function SideBar({
     );
   }
 
-  const role: UserRole = user.role;
+  const role: UserRole | undefined = user.role;
   const filteredNavLinks = navLinks
-    .filter((link) => link.roles.includes(role))
+    .filter((link) => !!role && link.roles.includes(role))
     .map((link) => ({
       ...link,
-      subItems: link.subItems?.filter((sub) => sub.roles.includes(role)),
+      subItems: link.subItems?.filter((sub) => !!role && sub.roles.includes(role)),
     }));
 
-  const combinedNavLinks = [...filteredNavLinks, ...(additionalRoutes?.filter((link) => link.roles.includes(role)) || [])];
+  const combinedNavLinks = [...filteredNavLinks, ...(additionalRoutes?.filter((link) => !!role && link.roles.includes(role)) || [])];
 
   const handleLogout = async () => {
     try { await logoutApi({}).unwrap(); } catch (error) { console.error("Backend logout failed", error); }

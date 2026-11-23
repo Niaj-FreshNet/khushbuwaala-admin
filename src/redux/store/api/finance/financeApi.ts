@@ -1,4 +1,5 @@
 import baseApi from "../baseApi";
+import type { ApiEnvelope } from "@/types/investor.types";
 
 export type CostCategory =
     | 'STOCK_BILL'
@@ -26,6 +27,41 @@ export interface ReceiveStockPayload {
     costLines: CostLine[];
 }
 
+/** GET /finance/analytics/summary (finance.service getFinancialSummary) */
+export interface FinanceMetrics {
+    grossSales: number; totalOrderDiscounts: number; totalRevenue: number; totalShippingCollected: number;
+    totalCOGS: number; grossProfit: number; grossMarginPercentage: number;
+    returnedCourierLoss: number; returnChargesCollected: number; netReturnLoss: number;
+    freeShippingCourierCost: number; codFees: number; totalFulfillmentCosts: number;
+    totalOperatingExpenses: number; netProfit: number; netMarginPercentage: number; totalInventoryInvestment: number;
+}
+export interface FinanceBreakdown {
+    totalLiquidCost: number; totalPackagingCost: number; expenseCount: number; orderCount: number;
+    returnedCount: number; courierReturnCount: number; missingCostItemCount: number;
+    missingCostOrderCount: number; unsyncedOrderCount: number;
+}
+export interface FinancialSummary {
+    period: { startDate: string; endDate: string };
+    metrics: FinanceMetrics;
+    breakdown: FinanceBreakdown;
+}
+
+/** GET /finance/ledger: one money movement */
+export interface LedgerEntry {
+    id: string;
+    date: string;
+    type: 'CREDIT' | 'DEBIT';
+    source: string; // ORDER | RETURN | EXPENSE | PURCHASE
+    description: string;
+    method: string;
+    amount: number;
+    reference: string;
+}
+export interface LedgerResponse {
+    metrics: { totalCredits: number; totalDebits: number; netCashFlow: number; transactionCount: number };
+    data: LedgerEntry[];
+}
+
 export const financeApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         getPackagingCosts: builder.query<{ data: { costLines: CostLine[], totalCost: number } }, string>({
@@ -33,7 +69,7 @@ export const financeApi = baseApi.injectEndpoints({
             providesTags: ["Finance"],
         }),
 
-        setPackagingCosts: builder.mutation<any, { sku: string; costLines: CostLine[] }>({
+        setPackagingCosts: builder.mutation<ApiEnvelope<unknown>, { sku: string; costLines: CostLine[] }>({
             query: ({ sku, costLines }) => ({
                 url: `/finance/packaging/variant/${sku}`,
                 method: "POST",
@@ -47,7 +83,7 @@ export const financeApi = baseApi.injectEndpoints({
             providesTags: ["Finance"],
         }),
 
-        receiveStockPurchase: builder.mutation<any, { productId: string; payload: ReceiveStockPayload }>({
+        receiveStockPurchase: builder.mutation<ApiEnvelope<unknown>, { productId: string; payload: ReceiveStockPayload }>({
             query: ({ productId, payload }) => ({
                 url: `/finance/procurement/purchase/${productId}`,
                 method: "POST",
@@ -57,7 +93,7 @@ export const financeApi = baseApi.injectEndpoints({
             invalidatesTags: ["Finance", "Stock", "Product"],
         }),
 
-        getFinancialSummary: builder.query<{ data: any }, { startDate?: string; endDate?: string } | void>({
+        getFinancialSummary: builder.query<ApiEnvelope<FinancialSummary>, { startDate?: string; endDate?: string } | void>({
             query: (params) => {
                 const queryArgs = new URLSearchParams();
                 if (params?.startDate) queryArgs.append('startDate', params.startDate);
@@ -68,7 +104,7 @@ export const financeApi = baseApi.injectEndpoints({
             providesTags: ['Finance', 'Sales', 'Expenses'],
         }),
 
-        backfillHistoricalCosts: builder.mutation<any, { orderIds?: string[] } | void>({
+        backfillHistoricalCosts: builder.mutation<ApiEnvelope<unknown>, { orderIds?: string[] } | void>({
             query: (body) => ({
                 url: '/finance/backfill-historical-costs',
                 method: 'POST',
@@ -78,7 +114,7 @@ export const financeApi = baseApi.injectEndpoints({
         }),
 
         // ✅ Add manual profit override mutation
-        overrideOrderProfit: builder.mutation<any, { orderId: string; profit: number }>({
+        overrideOrderProfit: builder.mutation<ApiEnvelope<unknown>, { orderId: string; profit: number }>({
             query: ({ orderId, ...body }) => ({
                 url: `/finance/override-profit/${orderId}`,
                 method: 'PATCH',
@@ -87,11 +123,11 @@ export const financeApi = baseApi.injectEndpoints({
             invalidatesTags: ['Sales', 'Finance'],
         }),
 
-        getLedger: builder.query({
-      query: (params?: { startDate?: string; endDate?: string; type?: string }) => ({
+        getLedger: builder.query<ApiEnvelope<LedgerResponse>, { startDate?: string; endDate?: string; type?: string } | void>({
+      query: (params) => ({
         url: '/finance/ledger',
         method: 'GET',
-        params,
+        params: params || undefined,
       }),
       providesTags: ['Finance', 'Sales', 'Expenses'],
     }),

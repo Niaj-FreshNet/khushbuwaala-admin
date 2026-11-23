@@ -1,16 +1,17 @@
 // src/redux/api/discount/discountApi.ts
 import { IDiscount } from "@/types/product.types";
 import baseApi from "../baseApi";
+import type { ApiEnvelope } from "@/types/api.types";
 
 export const discountApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     // ── Admin CRUD ───────────────────────────────────────
-    getAllDiscountsAdmin: builder.query<IDiscount[], void>({
+    getAllDiscountsAdmin: builder.query<ApiEnvelope<IDiscount[]>, void>({
       query: () => "/discount/admin",
       providesTags: ["Discount"],
     }),
 
-    getDiscountById: builder.query<IDiscount, string>({
+    getDiscountById: builder.query<ApiEnvelope<IDiscount>, string>({
   query: (id) => `/discount/${id}`,
   providesTags: (_res, _err, id) => [{ type: "Discount", id }],
 }),

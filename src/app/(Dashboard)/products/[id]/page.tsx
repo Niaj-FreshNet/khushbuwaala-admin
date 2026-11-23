@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -26,6 +25,7 @@ import { VariantForForm } from '@/types/product.types';
 import { uploadToCloudinary } from '@/lib/helper/uploadToCloudinary';
 import { ImagePlus, X, Sparkles, Layers, Info, Sliders, ShieldCheck, Video, Loader2, SearchCheck, Wand2 } from 'lucide-react';
 import { useFormContext } from 'react-hook-form';
+import Thumb from "@/components/admin/Thumb";
 
 interface FormValues {
   name: string;
@@ -207,7 +207,7 @@ const EditProductPage = () => {
         fragranceIds: product.fragranceIds || [],
         published: product.published,
         variants:
-          product.variants?.map((v: any) => ({
+          product.variants?.map((v) => ({
             id: v.id,
             sku: v.sku,
             size: v.size.toString(),
@@ -259,18 +259,16 @@ const EditProductPage = () => {
       const finalVideos = [...videosToKeep, ...newlyUploadedVideos];
 
       const processedVariants = await Promise.all(
-        values.variants.map(async (v: any, index: number) => {
+        values.variants.map(async (v, index: number) => {
           let variantImageUrls: string[] = [];
           if (v.images && Array.isArray(v.images) && v.images.length > 0) {
-            variantImageUrls = await Promise.all(
-              v.images.map(async (img: any) => {
-                if (img instanceof File) {
-                  return await uploadToCloudinary(img, 'khushbuwaala_images/variants');
-                }
+            const uploaded = await Promise.all(
+              v.images.map(async (img) => {
+                if (img instanceof File) return uploadToCloudinary(img, 'khushbuwaala_images/variants');
                 return typeof img === 'string' ? img : null;
               })
             );
-            variantImageUrls = variantImageUrls.filter(Boolean);
+            variantImageUrls = uploaded.filter((u): u is string => !!u);
           }
 
           return {
@@ -372,7 +370,6 @@ const EditProductPage = () => {
             onSubmit={handleSubmit}
             submitButtonText="Update Product Details"
             submitButtonClassName="bg-green-600 hover:bg-green-800 text-sm font-bold h-8 p-5 shadow-2xs"
-            successMessage="Product updated successfully!"
             errorMessage="Failed to update product. Please check fields."
             showResetButton={false}
           >
@@ -557,7 +554,7 @@ const EditProductPage = () => {
               {/* SECTION 4 & 5: Rich Description & Pyramid Notes Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-200/60 space-y-1">
-                  <RichDescriptionEditor name="description" label="4. Description & Rich Story" rows={6} />
+                  <RichDescriptionEditor name="description" label="4. Description & Rich Story" />
                 </div>
 
                 {/* SECTION 5: Fragrance Pyramid Notes */}
@@ -637,7 +634,7 @@ const EditProductPage = () => {
                     />
                     {imagePreviews[0] && (
                       <div className="relative w-12 h-12 border-2 border-[#FB923C] rounded-lg overflow-hidden shadow-2xs bg-gray-100 mt-1">
-                        <img src={imagePreviews[0]} alt="Primary Preview" className="w-full h-full object-cover" />
+                        <Thumb src={imagePreviews[0]} alt="Primary Preview" size={48} className="w-full h-full object-cover" />
                       </div>
                     )}
                   </div>
@@ -662,7 +659,7 @@ const EditProductPage = () => {
                       <div className="flex flex-wrap gap-1.5 pt-1">
                         {imagePreviews.slice(1).map((preview, index) => (
                           <div key={index} className="relative w-11 h-11 rounded-lg border border-gray-300 overflow-hidden shadow-2xs bg-gray-100">
-                            <img src={preview} alt={`Gallery item ${index + 1}`} className="w-full h-full object-cover" />
+                            <Thumb src={preview} alt={`Gallery item ${index + 1}`} size={44} className="w-full h-full object-cover" />
                             <button
                               type="button"
                               className="absolute top-0.5 right-0.5 bg-red-600 text-white rounded-full p-0.5 w-3.5 h-3.5 flex items-center justify-center text-[9px] leading-none"
@@ -740,10 +737,10 @@ const EditProductPage = () => {
                   <SizesCheckboxes selectedSizes={selectedSizes} />
                 </div>
 
-                <VariantsSection selectedSizes={selectedSizes} />
+                <VariantsSection />
 
                 <div className="pt-1">
-                  <AddVariantButton selectedSizes={selectedSizes} />
+                  <AddVariantButton />
                 </div>
               </div>
 

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useMemo, useState, useEffect, useRef } from 'react';
@@ -38,6 +37,8 @@ import {
 import FormInput from '@/components/ReusableUI/FormInput';
 import { cn } from '@/lib/utils';
 import { useConfirm } from '@/components/admin/ConfirmProvider';
+import { apiErrorMessage } from "@/lib/apiError";
+import type { IDiscount } from "@/types/product.types";
 
 /* ================= TYPES & ZOD SCHEMA ================= */
 const localInputToISO = (value?: string) => {
@@ -87,7 +88,9 @@ const schema = z
     }
   });
 
-type FormData = z.infer<typeof schema>;
+// what the inputs hold (strings allowed) vs. what the schema hands to onSubmit
+type FormInput = z.input<typeof schema>;
+type FormData = z.output<typeof schema>;
 
 function computeDiscountPreview(opts: { originalPrice: number; type: "percentage" | "fixed"; value: number }) {
   const { originalPrice, type, value } = opts;
@@ -127,12 +130,12 @@ const ProductSearchAndVariantPicker = () => {
     limit: 50,
   });
 
-  const rawProducts = (productsData as any)?.data || [];
+  const rawProducts = useMemo(() => productsData?.data ?? [], [productsData]);
 
   const products = useMemo(() => {
     if (!productSearch.trim()) return rawProducts;
     const q = productSearch.toLowerCase().trim();
-    return rawProducts.filter((p: any) => p.name?.toLowerCase().includes(q));
+    return rawProducts.filter((p) => p.name?.toLowerCase().includes(q));
   }, [rawProducts, productSearch]);
 
   const shouldFetchVariants = Boolean(scope !== "ORDER" && productId?.trim());
@@ -148,9 +151,9 @@ const ProductSearchAndVariantPicker = () => {
 
   if (scope === "ORDER") return null;
 
-  const variants = Array.isArray((variantsData as any)?.data) ? (variantsData as any).data : [];
-  const selectedVariant = variants.find((v: any) => v.id === variantId);
-  const minPrice = variants.length ? Math.min(...variants.map((v: any) => Number(v.price || 0))) : 0;
+  const variants = variantsData?.data ?? [];
+  const selectedVariant = variants.find((v) => v.id === variantId);
+  const minPrice = variants.length ? Math.min(...variants.map((v) => Number(v.price || 0))) : 0;
   const previewBasePrice = scope === "PRODUCT" ? minPrice : Number(selectedVariant?.price ?? 0);
   const preview = computeDiscountPreview({ originalPrice: previewBasePrice, type, value: Number(value || 0) });
 
@@ -200,7 +203,7 @@ const ProductSearchAndVariantPicker = () => {
             ) : products.length === 0 ? (
               <div className="p-3 text-center text-gray-400 text-xs">No products found matching &ldquo;{productSearch}&rdquo;</div>
             ) : (
-              products.map((p: any) => (
+              products.map((p) => (
                 <div
                   key={p.id}
                   onClick={() => {
@@ -236,7 +239,7 @@ const ProductSearchAndVariantPicker = () => {
               name="variantId"
               label="Select Variant *"
               type="select"
-              options={variants.map((v: any) => ({
+              options={variants.map((v) => ({
                 value: v.id,
                 label: `${selectedProductName} - ${v.size}${v.unit} - ${Math.round(v.price)} BDT`,
               }))}
@@ -281,10 +284,10 @@ export default function DiscountManagementPage() {
     data: discountRes,
   } = useGetDiscountByIdQuery(editingId as string, { skip: !editingId });
 
-  const activeDiscount = (discountRes as any)?.data ?? discountRes;
+  const activeDiscount = discountRes?.data;
 
-  const methods = useForm<FormData>({
-    resolver: zodResolver(schema) as any,
+  const methods = useForm<FormInput, unknown, FormData>({
+    resolver: zodResolver(schema),
     defaultValues: {
       scope: "PRODUCT",
       productId: "",
@@ -315,11 +318,11 @@ export default function DiscountManagementPage() {
     });
   }, [editingId, activeDiscount, methods]);
 
-  const discounts = useMemo(() => (Array.isArray(data) ? data : (data as any)?.data || []), [data]);
+  const discounts = useMemo(() => data?.data ?? [], [data]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return discounts.filter((d: any) => {
+    return discounts.filter((d) => {
       const code = d.code?.toLowerCase() || '';
       const productName = d.product?.name?.toLowerCase() || '';
       return code.includes(q) || productName.includes(q);
@@ -333,8 +336,8 @@ export default function DiscountManagementPage() {
       await deleteDiscount(id).unwrap();
       toast.success('Discount deleted successfully.');
       refetch();
-    } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to delete discount.');
+    } catch (error) {
+      toast.error(apiErrorMessage(error, 'Failed to delete discount.'));
     }
   };
 
@@ -382,8 +385,8 @@ export default function DiscountManagementPage() {
       setModalOpen(false);
       setEditingId(null);
       refetch();
-    } catch (error: any) {
-      toast.error(error?.data?.message || "Failed to save discount.");
+    } catch (error) {
+      toast.error(apiErrorMessage(error, "Failed to save discount."));
     }
   };
 
@@ -396,7 +399,7 @@ export default function DiscountManagementPage() {
     return { text: "Auto-Applied", cls: "bg-emerald-600" };
   }, [scopeVal, codeVal]);
 
-  const getStatus = (d: any) => {
+  const getStatus = (d: IDiscount) => {
     const now = Date.now();
     const start = d.startDate ? new Date(d.startDate).getTime() : null;
     const end = d.endDate ? new Date(d.endDate).getTime() : null;
@@ -459,7 +462,7 @@ export default function DiscountManagementPage() {
           isEmpty={!isLoading && filtered.length === 0}
           emptyText="No discounts found."
         >
-          {filtered.map((d: any) => {
+          {filtered.map((d) => {
             const status = getStatus(d);
             const isPromo = !!d.code?.trim();
             const amount = d.type === 'percentage' ? `${d.value}% off` : `৳${d.value} off`;
@@ -478,7 +481,7 @@ export default function DiscountManagementPage() {
                 actions={
                   <>
                     {isPromo && (
-                      <Button variant="outline" size="sm" className="h-10 flex-1 text-xs" onClick={() => copyText(d.code)}>
+                      <Button variant="outline" size="sm" className="h-10 flex-1 text-xs" onClick={() => copyText(d.code ?? '')}>
                         <Copy className="mr-1 h-4 w-4" /> Copy code
                       </Button>
                     )}
@@ -541,7 +544,7 @@ export default function DiscountManagementPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered.map((d: any) => {
+                filtered.map((d) => {
                   const status = getStatus(d);
                   const isPromo = !!d.code?.trim();
 
@@ -551,7 +554,7 @@ export default function DiscountManagementPage() {
                         {isPromo ? (
                           <div className="flex items-center gap-1.5">
                             <span className="font-mono font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded">{d.code}</span>
-                            <Button size="icon" variant="ghost" className="h-6 w-6 text-gray-400 hover:text-gray-700" onClick={() => copyText(d.code)}>
+                            <Button size="icon" variant="ghost" className="h-6 w-6 text-gray-400 hover:text-gray-700" onClick={() => copyText(d.code ?? '')}>
                               <Copy className="w-3 h-3" />
                             </Button>
                           </div>

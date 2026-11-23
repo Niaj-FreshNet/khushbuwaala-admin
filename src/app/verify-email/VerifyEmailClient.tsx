@@ -18,6 +18,7 @@ import { useDispatch } from 'react-redux';
 import { jwtDecode } from 'jwt-decode';
 import { setUser } from '@/redux/store/features/auth/authSlice';
 import { TUser } from '@/types/auth.types';
+import { apiErrorMessage } from "@/lib/apiError";
 
 export default function VerifyEmailClient() {
     const searchParams = useSearchParams();
@@ -82,9 +83,9 @@ export default function VerifyEmailClient() {
 
             toast.success('Email verified successfully!');
             router.push(redirect || '/');
-        } catch (error: any) {
+        } catch (error) {
             toast.error(
-                error?.data?.message || 'OTP verification failed.'
+                apiErrorMessage(error, 'OTP verification failed.')
             );
         }
     };
@@ -99,9 +100,9 @@ export default function VerifyEmailClient() {
             setResendCooldown(30);
 
             toast.success('New OTP sent successfully!');
-        } catch (error: any) {
+        } catch (error) {
             toast.error(
-                error?.data?.message || 'Failed to resend OTP.'
+                apiErrorMessage(error, 'Failed to resend OTP.')
             );
         }
     };

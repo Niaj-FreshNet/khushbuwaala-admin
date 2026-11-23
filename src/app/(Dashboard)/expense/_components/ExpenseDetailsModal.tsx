@@ -21,6 +21,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useGetExpenseDetailsQuery } from '@/redux/store/api/expense/expenseApi';
+import type { Expense as ExpenseRecord } from '@/types/expense.types';
 
 interface ExpenseDetailsModalProps {
   expenseId: string;
@@ -28,19 +29,7 @@ interface ExpenseDetailsModalProps {
   onClose: () => void;
 }
 
-interface Expense {
-  id: string;
-  expenseTime?: string;
-  createdAt?: string;
-  title: string;
-  description?: string;
-  amount: number;
-  method: string;
-  isPaid: boolean;
-  status: string;
-  reference?: string;
-  expenseBy: { name: string } | string;
-}
+type Expense = ExpenseRecord;
 
 const formatBDT = (amount: number) =>
   new Intl.NumberFormat('en-BD', {
@@ -113,13 +102,7 @@ const ExpenseDetailsModal = ({ expenseId, visible, onClose }: ExpenseDetailsModa
     skip: !expenseId || !visible,
   });
 
-  // Safely extract the expense object regardless of whether the API returns { data: ... }, { Data: ... }, or the object directly
-  const expense: Expense | undefined = useMemo(() => {
-    if (!data) return undefined;
-    if (data.data && typeof data.data === 'object') return data.data;
-    if (data.Data && typeof data.Data === 'object') return data.Data;
-    return data as Expense;
-  }, [data]);
+  const expense: Expense | undefined = data?.data ?? undefined;
 
   const expenseDate = useMemo(() => {
     if (!expense) return 'N/A';
@@ -134,10 +117,7 @@ const ExpenseDetailsModal = ({ expenseId, visible, onClose }: ExpenseDetailsModa
 
   const expenseByName = useMemo(() => {
     if (!expense) return 'N/A';
-    if (typeof expense.expenseBy === 'object' && expense.expenseBy !== null) {
-      return expense.expenseBy.name;
-    }
-    return String(expense.expenseBy || 'N/A');
+    return expense.expenseBy?.name || 'N/A';
   }, [expense]);
 
   const expenseIdDisplay = expense?.id ? `#${expense.id.slice(0, 8)}...` : 'EXP-DETAILS';

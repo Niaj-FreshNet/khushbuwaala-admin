@@ -4,18 +4,17 @@
 import { useSelector } from "react-redux";
 import type { Dispatch, SetStateAction } from "react";
 import { RootState } from "@/redux/store/store";
-import { LuMenu, LuShieldCheck, LuX } from "react-icons/lu";
+import { LuMenu, LuX } from "react-icons/lu";
+import Thumb from "@/components/admin/Thumb";
 
 interface TopBarProps {
     isOpen: boolean;
     setIsOpen: Dispatch<SetStateAction<boolean>>;
-    dark?: boolean;
 }
 
 export default function TopBar({
     isOpen,
     setIsOpen,
-    dark = false,
 }: TopBarProps) {
     const user = useSelector((state: RootState) => state.auth.user) as { 
         name?: string; 
@@ -72,11 +71,7 @@ export default function TopBar({
                     <div className="flex items-center gap-3">
                         {/* Avatar / Initials Circle */}
                         {user?.imageUrl ? (
-                            <img 
-                                src={user.imageUrl} 
-                                alt={user?.name || 'N/A'} 
-                                className="h-9 w-9 rounded-full object-cover border border-stone-200 shadow-xs" 
-                            />
+                            <Thumb src={user.imageUrl} alt={user?.name || 'N/A'} className="h-9 w-9 rounded-full object-cover border border-stone-200 shadow-xs" size={36} />
                         ) : (
                             <div className="h-9 w-9 rounded-full bg-[#1b382b] text-white flex items-center justify-center text-xs font-bold tracking-wider shadow-xs">
                                 {getInitials(user?.name)}

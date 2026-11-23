@@ -1,5 +1,6 @@
 import { TUser } from "@/types/auth.types";
-import baseApi from "../baseApi";;
+import baseApi from "../baseApi";
+import type { ApiEnvelope } from "@/types/api.types";
 
 export interface TMeta {
     page: number;
@@ -15,59 +16,38 @@ export interface TUserResponse {
 
 const userApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
-        getAllUsers: builder.query<TUserResponse, Record<string, any> | void>({
+        getAllUsers: builder.query<TUserResponse, Record<string, string | number | boolean | undefined> | void>({
             query: (params) => ({
                 url: '/user/get-all-users',
                 method: 'GET',
                 params: params || undefined,
             }),
-            transformResponse: (response: any) => {
-                // Case 1: Backend returns { meta, data: [...] } at the root of response
-                if (response?.meta && Array.isArray(response?.data)) {
-                    return {
-                        data: response.data,
-                        meta: response.meta,
-                    };
-                }
-
-                // Case 2: Backend returns { data: { data: [...], meta: {...} } }
-                if (response?.data?.meta && Array.isArray(response?.data?.data)) {
-                    return {
-                        data: response.data.data,
-                        meta: response.data.meta,
-                    };
-                }
-
-                // Fallback for direct array responses
+            // the backend sends { success, meta, data: [...] } (user.controller getAllUsers)
+            transformResponse: (response: ApiEnvelope<TUser[]> & { meta?: TMeta }) => {
                 const data = Array.isArray(response?.data) ? response.data : [];
                 return {
                     data,
-                    meta: {
-                        page: 1,
-                        limit: data.length,
-                        total: data.length,
-                        totalPage: 1,
-                    },
+                    meta: response?.meta ?? { page: 1, limit: data.length, total: data.length, totalPage: 1 },
                 };
             },
             providesTags: ['User'],
         }),
 
-        getUserProfile: builder.query({
+        getUserProfile: builder.query<TUser, void>({
             query: () => ({
                 url: '/user/profile',
                 method: 'GET',
             }),
-            transformResponse: (response: { success: boolean; data: any }) => response.data,
+            transformResponse: (response: ApiEnvelope<TUser>) => response.data,
             providesTags: ['User'],
         }),
 
-        getUserById: builder.query<any, string>({
+        getUserById: builder.query<TUser | null, string>({
             query: (id) => ({
                 url: `/user/get-user-by-id/${id}`,
                 method: 'GET',
             }),
-            transformResponse: (response: any) => response?.data,
+            transformResponse: (response: ApiEnvelope<TUser | null>) => response?.data ?? null,
             providesTags: ['User'],
         }),
 

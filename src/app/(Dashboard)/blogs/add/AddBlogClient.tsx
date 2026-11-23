@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import 'jodit/es5/jodit.min.css';
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +17,8 @@ import { toast } from 'sonner';
 import { useAddBlogMutation } from '@/redux/store/api/blog/blogApi';
 import { cn } from '@/lib/utils';
 import { uploadToCloudinary } from '@/lib/helper/uploadToCloudinary';
+import { apiErrorMessage } from "@/lib/apiError";
+import Thumb from "@/components/admin/Thumb";
 
 const formSchema = z.object({
   title: z.string().min(1, 'Blog title is required').max(70, 'Title must be 70 characters or less'),
@@ -56,7 +57,6 @@ const AddBlogClient = () => {
   // Quick Questions / FAQ state for expert guides
   const [faqs, setFaqs] = useState<FaqItem[]>([{ question: '', answer: '' }]);
 
-  const editorRef = useRef<any>(null);
   const router = useRouter();
 
   const {
@@ -221,9 +221,9 @@ const AddBlogClient = () => {
       setFaqs([{ question: '', answer: '' }]);
       setImageFile(null);
       setImagePreview(null);
-    } catch (error: any) {
+    } catch (error) {
       toast.dismiss();
-      toast.error(error?.data?.message || 'Failed to add blog');
+      toast.error(apiErrorMessage(error, 'Failed to add blog'));
     }
   };
 
@@ -284,7 +284,6 @@ const AddBlogClient = () => {
               <Label className="text-[11px] font-semibold text-gray-700">Rich Body Content (Supports Subheadings, Lists & Media) *</Label>
               <div className="border border-gray-300 rounded-lg overflow-hidden bg-white shadow-inner">
                 <JoditEditor
-                  ref={editorRef}
                   value={content}
                   config={joditConfig}
                   onBlur={(newContent) => setContent(newContent)}
@@ -413,7 +412,7 @@ const AddBlogClient = () => {
                 {imagePreview && (
                   <div className="mt-1.5 flex items-center gap-2 p-1.5 bg-gray-50 border rounded-lg">
                     <div className="relative w-12 h-9 rounded overflow-hidden border bg-white shrink-0">
-                      <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                      <Thumb src={imagePreview} alt="Preview" size={48} className="w-full h-full object-cover" />
                       <button type="button" onClick={handleRemoveImage} className="absolute top-0.5 right-0.5 bg-rose-600 text-white rounded-full p-0.5">
                         <X className="w-2.5 h-2.5" />
                       </button>

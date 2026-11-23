@@ -21,6 +21,8 @@ import { useAuth } from "@/redux/store/hooks/useAuth";
 import { useGetLiveWACQuery, useReceiveStockPurchaseMutation } from "@/redux/store/api/finance/financeApi";
 import { useUpdateProductStockMutation } from "@/redux/store/api/product/productApi";
 import { formatTaka } from '@/lib/money';
+import { apiErrorMessage } from "@/lib/apiError";
+import type { CostLine } from "@/redux/store/api/finance/financeApi";
 
 export type RestockProduct = {
   id: string;
@@ -32,7 +34,7 @@ export type RestockProduct = {
 
 type Mode = "purchase" | "adjust";
 
-const freshLines = () => [
+const freshLines = (): CostLine[] => [
   { category: "STOCK_BILL", amount: 0, label: "Main liquid bill" },
   { category: "CARRYING", amount: 0, label: "Shipping / courier to shop" },
 ];
@@ -100,7 +102,7 @@ export default function RestockDialog({
       if (mode === "purchase") {
         await receiveStock({
           productId: product.id,
-          payload: { quantity: qty, unit, supplier, billNo, note, costLines: lines as any },
+          payload: { quantity: qty, unit, supplier, billNo, note, costLines: lines },
         }).unwrap();
         toast.success(`Added ${qty} ${unit} to ${product.name}; average cost updated`);
       } else {
@@ -109,8 +111,8 @@ export default function RestockDialog({
       }
       onOpenChange(false);
       onDone?.();
-    } catch (err: any) {
-      toast.error(err?.data?.message || "Could not update the stock");
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Could not update the stock"));
     }
   };
 

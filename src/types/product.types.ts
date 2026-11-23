@@ -3,14 +3,19 @@
 
 export interface IDiscount {
   id: string;
-  productId: string;
-  code?: string;
+  scope?: "ORDER" | "PRODUCT" | "VARIANT";
+  productId?: string | null;
+  code?: string | null;
   type: "percentage" | "fixed";
   value: number;
-  maxUsage?: number;
-  startDate?: string;
-  endDate?: string;
-  variantId?: string; // null means product-level discount
+  maxUsage?: number | null;
+  usedCount?: number;
+  startDate?: string | null;
+  endDate?: string | null;
+  variantId?: string | null; // null means product-level discount
+  // included by the admin list
+  product?: { id: string; name: string } | null;
+  variant?: { id: string; sku: string; size: number; unit: string } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -46,9 +51,12 @@ export interface VariantForForm extends Omit<IProductVariant, "size" | "price" |
   stock?: number | string;
   isDefault?: boolean;
   published?: boolean;
-  compareAtPrice?: number | string;
-  costPrice?: number | string;
-  weightGrams?: number | string;
+  compareAtPrice?: number | string | null;
+  costPrice?: number | string | null;
+  weightGrams?: number | string | null;
+  gtin?: string;
+  mpn?: string;
+  barcode?: string | null;
   images?: (File | string)[];
 }
 
@@ -178,10 +186,11 @@ export interface IReview {
   userId?: string;
   user?: {
     name: string;
-    imageUrl: string;
+    imageUrl?: string | null;
   };
-  createdAt: Date;
-  updatedAt: Date;
+  product?: { name: string } | null; // admin list
+  createdAt: string; // ISO date (JSON)
+  updatedAt: string;
 }
 
 // Response Interfaces
@@ -253,21 +262,28 @@ export interface IProductResponse {
   totalStock: number;
   inStock: boolean;
 
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string; // ISO date (JSON)
+  updatedAt: string;
 }
 
 export interface IProductVariantResponse {
   id: string;
   sku: string;
+  published?: boolean; // hidden sizes stay on old orders but are not sold
+  // admin listing extras (formatProductAdminListingResponse)
+  isDefault?: boolean;
+  compareAtPrice?: number | null;
+  weightGrams?: number | null;
+  images?: string[];
+  barcode?: string | null;
   unit: string;
   size: number;
   price: number;
   stock?: number;
   discounts?: IDiscount[];
   productId?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string; // ISO date (JSON)
+  updatedAt: string;
 }
 
 // Analytics Interfaces

@@ -113,7 +113,7 @@ const authSlice = createSlice({
           state.refreshToken = refreshToken;
           state.isAuthenticated = true;
           console.log('ok done boss')
-        } catch (err) {
+        } catch {
           console.warn("Invalid token in localStorage, clearing...");
           // localStorage.removeItem("accessToken");
           localStorage.removeItem("refreshToken");

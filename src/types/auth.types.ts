@@ -10,6 +10,12 @@ export type TUser = {
 	imageUrl?: string;
 	isVerified?: boolean;
 	isApproved?: boolean;
+	// user list / user detail (admin)
+	phone?: string | null;
+	address?: string | null;
+	district?: string | null;
+	createdAt?: string;
+	investor?: { profitSharePercentage: number } | null;
 };
 
 export interface RefreshResponse {

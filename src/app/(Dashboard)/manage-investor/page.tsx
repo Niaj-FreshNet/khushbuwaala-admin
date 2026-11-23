@@ -19,8 +19,10 @@ import { cn } from "@/lib/utils";
 import ProfitDistributionPanel from "./_components/ProfitDistributionPanel";
 import LedgerAccessPanel from "./_components/LedgerAccessPanel";
 import { formatTaka } from '@/lib/money';
+import { apiErrorMessage } from "@/lib/apiError";
+import type { InvestorRecord } from "@/types/investor.types";
 
-const money = (v: any) => formatTaka(v, 2);
+const money = (v: unknown) => formatTaka(v, 2);
 
 type WithdrawalAction = { id: string; status: 'APPROVED' | 'REJECTED' | 'COMPLETED'; name: string; amount: number };
 const ACTION_TEXT: Record<WithdrawalAction['status'], string> = {
@@ -30,8 +32,8 @@ const ACTION_TEXT: Record<WithdrawalAction['status'], string> = {
 };
 
 export default function ManageInvestorsPage() {
-    const { data: res, isLoading, refetch } = useGetAllInvestorsQuery(undefined);
-    const { data: withdrawRes, isLoading: loadingWithdrawals } = useGetAllWithdrawalsQuery(undefined);
+    const { data: res, isLoading, refetch } = useGetAllInvestorsQuery();
+    const { data: withdrawRes, isLoading: loadingWithdrawals } = useGetAllWithdrawalsQuery();
     const [updateInvestor, { isLoading: isUpdating }] = useUpdateInvestorMutation();
     const [updateWithdrawalStatus, { isLoading: isStatusUpdating }] = useUpdateWithdrawalStatusMutation();
 
@@ -40,7 +42,7 @@ export default function ManageInvestorsPage() {
 
     // Edit investor
     const [editModalOpen, setEditModalOpen] = useState(false);
-    const [selectedInvestor, setSelectedInvestor] = useState<any>(null);
+    const [selectedInvestor, setSelectedInvestor] = useState<InvestorRecord | null>(null);
     const [profitShare, setProfitShare] = useState("");
     const [totalInvested, setTotalInvested] = useState("");
     const [currentBalance, setCurrentBalance] = useState("");
@@ -48,7 +50,7 @@ export default function ManageInvestorsPage() {
     // Withdrawal confirmation
     const [pendingAction, setPendingAction] = useState<WithdrawalAction | null>(null);
 
-    const openEditModal = (investor: any) => {
+    const openEditModal = (investor: InvestorRecord) => {
         setSelectedInvestor(investor);
         setProfitShare(String(investor.profitSharePercentage || 0));
         setTotalInvested(String(investor.totalInvested || 0));
@@ -71,8 +73,8 @@ export default function ManageInvestorsPage() {
             toast.success(`${selectedInvestor.user.name}'s data updated`);
             setEditModalOpen(false);
             refetch();
-        } catch (error: any) {
-            toast.error(error?.data?.message || "Failed to update investor data.");
+        } catch (error) {
+            toast.error(apiErrorMessage(error, "Failed to update investor data."));
         }
     };
 
@@ -81,8 +83,8 @@ export default function ManageInvestorsPage() {
         try {
             await updateWithdrawalStatus({ id: pendingAction.id, data: { status: pendingAction.status } }).unwrap();
             toast.success(`Withdrawal marked as ${pendingAction.status.toLowerCase()}`);
-        } catch (error: any) {
-            toast.error(error?.data?.message || "Failed to process withdrawal");
+        } catch (error) {
+            toast.error(apiErrorMessage(error, "Failed to process withdrawal"));
         } finally {
             setPendingAction(null);
         }
@@ -114,7 +116,7 @@ export default function ManageInvestorsPage() {
                     <p className="py-6 text-center text-sm text-gray-500">No investors yet. Assign the Investor role in Manage Roles.</p>
                 ) : (
                     <div className="grid gap-2 sm:grid-cols-2">
-                        {investors.map((inv: any) => (
+                        {investors.map((inv) => (
                             <div key={inv.id} className="rounded-lg border border-gray-200 p-3">
                                 <div className="flex items-start justify-between gap-2">
                                     <div className="min-w-0">
@@ -145,7 +147,7 @@ export default function ManageInvestorsPage() {
                     <p className="py-6 text-center text-sm text-gray-500">No withdrawal requests.</p>
                 ) : (
                     <ul className="space-y-2">
-                        {withdrawals.map((w: any) => (
+                        {withdrawals.map((w) => (
                             <li key={w.id} className="rounded-lg border border-gray-200 p-3">
                                 <div className="flex items-start justify-between gap-2">
                                     <div className="min-w-0">

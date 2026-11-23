@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -20,6 +19,7 @@ import { Search, Plus, Edit, Trash2, Sparkles, Tags } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useConfirm } from '@/components/admin/ConfirmProvider';
+import type { Fragrance } from '@/types/fragrance.types';
 
 const fragranceSchema = z.object({
     fragranceName: z.string().min(1, 'Fragrance name is required'),
@@ -39,13 +39,13 @@ export default function FragranceList() {
     // Modal Controls
     const [addModalOpen, setAddModalOpen] = useState(false);
     const [editModalOpen, setEditModalOpen] = useState(false);
-    const [editingFragrance, setEditingFragrance] = useState<any>(null);
+    const [editingFragrance, setEditingFragrance] = useState<Fragrance | null>(null);
 
     useEffect(() => {
         const fragrances = data?.data?.data || [];
         if (searchTerm.trim()) {
             setFilteredFragrances(
-                fragrances.filter((frag: any) =>
+                fragrances.filter((frag) =>
                     frag.fragranceName.toLowerCase().includes(searchTerm.toLowerCase().trim())
                 )
             );
@@ -80,12 +80,13 @@ export default function FragranceList() {
         }
     };
 
-    const handleEdit = (fragrance: any) => {
+    const handleEdit = (fragrance: Fragrance) => {
         setEditingFragrance(fragrance);
         setEditModalOpen(true);
     };
 
     const handleUpdate = async (formData: z.infer<typeof fragranceSchema>) => {
+        if (!editingFragrance) return;
         try {
             await updateFragrance({
                 id: editingFragrance.id,
@@ -152,7 +153,7 @@ export default function FragranceList() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
-                        {filteredFragrances.map((fragrance: any) => (
+                        {filteredFragrances.map((fragrance) => (
                             <div
                                 key={fragrance.id}
                                 className="flex items-center justify-between p-2.5 rounded-lg border border-gray-100 bg-gray-50/40 hover:bg-green-50/30 hover:border-green-200 transition-all group"
@@ -198,7 +199,6 @@ export default function FragranceList() {
                         resolver={zodResolver(fragranceSchema)}
                         defaultValues={{ fragranceName: '' }}
                         onSubmit={handleCreate}
-                        successMessage="Fragrance added successfully!"
                         errorMessage="Failed to add fragrance"
                         submitButtonText="Save Fragrance"
                         submitButtonClassName="bg-green-600 hover:bg-green-700 active:bg-green-800 text-xs font-bold h-7 px-3 shadow-2xs transition-colors"
@@ -227,7 +227,6 @@ export default function FragranceList() {
                         resolver={zodResolver(fragranceSchema)}
                         defaultValues={{ fragranceName: editingFragrance?.fragranceName || '' }}
                         onSubmit={handleUpdate}
-                        successMessage="Fragrance updated successfully!"
                         errorMessage="Failed to update fragrance"
                         submitButtonText="Update Fragrance"
                         submitButtonClassName="bg-green-600 hover:bg-green-700 active:bg-green-800 text-xs font-bold h-7 px-3 shadow-2xs transition-colors"

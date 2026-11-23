@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -18,11 +17,13 @@ import { cn } from '@/lib/utils';
 import RestockDialog from '@/components/admin/RestockDialog';
 import { useAuth } from '@/redux/store/hooks/useAuth';
 
+const SORTS = ['name', 'price_asc', 'price_desc', 'newest', 'oldest', 'popularity'] as const;
+
 const StockManagementPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
-  const [sortBy, setSortBy] = useState<'name' | 'price_asc' | 'price_desc' | 'newest' | 'oldest' | 'popularity'>('name');
+  const limit = 20;
+  const [sortBy, setSortBy] = useState<(typeof SORTS)[number]>('name');
   const [stockFilter, setStockFilter] = useState<'in' | 'out' | 'all'>('all');
 
   // Auth check for Super Admin privileges
@@ -83,7 +84,7 @@ const StockManagementPage = () => {
             />
           </div>
 
-          <Select value={stockFilter} onValueChange={(val: any) => setStockFilter(val)}>
+          <Select value={stockFilter} onValueChange={(val) => setStockFilter(val === 'in' || val === 'out' ? val : 'all')}>
             <SelectTrigger className="w-28 h-7 text-xs border-gray-300 bg-white">
               <SelectValue placeholder="Stock Status" />
             </SelectTrigger>
@@ -94,7 +95,7 @@ const StockManagementPage = () => {
             </SelectContent>
           </Select>
 
-          <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
+          <Select value={sortBy} onValueChange={(val) => setSortBy(SORTS.find((s) => s === val) ?? 'name')}>
             <SelectTrigger className="w-32 h-7 text-xs border-gray-300 bg-white">
               <SelectValue placeholder="Sort By" />
             </SelectTrigger>
@@ -118,8 +119,8 @@ const StockManagementPage = () => {
           isEmpty={!isLoading && allProducts.length === 0}
           emptyText="No products match these filters."
         >
-          {allProducts.map((product: any) => {
-            const sizes = [...(product.variants || [])].sort((a: any, b: any) => (Number(a.size) || 0) - (Number(b.size) || 0));
+          {allProducts.map((product) => {
+            const sizes = [...(product.variants || [])].sort((a, b) => (Number(a.size) || 0) - (Number(b.size) || 0));
             const low = product.totalStock <= 10;
             return (
               <MobileCard
@@ -152,7 +153,7 @@ const StockManagementPage = () => {
                 <MobileField label="Sizes">{sizes.length}</MobileField>
                 {sizes.length > 0 && (
                   <MobileField label="Prices" full>
-                    <span className="whitespace-normal">{sizes.map((v: any) => `${v.size}${v.unit} ৳${v.price}`).join(' · ')}</span>
+                    <span className="whitespace-normal">{sizes.map((v) => `${v.size}${v.unit} ৳${v.price}`).join(' · ')}</span>
                   </MobileField>
                 )}
               </MobileCard>
@@ -192,10 +193,10 @@ const StockManagementPage = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                allProducts.map((product: any) => {
+                allProducts.map((product) => {
                   // <-- ⚡ SORT VARIANTS: From small size to large size
                   const sortedVariants = [...(product.variants || [])].sort(
-                    (a: any, b: any) => (Number(a.size) || 0) - (Number(b.size) || 0)
+                    (a, b) => (Number(a.size) || 0) - (Number(b.size) || 0)
                   );
 
                   return (
@@ -222,7 +223,7 @@ const StockManagementPage = () => {
                           <HoverCardContent className="w-60 p-2.5 text-xs space-y-1.5 shadow-lg rounded-xl border border-gray-200 bg-white" align="start">
                             <p className="font-bold text-gray-900 border-b pb-1 text-[11px] mb-1">Variant Sizes & Pricing</p>
                             {sortedVariants.length > 0 ? (
-                              sortedVariants.map((v: any, index: number) => (
+                              sortedVariants.map((v, index: number) => (
                                 <div key={v.id || index} className="flex items-center justify-between text-[11px] border-b border-gray-100 pb-1 last:border-b-0">
                                   <span className="font-semibold text-gray-700">{v.size} {v.unit}</span>
                                   <span className="font-bold text-emerald-700">{v.price}৳</span>

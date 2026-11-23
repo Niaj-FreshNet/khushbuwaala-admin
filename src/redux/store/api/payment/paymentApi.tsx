@@ -1,4 +1,18 @@
 import { baseApi } from "../baseApi";
+import type { ApiEnvelope, PageMeta } from "@/types/api.types";
+
+/** A gateway payment (Prisma Payment + its order) */
+export type PaymentRecord = {
+    id: string;
+    orderId?: string | null;
+    amount: number;
+    provider: string;
+    status: 'INITIATED' | 'COMPLETED' | 'FAILED' | 'CANCELED' | 'REFUNDED';
+    gatewayPaymentId?: string | null;
+    gatewayTrxId?: string | null;
+    createdAt: string;
+    order?: { id: string; invoice: string } | null;
+};
 
 export const paymentApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
@@ -16,7 +30,7 @@ export const paymentApi = baseApi.injectEndpoints({
         }),
 
         // ✅ Add this endpoint to fetch payment history for the admin dashboard
-        getAllPaymentHistory: builder.query<any, Record<string, any> | void>({
+        getAllPaymentHistory: builder.query<ApiEnvelope<{ meta: PageMeta; data: PaymentRecord[] }>, Record<string, string | number | undefined> | void>({
             query: (params) => ({
                 url: "/payment/get-all-payment-history",
                 method: "GET",

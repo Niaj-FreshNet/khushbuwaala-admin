@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { Loader2, Receipt, Save, ChevronDown, ChevronUp, Trash2, Plus, Search, X, Check } from "lucide-react";
+import { Loader2, Receipt, Save, ChevronDown, ChevronUp, Trash2, Plus, Search, X} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +22,12 @@ import {
 import { useGetAllProductsQuery } from "@/redux/store/api/product/productApi";
 import OrderInvoice from "./OrderInvoice";
 import { useCourierReturnPrompt } from "@/components/admin/courierReturn";
+import { toast } from "sonner";
+import { apiErrorMessage } from "@/lib/apiError";
+import { editableLinePayload, isOrderStatus, newEditableLine, toEditableLines } from "@/types/order.types";
+import type { EditableLineField, EditableOrderLine, OrderStatus } from "@/types/order.types";
+import type { IProductResponse, IProductVariantResponse } from "@/types/product.types";
+import { PAYMENT_METHODS } from "@/lib/paymentMethods";
 
 type Address = {
     name?: string | null;
@@ -32,21 +38,9 @@ type Address = {
     thana?: string | null;
 };
 
-type OrderStatus = "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "COMPLETED" | "CANCELED" | "RETURNED";
 const STATUS_LIST: OrderStatus[] = ["PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "COMPLETED", "CANCELED", "RETURNED"];
 
-const METHOD_OPTIONS = [
-    { value: "cash", label: "Cash" },
-    { value: "cashOnDelivery", label: "Cash on Delivery" },
-    { value: "onlinePayment", label: "Online Payment" },
-    { value: "bkash", label: "bKash" },
-    { value: "nagad", label: "Nagad" },
-    { value: "rocket", label: "Rocket" },
-    { value: "bankTransfer", label: "Bank Transfer" },
-    { value: "cardPayment", label: "Card Payment" },
-] as const;
-
-type MethodValue = (typeof METHOD_OPTIONS)[number]["value"];
+const METHOD_OPTIONS = PAYMENT_METHODS;
 
 interface EditOrderModalProps {
     orderId: string | null;
@@ -69,7 +63,7 @@ export default function EditOrderModal({ orderId, visible, onClose }: EditOrderM
     const [statusValue, setStatusValue] = useState<OrderStatus>("PENDING");
     const [paymentValue, setPaymentValue] = useState<"PAID" | "DUE">("DUE");
 
-    const [editableItems, setEditableItems] = useState<any[]>([]);
+    const [editableItems, setEditableItems] = useState<EditableOrderLine[]>([]);
     const [amountInput, setAmountInput] = useState<number>(0);
 
     const [form, setForm] = useState<Partial<IUpdateOrderPayload> | null>(null);
@@ -79,23 +73,31 @@ export default function EditOrderModal({ orderId, visible, onClose }: EditOrderM
     // Product & Variant Picker Modal State
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [productSearchTerm, setProductSearchTerm] = useState("");
-    const [selectedProductForVariant, setSelectedProductForVariant] = useState<any | null>(null);
+    const [selectedProductForVariant, setSelectedProductForVariant] = useState<IProductResponse | null>(null);
 
     const { data: productQueryResult, isLoading: loadingProducts } = useGetAllProductsQuery({ limit: 20, searchTerm: productSearchTerm });
     const productList = productQueryResult?.data ?? [];
 
-    const normalizeNumber = (v: any) => {
+    const normalizeNumber = (v: unknown) => {
         const n = Number(v);
         return Number.isFinite(n) ? n : 0;
     };
 
+    // Load the order into the form when it opens, and again after it changes on the server
+    // (save, status change), but never over edits that are not saved yet.
+    const loadedVersion = useRef<string | null>(null);
     useEffect(() => {
         if (!order) return;
+        const version = `${order.id}:${order.updatedAt}`;
+        if (loadedVersion.current === version) return;
+        const sameOrder = loadedVersion.current?.startsWith(`${order.id}:`);
+        if (sameOrder && dirty) return;
+        loadedVersion.current = version;
 
         setForm({
-            method: (order.method as MethodValue) ?? "cash",
-            orderSource: order.orderSource as any,
-            saleType: order.saleType as any ?? null,
+            method: order.method ?? "cash",
+            orderSource: order.orderSource,
+            saleType: order.saleType ?? null,
             shippingCost: Number(order.shippingCost ?? 0),
             discountAmount: Number(order.discountAmount ?? 0),
             coupon: order.coupon ?? "",
@@ -124,22 +126,14 @@ export default function EditOrderModal({ orderId, visible, onClose }: EditOrderM
             customerId: order.customerId ?? null,
         });
 
-        setStatusValue((order.status as OrderStatus) ?? "PENDING");
+        setStatusValue(order.status ?? "PENDING");
         setPaymentValue(order.isPaid ? "PAID" : "DUE");
 
-        setEditableItems(
-            (order.orderItems ?? []).map((it) => ({
-                ...it,
-                quantity: Number(it.quantity ?? 1),
-                size: Number(it.size ?? 1),
-                unit: it.unit ?? "ML",
-                price: Number(it.price ?? 0),
-            }))
-        );
+        setEditableItems(toEditableLines(order.orderItems));
 
         setAmountInput(Number(order.amount ?? 0));
         setDirty(false);
-    }, [order?.id, order]);
+    }, [order, dirty]);
 
     const computedItemsTotal = useMemo(() => {
         if (!editableItems.length) return 0;
@@ -164,7 +158,7 @@ export default function EditOrderModal({ orderId, visible, onClose }: EditOrderM
         });
     };
 
-    const setAddressField = (type: "shipping" | "billing", key: keyof Address, value: any) => {
+    const setAddressField = (type: "shipping" | "billing", key: keyof Address, value: string) => {
         setForm((prev) => {
             if (!prev) return prev;
             setDirty(true);
@@ -178,18 +172,13 @@ export default function EditOrderModal({ orderId, visible, onClose }: EditOrderM
         });
     };
 
-    const handleItemFieldChange = (itemId: string, field: string, value: any) => {
+    const handleItemFieldChange = (itemId: string, field: EditableLineField, value: string) => {
         setEditableItems((prev) =>
-            prev.map((item) => {
-                if (item.id === itemId) {
-                    let updatedVal = value;
-                    if (field === "quantity" || field === "size" || field === "price") {
-                        updatedVal = normalizeNumber(value);
-                    }
-                    return { ...item, [field]: updatedVal };
-                }
-                return item;
-            })
+            prev.map((item) =>
+                item.id !== itemId ? item
+                    : field === "unit" ? { ...item, unit: value }
+                        : { ...item, [field]: normalizeNumber(value) }
+            )
         );
         setDirty(true);
     };
@@ -199,21 +188,8 @@ export default function EditOrderModal({ orderId, visible, onClose }: EditOrderM
         setDirty(true);
     };
 
-    const handleAddVariantToOrder = (prod: any, variant: any) => {
-        const newItem = {
-            id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-            productId: prod.id,
-            variantId: variant?.id || "default_variant",
-            size: Number(variant?.size ?? 1),
-            unit: variant?.unit ?? "ML",
-            quantity: 1,
-            price: Number(variant?.price ?? 0),
-            product: {
-                name: prod.name,
-                primaryImage: prod.primaryImage || "/placeholder.png",
-            }
-        };
-        setEditableItems((prev) => [...prev, newItem]);
+    const handleAddVariantToOrder = (prod: IProductResponse, variant?: IProductVariantResponse | null) => {
+        setEditableItems((prev) => [...prev, newEditableLine(prod, variant)]);
         setDirty(true);
         setSelectedProductForVariant(null);
         setIsProductModalOpen(false);
@@ -222,15 +198,7 @@ export default function EditOrderModal({ orderId, visible, onClose }: EditOrderM
     const handleSaveAll = async () => {
         if (!orderId || !form || !order) return;
 
-        const orderItemsPayload = editableItems.map((it) => ({
-            id: it.id?.startsWith("temp_") ? undefined : it.id,
-            productId: it.productId,
-            variantId: it.variantId,
-            size: normalizeNumber(it.size),
-            unit: (it.unit ?? "").toString().trim(),
-            quantity: Math.max(1, Math.floor(normalizeNumber(it.quantity))),
-            price: normalizeNumber(it.price),
-        }));
+        const orderItemsPayload = editableItems.map(editableLinePayload);
 
         const payload: IUpdateOrderPayload = {
             id: orderId,
@@ -241,19 +209,25 @@ export default function EditOrderModal({ orderId, visible, onClose }: EditOrderM
             method: (form.method ?? "").toString().trim() || null,
             additionalNotes: (form.additionalNotes ?? "").toString().trim() || null,
             amount: normalizeNumber(amountInput),
-            orderItems: orderItemsPayload as any,
+            orderItems: orderItemsPayload,
         };
 
-        await updateOrder(payload).unwrap();
-        setDirty(false);
-        refetch();
+        try {
+            await updateOrder(payload).unwrap();
+            toast.success("Order saved");
+            setDirty(false);
+            refetch();
+        } catch (e) {
+            // used to fail silently: the button just stopped spinning
+            toast.error(apiErrorMessage(e, "Could not save the order"));
+        }
     };
 
     const askReturnCharge = useCourierReturnPrompt();
     const onStatusChange = async (val: string) => {
-        const next = val as OrderStatus;
-        if (!orderId) return;
-        const extra = await askReturnCharge(order as any, next);
+        if (!orderId || !isOrderStatus(val)) return;
+        const next = val;
+        const extra = await askReturnCharge(order, next);
         if (extra === null) return; // closed the question: change nothing
         setStatusValue(next);
 
@@ -261,7 +235,7 @@ export default function EditOrderModal({ orderId, visible, onClose }: EditOrderM
             await updateStatus({ id: orderId, status: next, ...(extra || {}) }).unwrap();
             refetch();
         } catch {
-            setStatusValue((order?.status as OrderStatus) ?? "PENDING");
+            setStatusValue(order?.status ?? "PENDING");
         }
     };
 
@@ -376,7 +350,7 @@ export default function EditOrderModal({ orderId, visible, onClose }: EditOrderM
 
                                 <div>
                                     <label className="text-[11px] text-gray-500 font-medium mb-1 block">Payment Method</label>
-                                    <Select value={(form.method ?? "") as any} onValueChange={(val) => setField("method", val as any)}>
+                                    <Select value={form.method ?? ""} onValueChange={(val) => setField("method", val)}>
                                         <SelectTrigger className="h-8 text-xs border-green-300">
                                             <SelectValue placeholder="Method" />
                                         </SelectTrigger>
@@ -638,15 +612,15 @@ export default function EditOrderModal({ orderId, visible, onClose }: EditOrderM
                                         ) : productList.length === 0 ? (
                                             <p className="text-xs text-gray-500 text-center py-4">No products found.</p>
                                         ) : (
-                                            productList.map((prod: any) => (
+                                            productList.map((prod) => (
                                                 <div
                                                     key={prod.id}
                                                     onClick={() => {
                                                         if (prod.variants && prod.variants.length > 0) {
                                                             setSelectedProductForVariant(prod);
                                                         } else {
-                                                            // Add default variant if none exist
-                                                            handleAddVariantToOrder(prod, { id: "default", size: 1, unit: "PCS", price: 0 });
+                                                            // no sizes: add the product itself (set size and price on the line)
+                                                            handleAddVariantToOrder(prod, null);
                                                         }
                                                     }}
                                                     className="flex items-center gap-2.5 p-1.5 rounded border hover:bg-green-50 hover:border-green-300 cursor-pointer transition-colors"
@@ -666,7 +640,7 @@ export default function EditOrderModal({ orderId, visible, onClose }: EditOrderM
                                 /* Variant selection list */
                                 <div className="flex-1 overflow-y-auto p-3 space-y-2">
                                     <p className="text-[11px] text-gray-500 mb-2">Select a specific variant / size / price for this item:</p>
-                                    {selectedProductForVariant.variants.map((v: any) => (
+                                    {selectedProductForVariant.variants.map((v) => (
                                         <div
                                             key={v.id}
                                             onClick={() => handleAddVariantToOrder(selectedProductForVariant, v)}

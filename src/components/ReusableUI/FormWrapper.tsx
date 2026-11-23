@@ -1,15 +1,17 @@
 'use client';
 
 import { ReactNode, useState } from 'react';
-import { FormProvider, useForm, SubmitHandler } from 'react-hook-form';
+import { FormProvider, useForm, type DefaultValues, type FieldValues, type Resolver, type UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
+import { apiErrorMessage } from "@/lib/apiError";
 
-interface FormWrapperProps {
+interface FormWrapperProps<T extends FieldValues> {
   children: ReactNode;
-  onSubmit: SubmitHandler<any>;
+  /** return false to keep the form as it is (no reset); `form` lets the page mark fields with server errors */
+  onSubmit: (data: T, form: UseFormReturn<T>) => unknown;
   onReset?: () => void;
   className?: string;
   submitButtonText?: string;
@@ -17,14 +19,13 @@ interface FormWrapperProps {
   showResetButton?: boolean;
   resetButtonText?: string;
   resetButtonClassName?: string;
-  defaultValues?: Record<string, any>;
-  resolver?: any;
-  successMessage?: string;
+  defaultValues?: DefaultValues<T>;
+  resolver?: Resolver<T>;
   errorMessage?: string;
   resetOnSuccess?: boolean;
 }
 
-export default function FormWrapper({
+export default function FormWrapper<T extends FieldValues>({
   children,
   onSubmit,
   onReset,
@@ -36,26 +37,22 @@ export default function FormWrapper({
   showResetButton = true,
   resetButtonText = 'Reset',
   resetButtonClassName,
-  successMessage = 'Form submitted successfully!',
   errorMessage = 'Failed to submit the form. Please try again.',
   resetOnSuccess = false,
-}: FormWrapperProps) {
+}: FormWrapperProps<T>) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const methods = useForm({ defaultValues, resolver });
+  const methods = useForm<T>({ defaultValues, resolver });
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: T) => {
     setIsSubmitting(true);
     try {
-      const result = await onSubmit(data);
+      // the form is passed on so a page can mark fields (it used to get only the values)
+      const result = await onSubmit(data, methods);
       if (result !== false) {
         if (resetOnSuccess) methods.reset();
       }
-    } catch (error: any) {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        errorMessage;
-      toast.error(message);
+    } catch (error) {
+      toast.error(apiErrorMessage(error, errorMessage));
       console.error('Form submission failed:', error);
     } finally {
       setIsSubmitting(false);

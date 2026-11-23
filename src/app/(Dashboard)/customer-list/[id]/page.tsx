@@ -4,7 +4,6 @@ import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import {
     useGetUserByIdQuery,
-    useUpdateUserProfileMutation,
 } from '@/redux/store/api/user/userApi';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,8 +14,6 @@ import {
     MapPin,
     Calendar,
     ShieldAlert,
-    Loader2,
-    UserCheck,
 } from 'lucide-react';
 
 export default function CustomerDetailsPage() {
@@ -28,7 +25,7 @@ export default function CustomerDetailsPage() {
         skip: !id,
     });
 
-    const user = rawUser?.data ? rawUser.data : rawUser;
+    const user = rawUser;
 
     if (isLoading) {
         return (

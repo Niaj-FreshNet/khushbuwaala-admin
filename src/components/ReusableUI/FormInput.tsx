@@ -1,7 +1,7 @@
 'use client';
 
 import { ChangeEvent, useId } from 'react';
-import { useFormContext } from 'react-hook-form';
+import { get, useFormContext } from 'react-hook-form';
 import { cn } from '@/lib/utils';
 import { LucideAlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -44,9 +44,8 @@ interface FormInputProps {
   className?: string;
   inputClassName?: string;
   labelClassName?: string;
-  onChange?: (
-    e: ChangeEvent<any> // ⚡ Changed to 'any' or broader union to resolve typing conflicts
-  ) => void;
+  /** input types (text, number, file …); the textarea keeps its value in the form only */
+  onChange?: (e: ChangeEvent<HTMLInputElement>) => void;
   accept?: string;
   multiple?: boolean;
   value?: string | number;
@@ -93,13 +92,15 @@ export default function FormInput({
     });
   };
 
-  const hasError = Boolean((errors as any)?.[name]);
-  const errorMsg = (errors as any)?.[name]?.message as string | undefined;
+  // get() also reads nested names such as "variants.0.price"
+  const fieldError = get(errors, name) as { message?: string } | undefined;
+  const hasError = Boolean(fieldError);
+  const errorMsg = fieldError?.message;
 
   return (
     <FormField
       control={control}
-      name={name as any}
+      name={name}
       render={({ field }) => {
         const currentLen =
           typeof field.value === 'string' ? field.value.length : 0;
@@ -155,7 +156,6 @@ export default function FormInput({
                       onChange={(e) => {
                         const v = e.target.value.replace(/\r\n/g, '\n');
                         field.onChange(v);
-                        onChange?.(e);
                       }}
                       className={cn(
                         'w-full resize-y border border-gray-300 focus:ring-2 focus:ring-orange-500 bg-white',
@@ -225,7 +225,7 @@ export default function FormInput({
                     id={id}
                     type={type}
                     placeholder={placeholder}
-                    value={(value ?? field.value ?? '') as any}
+                    value={value ?? field.value ?? ''}
                     disabled={disabled}
                     onChange={(e) => {
                       field.onChange(e);

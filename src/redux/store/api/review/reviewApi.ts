@@ -1,12 +1,6 @@
 import { IReview } from "@/types/product.types";
 import baseApi from "../baseApi";
-
-interface ApiResponse<T> {
-  success: boolean;
-  statusCode: number;
-  message: string;
-  data: T;
-}
+import type { ApiEnvelope, PageMeta } from "@/types/api.types";
 
 // Define the review API slice
 export const reviewApi = baseApi.injectEndpoints({
@@ -28,7 +22,7 @@ export const reviewApi = baseApi.injectEndpoints({
     }),
 
     // ✅ Get All Reviews (Admin / Super Admin)
-    getAllReviewsAdmin: builder.query<IReview[], void>({
+    getAllReviewsAdmin: builder.query<ApiEnvelope<{ meta: PageMeta; data: IReview[] }>, void>({
       query: () => "/review/get-all-reviews/admin",
       providesTags: ["Review"],
     }),

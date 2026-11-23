@@ -14,9 +14,25 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Loader2, Check, Calculator, DollarSign } from 'lucide-react';
 import { useOverrideOrderProfitMutation } from '@/redux/store/api/finance/financeApi';
+import { apiErrorMessage } from "@/lib/apiError";
+import type { Order } from "@/types/order.types";
+
+/** One line of the profit editor (from the order's Finance cost snapshot) */
+type ProfitLine = {
+    id?: string;
+    cartItemId?: string | null;
+    productName: string;
+    quantity: number;
+    sellingUnitPrice: number;
+    liquidUnitCost: number;
+    packagingUnitCost: number;
+};
+type NumberField = 'quantity' | 'sellingUnitPrice' | 'liquidUnitCost' | 'packagingUnitCost';
+
+const lineProfit = (l: ProfitLine) => (l.sellingUnitPrice - l.liquidUnitCost - l.packagingUnitCost) * l.quantity;
 
 interface OrderProfitEditorModalProps {
-    sale: any;
+    sale: Order | null;
     visible: boolean;
     onClose: () => void;
     onSuccess: () => void;
@@ -30,17 +46,17 @@ export default function OrderProfitEditorModal({
 }: OrderProfitEditorModalProps) {
     const [overrideProfit, { isLoading: isSaving }] = useOverrideOrderProfitMutation();
 
-    const [editableItems, setEditableItems] = useState<any[]>([]);
+    const [editableItems, setEditableItems] = useState<ProfitLine[]>([]);
     const [manualOverrideProfit, setManualOverrideProfit] = useState<string>('');
 
     useEffect(() => {
         if (sale && sale.orderItemCosts) {
-            const initialItems = sale.orderItemCosts.map((ic: any) => {
-                const itemObj = sale.orderItems?.find((oi: any) => oi.id === ic.cartItemId) || {};
+            const initialItems: ProfitLine[] = sale.orderItemCosts.map((ic) => {
+                const itemObj = sale.orderItems?.find((oi) => oi.id === ic.cartItemId);
                 return {
                     id: ic.id,
                     cartItemId: ic.cartItemId,
-                    productName: itemObj.name || itemObj.product?.name || 'Product Item',
+                    productName: itemObj?.product?.name || 'Product Item',
                     quantity: ic.quantity || 1,
                     sellingUnitPrice: ic.sellingUnitPrice || 0,
                     liquidUnitCost: ic.liquidUnitCost || 0,
@@ -49,17 +65,13 @@ export default function OrderProfitEditorModal({
             });
             setEditableItems(initialItems);
 
-            const totalCalcProfit = initialItems.reduce((acc: number, item: any) => {
-                const rev = item.sellingUnitPrice * item.quantity;
-                const cost = (item.liquidUnitCost + item.packagingUnitCost) * item.quantity;
-                return acc + (rev - cost);
-            }, 0);
+            const totalCalcProfit = initialItems.reduce((acc, item) => acc + lineProfit(item), 0);
 
             setManualOverrideProfit(totalCalcProfit.toString());
         }
     }, [sale]);
 
-    const handleItemChange = (index: number, field: string, value: string) => {
+    const handleItemChange = (index: number, field: NumberField, value: string) => {
         const num = parseFloat(value);
         const updated = [...editableItems];
         updated[index] = {
@@ -68,11 +80,7 @@ export default function OrderProfitEditorModal({
         };
         setEditableItems(updated);
 
-        const newTotal = updated.reduce((acc: number, item: any) => {
-            const rev = item.sellingUnitPrice * item.quantity;
-            const cost = (item.liquidUnitCost + item.packagingUnitCost) * item.quantity;
-            return acc + (rev - cost);
-        }, 0);
+        const newTotal = updated.reduce((acc, item) => acc + lineProfit(item), 0);
         setManualOverrideProfit(newTotal.toFixed(2));
     };
 
@@ -93,8 +101,8 @@ export default function OrderProfitEditorModal({
             toast.success('Order profit updated successfully!');
             onSuccess();
             onClose();
-        } catch (err: any) {
-            const errorMsg = err?.data?.message || '';
+        } catch (err) {
+            const errorMsg = apiErrorMessage(err, '');
             if (errorMsg.includes('No cost snapshot found')) {
                 toast.error('Please click "Sync Old Profits" on the main page for this order first to create its cost snapshot.');
             } else {

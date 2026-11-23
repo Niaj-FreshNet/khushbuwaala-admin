@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from 'react';
@@ -27,6 +26,8 @@ import { Sparkles, Layers, Info, Sliders, ShieldCheck, SearchCheck, Wand2 } from
 import { Button } from '@/components/ui/button';
 import { ProductMediaSection } from '../_component/ProductMediaSection';
 import { useFormContext } from 'react-hook-form';
+import { apiErrorMessage } from "@/lib/apiError";
+import type { Path, UseFormReturn } from 'react-hook-form';
 
 interface FormValues {
   name: string;
@@ -152,7 +153,15 @@ const AutoGenerateAllSeoFieldsButton = ({ categories, materials, fragrances }: {
   );
 };
 
-const AddProductContent = ({ categories, materials, fragrances, setSelectedSizes, selectedSizes }: any) => {
+interface AddProductContentProps {
+  categories: Category[];
+  materials: Material[];
+  fragrances: Fragrance[];
+  setSelectedSizes: (sizes: string[]) => void;
+  selectedSizes: string[];
+}
+
+const AddProductContent = ({ categories, materials, fragrances, setSelectedSizes, selectedSizes }: AddProductContentProps) => {
   return (
     <div className="w-full space-y-3 pb-8">
       <CategorySizesUpdater categories={categories} setSelectedSizes={setSelectedSizes} />
@@ -170,7 +179,7 @@ const AddProductContent = ({ categories, materials, fragrances, setSelectedSizes
             label="Category"
             type="select"
             required
-            options={categories.map((cat: any) => ({ value: cat.id, label: cat.categoryName }))}
+            options={categories.map((cat) => ({ value: cat.id, label: cat.categoryName }))}
             inputClassName="border-gray-300 text-xs h-8 bg-white"
           />
           <FormInput name="brand" label="Brand" placeholder="e.g. Khushbuwaala" inputClassName="border-gray-300 text-xs h-8 bg-white" />
@@ -252,14 +261,14 @@ const AddProductContent = ({ categories, materials, fragrances, setSelectedSizes
               <FormCheckboxGroup
                 name="fragranceIds"
                 label="Fragrance Families"
-                options={fragrances.map((f: any) => ({ label: f.fragranceName, value: f.id }))}
+                options={fragrances.map((f) => ({ label: f.fragranceName, value: f.id }))}
               />
             </div>
             <div className="border border-gray-200/80 p-2 rounded-lg bg-white shadow-2xs max-h-48 overflow-y-auto">
               <FormCheckboxGroup
                 name="materialIds"
                 label="Materials / Ingredients"
-                options={materials.map((m: any) => ({ label: m.materialName, value: m.id }))}
+                options={materials.map((m) => ({ label: m.materialName, value: m.id }))}
               />
             </div>
           </div>
@@ -330,7 +339,7 @@ const AddProductContent = ({ categories, materials, fragrances, setSelectedSizes
       {/* SECTION 4: Rich Description */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-200/60 space-y-1">
-          <RichDescriptionEditor name="description" label="4. Description & Rich Story" rows={6} />
+          <RichDescriptionEditor name="description" label="4. Description & Rich Story" />
         </div>
 
         {/* SECTION 5: Fragrance Pyramid Notes */}
@@ -393,10 +402,10 @@ const AddProductContent = ({ categories, materials, fragrances, setSelectedSizes
           <SizesCheckboxes selectedSizes={selectedSizes} />
         </div>
 
-        <VariantsSection selectedSizes={selectedSizes} />
+        <VariantsSection />
 
         <div className="pt-1">
-          <AddVariantButton selectedSizes={selectedSizes} />
+          <AddVariantButton />
         </div>
       </div>
 
@@ -454,7 +463,7 @@ const AddProductPage = () => {
     supplier: '',
   };
 
-  const handleSubmit = async (values: FormValues, formMethods: any) => {
+  const handleSubmit = async (values: FormValues, formMethods: UseFormReturn<FormValues>) => {
     if (!values.name?.trim()) {
       toast.error('Product name is required.');
       return false;
@@ -467,7 +476,7 @@ const AddProductPage = () => {
     const strippedDescription = values.description?.replace(/<[^>]*>/g, '').trim() || '';
     if (strippedDescription.length < 10) {
       toast.error('Description must be at least 10 characters long.');
-      formMethods?.setError?.('description', {
+      formMethods.setError('description', {
         type: 'manual',
         message: 'Description must be at least 10 characters',
       });
@@ -487,7 +496,7 @@ const AddProductPage = () => {
       const variantPrice = Number(values.variants[i].price);
       if (isNaN(variantPrice) || variantPrice < 0.01) {
         toast.error(`Variant #${i + 1} price must be at least 0.01.`);
-        formMethods?.setError?.(`variants.${i}.price`, {
+        formMethods.setError(`variants.${i}.price`, {
           type: 'manual',
           message: 'Price must be at least 0.01',
         });
@@ -531,21 +540,17 @@ const AddProductPage = () => {
       const filteredVideoUrls = videoUrls.filter(Boolean) as string[];
 
       const processedVariants = await Promise.all(
-        values.variants.map(async (v: any, index: number) => {
+        values.variants.map(async (v, index: number) => {
           let variantImageUrls: string[] = [];
 
           if (v.images && Array.isArray(v.images) && v.images.length > 0) {
-            variantImageUrls = await Promise.all(
-              v.images.map(async (img: any) => {
-                if (img instanceof File || img instanceof FileList) {
-                  const fileToUpload = img instanceof FileList ? img[0] : img;
-                  const uploadedRes = await uploadToCloudinary(fileToUpload, 'khushbuwaala_images/variants');
-                  return uploadedRes;
-                }
+            const uploaded = await Promise.all(
+              v.images.map(async (img) => {
+                if (img instanceof File) return uploadToCloudinary(img, 'khushbuwaala_images/variants');
                 return typeof img === 'string' ? img : null;
               })
             );
-            variantImageUrls = variantImageUrls.filter(Boolean);
+            variantImageUrls = uploaded.filter((u): u is string => !!u);
           }
 
           return {
@@ -605,10 +610,11 @@ const AddProductPage = () => {
       toast.success('Product published successfully!');
       router.push('/products');
       return true;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Product Submission Error:', error);
 
-      const errorData = error?.data || error?.response?.data || error;
+      const e = (error && typeof error === 'object' ? error : {}) as { data?: unknown; response?: { data?: unknown } };
+      const errorData = (e.data ?? e.response?.data ?? error) as { errorSources?: unknown } | undefined;
       const errorSources = errorData?.errorSources;
 
       if (Array.isArray(errorSources) && errorSources.length > 0) {
@@ -617,13 +623,13 @@ const AddProductPage = () => {
 
           if (formPath === 'price' && values.variants?.length > 0) {
             values.variants.forEach((_, idx) => {
-              formMethods?.setError?.(`variants.${idx}.price` as any, {
+              formMethods.setError(`variants.${idx}.price`, {
                 type: 'server',
                 message: err.message,
               });
             });
           } else {
-            formMethods?.setError?.(formPath as any, {
+            formMethods.setError(formPath as Path<FormValues>, {
               type: 'server',
               message: err.message,
             });
@@ -632,10 +638,7 @@ const AddProductPage = () => {
 
         toast.error('Please fix the validation errors highlighted below fields.');
       } else {
-        const specificErrorMessage =
-          errorData?.message ||
-          error?.message ||
-          'Product creation failed. Please check all required fields and try again.';
+        const specificErrorMessage = apiErrorMessage(error, 'Product creation failed. Please check all required fields and try again.');
 
         toast.error(specificErrorMessage);
       }

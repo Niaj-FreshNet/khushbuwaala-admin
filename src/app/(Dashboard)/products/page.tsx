@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Table,
@@ -85,10 +85,10 @@ const ProductList = () => {
   const [updateProduct] = useUpdateProductMutation();
 
   const allProducts: IProductResponse[] = useMemo(
-    () => (data as any)?.data || [],
+    () => data?.data || [],
     [data]
   );
-  const meta = (data as any)?.meta;
+  const meta = data?.meta;
 
   // ⚡ Keyboard Shortcut: Press '/' to focus search bar
   useEffect(() => {
@@ -102,8 +102,9 @@ const ProductList = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const debouncedSearch = useCallback(
-    debounce((value: string) => {
+  // one debounced function for the life of the page (setters are stable)
+  const debouncedSearch = useMemo(
+    () => debounce((value: string) => {
       // ⚡ Clean and normalize search query
       const sanitized = value.replace(/\s+/g, ' ').trim();
       setQuery(sanitized);
@@ -236,10 +237,10 @@ const ProductList = () => {
           isEmpty={!(isLoading || showSearchLoader) && allProducts.length === 0}
           emptyText="No products found. Try another search."
         >
-          {allProducts.map((product: any) => {
-            const variants = [...(product.variants || [])].sort((a: any, b: any) => (Number(a.size) || 0) - (Number(b.size) || 0));
-            const live = variants.filter((v: any) => v.published !== false).length;
-            const prices = variants.map((v: any) => v.price || 0);
+          {allProducts.map((product) => {
+            const variants = [...(product.variants || [])].sort((a, b) => (Number(a.size) || 0) - (Number(b.size) || 0));
+            const live = variants.filter((v) => v.published !== false).length;
+            const prices = variants.map((v) => v.price || 0);
             const min = prices.length ? Math.min(...prices) : 0;
             const max = prices.length ? Math.max(...prices) : 0;
             return (
@@ -327,14 +328,14 @@ const ProductList = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                allProducts.map((product: any) => {
+                allProducts.map((product) => {
                   // ⚡ Sort variants by size in ascending order (smallest to largest)
-                  const variants = [...(product.variants || [])].sort((a: any, b: any) =>
+                  const variants = [...(product.variants || [])].sort((a, b) =>
                     (Number(a.size) || 0) - (Number(b.size) || 0)
                   );
 
-                  const publishedVariantsCount = variants.filter((v: any) => v.published === true || v.published === undefined).length;
-                  const prices = variants.map((v: any) => v.price || 0);
+                  const publishedVariantsCount = variants.filter((v) => v.published === true || v.published === undefined).length;
+                  const prices = variants.map((v) => v.price || 0);
                   const min = prices.length ? Math.min(...prices) : 0;
                   const max = prices.length ? Math.max(...prices) : 0;
                   const accords = product.accords || [];
@@ -404,7 +405,7 @@ const ProductList = () => {
                               </div>
                               <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
                                 {variants.length > 0 ? (
-                                  variants.map((variant: any, index: number) => {
+                                  variants.map((variant, index: number) => {
                                     const isPublished = variant.published !== false;
                                     return (
                                       <div

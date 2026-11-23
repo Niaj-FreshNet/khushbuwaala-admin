@@ -1,5 +1,9 @@
-import { IProductAnalytics, IProductQuery, IProductResponse, IProductSearchResult, IRelatedProductsResponse, ITrendingProduct, LowStockProduct, StockLog } from "@/types/product.types";
+import { IProductQuery, IProductResponse, IProductVariantResponse, ITrendingProduct, StockLog } from "@/types/product.types";
+import type { ApiEnvelope } from "@/types/api.types";
 import baseApi from "../baseApi";
+
+// Storefront-only endpoints (trending, navbar, featured, new arrivals, by category, related,
+// analytics, low stock) were never used by the admin and were removed 2026-11-23.
 
 interface ApiResponse<T> {
   success: boolean;
@@ -21,32 +25,38 @@ export interface ProductQueryParams extends Partial<IProductQuery> {
   sortBy?: 'name' | 'price_asc' | 'price_desc' | 'newest' | 'oldest' | 'popularity';
   stock?: 'in' | 'out';
   smells?: string;
-  // Add other query fields as needed (e.g., brand, category, price range)
 }
 
-// Define response types for specific endpoints
-interface NavbarProductsResponse {
-  trendingByCategory: Record<string, { id: string; name: string }[]>;
-  overallTrending: { id: string; name: string }[];
+/** One hit of GET /products/search-products (product.service formatProductSearchResponse) */
+export interface ProductSearchHit {
+  id: string;
+  name: string;
+  slug: string;
+  primaryImage?: string;
+  accords: string[];
+  categoryName?: string;
+  minPrice: number;
+  maxPrice: number;
+  inStock: boolean;
+  averageRating: number;
+  reviewCount: number;
 }
 
-// Define the product API slice
+/** Product create/update body (JSON; images are uploaded to Cloudinary first) */
+export type ProductPayload = Record<string, unknown>;
+
 export const productApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     // Create Product (ADMIN)
-    createProduct: builder.mutation<IProductResponse, any>({
+    createProduct: builder.mutation<ApiEnvelope<IProductResponse>, ProductPayload>({
       query: (payload) => ({
         url: '/products/create-product',
         method: 'POST',
         body: payload,
-        headers: {
-          // Remove Content-Type header to let browser set multipart/form-data with boundary
-        },
       }),
       invalidatesTags: ['Product'],
     }),
 
-    // Get All Products (Public)
     getAllProducts: builder.query<
       { data: IProductResponse[]; meta: { total: number; totalPage: number } },
       ProductQueryParams
@@ -61,9 +71,8 @@ export const productApi = baseApi.injectEndpoints({
       providesTags: ["Product"],
     }),
 
-    // Get All Products (Admin)
     getAllProductsAdmin: builder.query<
-      { data: IProductResponse[]; meta: { total: number; totalPage: number } },
+      { data: IProductResponse[]; meta: { page: number; limit: number; total: number; totalPage: number } },
       ProductQueryParams
     >({
       query: (params) => ({
@@ -73,27 +82,17 @@ export const productApi = baseApi.injectEndpoints({
       providesTags: ['Product'],
     }),
 
-    // Get Single Product
     getProduct: builder.query<ApiResponse<IProductResponse>, string>({
       query: (id) => `/products/get-product/${id}`,
       providesTags: (result, error, id) => [{ type: 'Product', id }],
     }),
 
-    // Get Single Product By Slug
-    getProductBySlug: builder.query<ApiResponse<IProductResponse>, string>({
-      query: (slug) => `/products/get-product-by-slug/${slug}`,
-      providesTags: (result, error, slug) => [{ type: "Product", slug }],
-    }),
-
     // Update Product (ADMIN)
-    updateProduct: builder.mutation<IProductResponse, { id: string; payload: any }>({
+    updateProduct: builder.mutation<ApiEnvelope<IProductResponse>, { id: string; payload: ProductPayload }>({
       query: ({ id, payload }) => ({
         url: `/products/update-product/${id}`,
         method: 'PATCH',
         body: payload,
-        headers: {
-          // Remove Content-Type header for multipart/form-data
-        },
       }),
       invalidatesTags: (result, error, { id }) => [
         { type: 'Product', id },
@@ -110,63 +109,7 @@ export const productApi = baseApi.injectEndpoints({
       invalidatesTags: ['Product'],
     }),
 
-    // Get Trending Products
-    getTrendingProducts: builder.query<ITrendingProduct[], void>({
-      query: () => '/products/get-trending-products',
-      providesTags: ['Product'],
-    }),
-
-    // Get Navbar Products
-    getNavbarProducts: builder.query<NavbarProductsResponse, void>({
-      query: () => '/products/get-navbar-products',
-      providesTags: ['Product'],
-    }),
-
-    // Get Featured Products
-    getFeaturedProducts: builder.query<IProductResponse[], void>({
-      query: () => '/products/get-featured-products',
-      providesTags: ['Product'],
-    }),
-
-    // Get New Arrivals
-    getNewArrivals: builder.query<IProductResponse[], void>({
-      query: () => '/products/get-new-arrivals',
-      providesTags: ['Product'],
-    }),
-
-    // Get Products by Category Id
-    getProductsByCategoryId: builder.query<
-      { data: IProductResponse[]; meta: { total: number; totalPage: number } },
-      { categoryId: string; params: ProductQueryParams }
-    >({
-      query: ({ categoryId, params }) => ({
-        url: `/products/get-products-by-category-id/${categoryId}`,
-        params,
-      }),
-      providesTags: ['Product'],
-    }),
-
-    // Get Products by Category Name (NOT WORKING)
-    getProductsByCategoryName: builder.query<
-      { data: IProductResponse[]; meta: { total: number; totalPage: number } },
-      { categoryName: string; params: ProductQueryParams }
-    >({
-      query: ({ categoryName, params }) => ({
-        url: `/products/get-products-by-category-name/${categoryName}`,
-        params,
-      }),
-      providesTags: ['Product'],
-    }),
-
-    // Get Related Products
-    getRelatedProducts: builder.query<IRelatedProductsResponse, string>({
-      query: (productId) => `/products/get-related-products/${productId}`,
-      transformResponse: (response: any) => response.data,
-      providesTags: ['Product'],
-    }),
-
-    // Search Products
-    searchProducts: builder.query<IProductSearchResult, ProductQueryParams>({
+    searchProducts: builder.query<ApiEnvelope<ProductSearchHit[]> & { meta?: { total: number; page: number; limit: number; totalPages: number } }, ProductQueryParams>({
       query: (params) => ({
         url: '/products/search-products',
         params,
@@ -174,26 +117,15 @@ export const productApi = baseApi.injectEndpoints({
       providesTags: ['Product'],
     }),
 
-    // Get Product Variants
-    getProductVariants: builder.query<
-      Array<{
-        id: string;
-        sku: string;
-        size: number;
-        // unit: Unit;
-        unit: string;
-        price: number;
-        stock: number;
-      }>,
-      string
-    >({
+    // Published sizes of one product (404 when it has none)
+    getProductVariants: builder.query<ApiEnvelope<IProductVariantResponse[]>, string>({
       query: (productId) => `/products/get-product-variants/${productId}`,
       providesTags: (result, error, productId) => [{ type: 'Product', id: productId }],
     }),
 
-    // Update Product Stock (ADMIN)
+    // Stock count change, no cost (ADMIN). Stock is per product in ml/gm.
     updateProductStock: builder.mutation<
-      IProductResponse,
+      ApiEnvelope<IProductResponse>,
       { productId: string; addedStock: number; reason?: string }
     >({
       query: ({ productId, addedStock, reason }) => ({
@@ -207,22 +139,6 @@ export const productApi = baseApi.injectEndpoints({
       ],
     }),
 
-    // Get Product Analytics (ADMIN)
-    getProductAnalytics: builder.query<IProductAnalytics, void>({
-      query: () => '/products/get-product-analytics',
-      providesTags: ['Product'],
-    }),
-
-    // Get Low Stock Products (ADMIN)
-    getLowStockProducts: builder.query<LowStockProduct[], { threshold?: number }>({
-      query: ({ threshold = 10 }) => ({
-        url: '/products/get-low-stock-products',
-        params: { threshold },
-      }),
-      providesTags: ['Product'],
-    }),
-
-    // Get Bestsellers
     getBestSellers: builder.query<
       { success: boolean; statusCode: number; message: string; data: ITrendingProduct[] },
       void
@@ -231,15 +147,14 @@ export const productApi = baseApi.injectEndpoints({
       providesTags: ['Product'],
     }),
 
-    // New endpoint for stock logs
-    getStockLogs: builder.query<StockLog[], string>({
+    getStockLogs: builder.query<ApiEnvelope<StockLog[]>, string>({
       query: (productId) => `/products/get-stock-logs/${productId}`,
       providesTags: ['Product'],
     }),
 
-    // src/redux/store/api/product/productApi.ts
+    // One cell of the Master Price Sheet
     quickUpdateCell: builder.mutation<
-      any,
+      ApiEnvelope<unknown>,
       {
         entity: 'PRODUCT' | 'VARIANT';
         id: string;
@@ -266,22 +181,11 @@ export const {
   useGetAllProductsAdminQuery,
   useGetProductQuery,
   useLazyGetProductQuery,
-  useGetProductBySlugQuery,
   useUpdateProductMutation,
   useDeleteProductMutation,
-  useGetTrendingProductsQuery,
-  useGetNavbarProductsQuery,
-  useGetFeaturedProductsQuery,
-  useGetNewArrivalsQuery,
-  useGetProductsByCategoryIdQuery,
-  useGetProductsByCategoryNameQuery,
-  useGetRelatedProductsQuery,
   useSearchProductsQuery,
-  useLazySearchProductsQuery,
   useGetProductVariantsQuery,
   useUpdateProductStockMutation,
-  useGetProductAnalyticsQuery,
-  useGetLowStockProductsQuery,
   useGetBestSellersQuery,
   useGetStockLogsQuery,
   useQuickUpdateCellMutation,

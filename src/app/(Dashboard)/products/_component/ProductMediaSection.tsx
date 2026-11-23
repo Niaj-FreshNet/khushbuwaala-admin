@@ -1,10 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
 import FormInput from "@/components/ReusableUI/FormInput";
 import { useFormContext, useWatch } from "react-hook-form";
 import { ImagePlus, X, LucideAlertCircle, Video } from "lucide-react";
+import Thumb from "@/components/admin/Thumb";
 
 export const ProductMediaSection = () => {
     const {
@@ -15,10 +15,11 @@ export const ProductMediaSection = () => {
     } = useFormContext();
 
     const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-    const videos = useWatch({ control, name: "videos" }) || [];
+    const videos: (File | string)[] = useWatch({ control, name: "videos" }) || [];
 
-    const hasPrimaryError = Boolean((errors as any)?.primaryImage);
-    const primaryErrorMsg = (errors as any)?.primaryImage?.message as string | undefined;
+    const primaryError = errors.primaryImage as { message?: string } | undefined;
+    const hasPrimaryError = Boolean(primaryError);
+    const primaryErrorMsg = primaryError?.message;
 
     return (
         <div className="border border-gray-200/80 rounded-xl p-3 space-y-3 bg-white shadow-2xs">
@@ -35,7 +36,7 @@ export const ProductMediaSection = () => {
                         type="file"
                         required
                         inputClassName="border-gray-300 text-xs"
-                        onChange={(e: any) => {
+                        onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) {
                                 const previewUrl = URL.createObjectURL(file);
@@ -53,7 +54,7 @@ export const ProductMediaSection = () => {
 
                     {imagePreviews[0] && (
                         <div className="relative w-12 h-12 border-2 border-[#FB923C] rounded-lg overflow-hidden shadow-2xs bg-gray-100 mt-1">
-                            <img src={imagePreviews[0]} alt="Primary Preview" className="w-full h-full object-cover" />
+                            <Thumb src={imagePreviews[0]} alt="Primary Preview" size={48} className="w-full h-full object-cover" />
                             <button
                                 type="button"
                                 className="absolute top-0.5 right-0.5 bg-red-600 text-white rounded-full p-0.5 w-3.5 h-3.5 flex items-center justify-center text-[9px] leading-none hover:bg-red-700 shadow-sm"
@@ -77,7 +78,7 @@ export const ProductMediaSection = () => {
                         type="file"
                         inputClassName="border-gray-300 text-xs text-transparent file:text-gray-700"
                         multiple
-                        onChange={(e: any) => {
+                        onChange={(e) => {
                             const files = Array.from(e.target.files || []) as File[];
                             if (files.length > 0) {
                                 const currentOther = (getValues("otherImages") as File[]) || [];
@@ -103,7 +104,7 @@ export const ProductMediaSection = () => {
                                 {imagePreviews.slice(1).map((preview, index) => (
                                     preview ? (
                                         <div key={index} className="relative w-11 h-11 rounded-lg border border-gray-300 overflow-hidden shadow-2xs bg-gray-100">
-                                            <img src={preview} alt="Gallery item" className="w-full h-full object-cover" />
+                                            <Thumb src={preview} alt="Gallery item" size={44} className="w-full h-full object-cover" />
                                             <button
                                                 type="button"
                                                 className="absolute top-0.5 right-0.5 bg-red-600 text-white rounded-full p-0.5 w-3.5 h-3.5 flex items-center justify-center text-[9px] leading-none hover:bg-red-700 shadow-sm"
@@ -151,7 +152,7 @@ export const ProductMediaSection = () => {
 
                 {videos.length > 0 && (
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                        {videos.map((vid: any, idx: number) => {
+                        {videos.map((vid, idx: number) => {
                             const previewSrc = vid instanceof File ? URL.createObjectURL(vid) : vid;
                             return (
                                 <div key={idx} className="relative aspect-video rounded-lg border border-gray-300 overflow-hidden bg-black shadow-2xs group">
@@ -160,7 +161,7 @@ export const ProductMediaSection = () => {
                                         <button
                                             type="button"
                                             onClick={() => {
-                                                const updated = videos.filter((_: any, i: number) => i !== idx);
+                                                const updated = videos.filter((_, i: number) => i !== idx);
                                                 setValue("videos", updated, { shouldDirty: true });
                                             }}
                                             className="bg-red-600 text-white rounded-full p-1 hover:bg-red-700 shadow-sm"

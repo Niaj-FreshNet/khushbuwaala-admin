@@ -6,6 +6,7 @@ import {
   CostCategory 
 } from '@/redux/store/api/finance/financeApi';
 import { toast } from 'sonner';
+import { apiErrorMessage } from "@/lib/apiError";
 
 interface Props {
   sku: string;
@@ -26,7 +27,7 @@ export default function PackagingCostSetup({ sku }: Props) {
 
   const handleAddLine = () => setCostLines([...costLines, { category: 'BOTTLE', amount: 0, label: '' }]);
 
-  const handleUpdateLine = (index: number, field: keyof CostLine, value: any) => {
+  const handleUpdateLine = <K extends keyof CostLine>(index: number, field: K, value: CostLine[K]) => {
     const updated = [...costLines];
     updated[index] = { ...updated[index], [field]: value };
     setCostLines(updated);
@@ -40,8 +41,8 @@ export default function PackagingCostSetup({ sku }: Props) {
     try {
       await setPackagingCosts({ sku, costLines }).unwrap();
       toast.success('Packaging costs saved successfully');
-    } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to save costs');
+    } catch (error) {
+      toast.error(apiErrorMessage(error, 'Failed to save costs'));
     }
   };
 
@@ -58,7 +59,7 @@ export default function PackagingCostSetup({ sku }: Props) {
           <div key={idx} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 bg-gray-50 sm:bg-transparent p-3 sm:p-0 rounded-lg sm:rounded-none border sm:border-0 border-gray-100">
             <select
               value={line.category}
-              onChange={(e) => handleUpdateLine(idx, 'category', e.target.value)}
+              onChange={(e) => handleUpdateLine(idx, 'category', e.target.value as CostCategory)}
               className="border border-gray-300 p-2 rounded-md w-full sm:w-1/3 text-sm bg-white"
             >
               {CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}

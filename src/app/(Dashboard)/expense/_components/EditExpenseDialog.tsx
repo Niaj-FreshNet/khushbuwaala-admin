@@ -14,6 +14,7 @@ import {
   useGetExpenseCategoriesQuery,
   useGetExpenseDetailsQuery,
 } from '@/redux/store/api/expense/expenseApi';
+import { apiErrorMessage } from "@/lib/apiError";
 
 const PAYMENT_METHODS = [
   { value: 'cash', label: 'Cash' },
@@ -47,7 +48,7 @@ export default function EditExpenseDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { data, isFetching } = useGetExpenseDetailsQuery(expenseId, { skip: !expenseId || !open });
+  const { data, isFetching } = useGetExpenseDetailsQuery(expenseId ?? "", { skip: !expenseId || !open });
   const { data: categoriesRes } = useGetExpenseCategoriesQuery();
   const [editExpense, { isLoading: saving }] = useEditExpenseMutation();
   const categories = categoriesRes?.data ?? [];
@@ -64,14 +65,14 @@ export default function EditExpenseDialog({
 
   // Load the expense into the form whenever a different one is opened
   useEffect(() => {
-    const e = (data as any)?.data;
+    const e = data?.data;
     if (!e || !open) return;
     setTitle(e.title ?? '');
     setAmount(String(e.amount ?? ''));
     setExpenseTime(toLocalInput(e.expenseTime));
     setMethod(e.method || 'cash');
     setCategory(e.category || NONE);
-    setStatus(e.status === 'CANCEL' ? 'CANCELED' : e.status || 'COMPLETED');
+    setStatus(e.status || 'COMPLETED');
     setIsPaid(!!e.isPaid);
     setReference(e.reference ?? '');
     setDescription(e.description ?? '');
@@ -103,8 +104,8 @@ export default function EditExpenseDialog({
       }).unwrap();
       toast.success('Expense updated');
       onOpenChange(false);
-    } catch (err: any) {
-      toast.error(err?.data?.message || 'Could not update the expense');
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Could not update the expense'));
     }
   };
 

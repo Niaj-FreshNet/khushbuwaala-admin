@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
@@ -10,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/redux/store/hooks/useAuth";
 import { useChangePasswordMutation } from "@/redux/store/api/user/userApi";
+import { apiErrorMessage } from "@/lib/apiError";
 
 const ROLE_LABEL: Record<string, string> = {
   SUPER_ADMIN: "Super Admin",
@@ -36,8 +36,8 @@ export default function AccountPage() {
       await changePassword({ oldPassword: form.oldPassword, newPassword: form.newPassword }).unwrap();
       toast.success("Password changed. Use the new password next time you log in.");
       setForm({ oldPassword: "", newPassword: "", confirm: "" });
-    } catch (err: any) {
-      toast.error(err?.data?.message || "Could not change the password. Please try again.");
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Could not change the password. Please try again."));
     }
   };
 
@@ -72,7 +72,7 @@ export default function AccountPage() {
           </div>
           <div>
             <div className="text-muted-foreground">Role</div>
-            <div className="font-medium">{ROLE_LABEL[user?.role] || user?.role || "—"}</div>
+            <div className="font-medium">{(user?.role && ROLE_LABEL[user.role]) || user?.role || "—"}</div>
           </div>
           <div className="sm:col-span-2">
             <div className="text-muted-foreground">Email (used to log in)</div>

@@ -7,17 +7,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import { 
-    Calendar as CalendarIcon, 
-    CreditCard, 
-    Loader2, 
-    Receipt, 
-    RotateCcw, 
-    Tag, 
-    User, 
+import {
+    CreditCard,
+    Loader2,
+    Receipt,
+    RotateCcw,
     FileText,
-    CheckCircle2,
-    AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +28,8 @@ import {
 import { cn } from '@/lib/utils';
 import { useAddExpenseMutation, useGetExpenseCategoriesQuery } from '@/redux/store/api/expense/expenseApi';
 import { useAuth } from '@/redux/store/hooks/useAuth';
+import { apiErrorMessage } from "@/lib/apiError";
+import type { ExpenseStatus } from '@/types/expense.types';
 
 // ───────────────────────── Config & Schema ─────────────────────────
 
@@ -49,7 +46,7 @@ const STATUS_OPTIONS = [
     { value: 'PENDING', label: 'Pending' },
     { value: 'COMPLETED', label: 'Completed' },
     { value: 'CANCELED', label: 'Canceled' },
-];
+] as const;
 
 const formSchema = z.object({
     expenseTime: z.string().min(1, 'Expense time is required'),
@@ -62,8 +59,6 @@ const formSchema = z.object({
     reference: z.string().optional(),
     expenseBy: z.string().min(1, 'Expense By is required'),
 });
-
-type FormValues = z.infer<typeof formSchema>;
 
 // ───────────────────────── Helpers ─────────────────────────
 
@@ -109,7 +104,7 @@ const AddExpensePage = () => {
     const [amount, setAmount] = useState('');
     const [method, setMethod] = useState('cash');
     const [isPaid, setIsPaid] = useState(true);
-    const [status, setStatus] = useState('COMPLETED');
+    const [status, setStatus] = useState<ExpenseStatus>('COMPLETED');
     const [reference, setReference] = useState('');
     const [category, setCategory] = useState('');
     const [attempted, setAttempted] = useState(false);
@@ -179,9 +174,9 @@ const AddExpensePage = () => {
 
             toast.success('Expense recorded successfully!');
             handleReset();
-        } catch (error: any) {
+        } catch (error) {
             console.error('Failed to add expense:', error);
-            toast.error(error?.data?.message || error?.message || 'Failed to add expense');
+            toast.error(apiErrorMessage(error, 'Failed to add expense'));
         }
     };
 
@@ -400,7 +395,7 @@ const AddExpensePage = () => {
                                     label="Approval Status *" 
                                     error={attempted ? errors.status : undefined}
                                 >
-                                    <Select value={status} onValueChange={setStatus}>
+                                    <Select value={status} onValueChange={(v) => setStatus(STATUS_OPTIONS.find((s) => s.value === v)?.value ?? 'COMPLETED')}>
                                         <SelectTrigger className="h-9 w-full focus:ring-orange-500">
                                             <SelectValue placeholder="Select status" />
                                         </SelectTrigger>

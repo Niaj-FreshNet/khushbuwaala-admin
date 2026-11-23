@@ -17,13 +17,12 @@ interface BlogData {
     others?: string;
 }
 
+// GET /blog/get-all-blogs(/admin): { success, data: { meta, data: [...] } }
 interface BlogResponse {
-    data: BlogData[];
-    meta: {
-        page: number;
-        limit: number;
-        total: number;
-        totalPage: number;
+    success?: boolean;
+    data: {
+        data: BlogData[];
+        meta: { page: number; limit: number; total: number; totalPage: number };
     };
 }
 
@@ -50,7 +49,7 @@ interface SingleBlogResponse {
 
 export const blogApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
-        addBlog: builder.mutation<BlogData, Record<string, any>>({
+        addBlog: builder.mutation<BlogData, Record<string, unknown>>({
             query: (payload) => ({
                 url: '/blog/create-blog',
                 method: 'POST',
@@ -72,7 +71,7 @@ export const blogApi = baseApi.injectEndpoints({
             }),
             providesTags: ['Blog'],
         }),
-        updateBlog: builder.mutation<BlogData, { id: string; data: Record<string, any> }>({
+        updateBlog: builder.mutation<BlogData, { id: string; data: Record<string, unknown> }>({
             query: ({ id, data }) => ({
                 url: `/blog/update-blog/${id}`,
                 method: 'PATCH',

@@ -10,18 +10,12 @@ import {
   Check,
   ChevronDown,
   ChevronsUpDown,
-  Globe,
   Loader2,
-  MessageCircle,
   Minus,
-  MoreHorizontal,
-  Phone,
   Plus,
   Receipt,
   RotateCcw,
-  Store,
   Trash2,
-  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,32 +44,21 @@ import {
   useLazyGetSalesByCustomerQuery,
 } from '@/redux/store/api/sales/salesApi';
 import { useAuth } from '@/redux/store/hooks/useAuth';
-import type { IProductResponse, IProductVariantResponse } from '@/types/product.types';
+import type { IProductVariantResponse } from '@/types/product.types';
+
+/** What the sale form needs from a product: a full product or a search hit (search hits have no price) */
+type SaleProduct = { id: string; name: string; primaryImage?: string; price?: number };
 import InvoiceDialog, { InvoiceData } from '../_components/SaleInvoiceDialog';
+import { apiErrorMessage } from "@/lib/apiError";
+import { PAYMENT_METHODS } from '@/lib/paymentMethods';
+import { PLATFORMS, type PlatformValue } from '@/lib/salePlatforms';
+import { isOrderStatus, type OrderStatus } from '@/types/order.types';
+import Thumb from "@/components/admin/Thumb";
 
 // ───────────────────────── Config ─────────────────────────
 
 
-const PLATFORMS = [
-  { value: 'SHOWROOM', label: 'Showroom', full: 'Showroom', icon: Store },
-  { value: 'FACEBOOK_PAGE', label: 'Page', full: 'Facebook Page', icon: Globe },
-  { value: 'WHATSAPP', label: 'WhatsApp', full: 'WhatsApp', icon: MessageCircle },
-  { value: 'FACEBOOK_GROUP', label: 'Group', full: 'Facebook Group', icon: Users },
-  { value: 'PHONE_CALL', label: 'Call', full: 'Phone Call', icon: Phone },
-  { value: 'OTHER', label: 'Other', full: 'Other', icon: MoreHorizontal },
-] as const;
-type PlatformValue = (typeof PLATFORMS)[number]['value'];
 
-const PAYMENT_METHODS = [
-  { value: 'cash', label: 'Cash' },
-  { value: 'cashOnDelivery', label: 'Cash on Delivery' },
-  { value: 'onlinePayment', label: 'Online Payment' },
-  { value: 'bkash', label: 'bKash' },
-  { value: 'nagad', label: 'Nagad' },
-  { value: 'rocket', label: 'Rocket' },
-  { value: 'bankTransfer', label: 'Bank Transfer' },
-  { value: 'cardPayment', label: 'Card Payment' },
-];
 
 const STATUS_OPTIONS = [
   { value: 'PENDING', label: 'Pending' },
@@ -112,8 +95,7 @@ const nowLocalInput = () => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 };
 
-const errMessage = (err: any) =>
-  err?.data?.message ?? err?.message ?? 'Failed to create bulk sale';
+const errMessage = (err: unknown) => apiErrorMessage(err, 'Failed to create bulk sale');
 
 function Field({
   label,
@@ -149,7 +131,7 @@ function ProductCombobox({
   value: string;
   onSelect: (id: string) => void;
   invalid?: boolean;
-  products: IProductResponse[];
+  products: SaleProduct[];
   onSearch: (term: string) => void;
   searchTerm: string;
   isSearching: boolean;
@@ -174,11 +156,7 @@ function ProductCombobox({
         >
           <span className="flex items-center gap-2 truncate">
             {selected?.primaryImage && (
-              <img
-                src={selected.primaryImage}
-                alt={selected.name}
-                className="h-5 w-5 rounded object-cover border"
-              />
+              <Thumb src={selected.primaryImage} alt={selected.name} className="h-5 w-5 rounded object-cover border" size={20} />
             )}
             <span className="truncate">{selected?.name ?? 'Search product…'}</span>
           </span>
@@ -210,11 +188,7 @@ function ProductCombobox({
                   }}
                 >
                   {p.primaryImage ? (
-                    <img
-                      src={p.primaryImage}
-                      alt={p.name}
-                      className="mr-2 h-7 w-7 rounded object-cover border shrink-0"
-                    />
+                    <Thumb src={p.primaryImage} alt={p.name} className="mr-2 h-7 w-7 rounded object-cover border shrink-0" size={28} />
                   ) : (
                     <div className="mr-2 h-7 w-7 rounded bg-gray-100 border flex items-center justify-center text-[10px] text-gray-400 shrink-0">
                       img
@@ -248,17 +222,15 @@ const BulkSalesPage = () => {
   );
 
   // Resolve product list dynamically based on search status
-  const products = useMemo<IProductResponse[]>(() => {
+  const products = useMemo<SaleProduct[]>(() => {
     if (!searchTerm.trim()) {
       return allProductsData?.data ?? [];
     }
-    const res = searchResultData;
-    if (Array.isArray(res)) return res;
-    return (res as any)?.data ?? (res as any)?.result ?? [];
+    return searchResultData?.data ?? [];
   }, [searchTerm, allProductsData, searchResultData]);
 
   const productMap = useMemo(() => {
-    const map = new Map<string, IProductResponse>();
+    const map = new Map<string, SaleProduct>();
     (allProductsData?.data ?? []).forEach((p) => map.set(p.id, p));
     products.forEach((p) => map.set(p.id, p));
     return map;
@@ -291,7 +263,7 @@ const BulkSalesPage = () => {
   const [method, setMethod] = useState('cash');
   const [extraDiscount, setExtraDiscount] = useState('');
   const [deliveryCharge, setDeliveryCharge] = useState('');
-  const [status, setStatus] = useState('');
+  const [status, setStatus] = useState<OrderStatus | ''>('');
   const [statusTouched, setStatusTouched] = useState(false);
 
   // UI
@@ -301,7 +273,7 @@ const BulkSalesPage = () => {
 
   useEffect(() => setSaleTime(nowLocalInput()), []);
 
-  const effectiveStatus = statusTouched
+  const effectiveStatus: OrderStatus | '' = statusTouched
     ? status
     : platform === 'SHOWROOM'
       ? 'COMPLETED'
@@ -328,7 +300,7 @@ const BulkSalesPage = () => {
     setLoadingVariants((s) => ({ ...s, [productId]: true }));
     try {
       const res = await getProductVariants(productId).unwrap();
-      const list: IProductVariantResponse[] = Array.isArray(res) ? res : ((res as any)?.data ?? []);
+      const list: IProductVariantResponse[] = res?.data ?? [];
       setVariantsMap((m) => ({ ...m, [productId]: list }));
       if (list.length === 1) {
         patchLine(key, {
@@ -398,7 +370,7 @@ const BulkSalesPage = () => {
     const p = phone.replace(/[\s-]/g, '');
     if (p.length < 11 || (name && address)) return;
     try {
-      const res: any = await fetchCustomer(p).unwrap();
+      const res = await fetchCustomer(p).unwrap();
       const last = res?.data?.data?.[0];
       if (!last) return;
       if (!name && last.name) setName(last.name);
@@ -457,7 +429,7 @@ const BulkSalesPage = () => {
       const platformMeta = PLATFORMS.find((p) => p.value === platform)!;
       const methodLabel = PAYMENT_METHODS.find((m) => m.value === method)?.label;
 
-      const res: any = await addSale({
+      const res = await addSale({
         items,
         amount: grandTotal,
         isPaid,
@@ -467,7 +439,7 @@ const BulkSalesPage = () => {
         orderSource: platform === 'SHOWROOM' ? 'SHOWROOM' : 'MANUAL',
         platform,
         platformNote: platform === 'OTHER' ? platformNote.trim() || undefined : undefined,
-        status: effectiveStatus,
+        status: effectiveStatus || undefined,
         saleTime: when,
         discount: extra,
         deliveryCharge: delivery,
@@ -621,11 +593,7 @@ const BulkSalesPage = () => {
                   <div key={line.key} className="grid grid-cols-12 gap-x-2 gap-y-1.5 px-3 py-2.5">
                     <div className="col-span-12 md:col-span-4 flex items-center gap-2">
                       {product?.primaryImage && (
-                        <img
-                          src={product.primaryImage}
-                          alt={product.name}
-                          className="h-9 w-9 rounded object-cover border shrink-0 hidden md:block"
-                        />
+                        <Thumb src={product.primaryImage} alt={product.name} className="h-9 w-9 rounded object-cover border shrink-0 hidden md:block" size={36} />
                       )}
                       <div className="flex-1">
                         <span className="mb-0.5 block text-[11px] text-gray-500 md:hidden">Product</span>
@@ -853,7 +821,7 @@ const BulkSalesPage = () => {
                     <Select
                       value={effectiveStatus}
                       onValueChange={(v) => {
-                        setStatus(v);
+                        setStatus(isOrderStatus(v) ? v : '');
                         setStatusTouched(true);
                       }}
                     >

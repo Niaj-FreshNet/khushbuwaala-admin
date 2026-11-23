@@ -53,7 +53,7 @@ import {
   useDeleteSaleMutation,
 } from '@/redux/store/api/sales/salesApi';
 import { useSendOrderToSteadfastMutation } from '@/redux/store/api/steadfast/steadfastApi';
-import { useBackfillHistoricalCostsMutation, useOverrideOrderProfitMutation } from '@/redux/store/api/finance/financeApi';
+import { useBackfillHistoricalCostsMutation } from '@/redux/store/api/finance/financeApi';
 import { useAuth } from '@/redux/store/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
 import SaleDetailsModal from './SaleDetailsModal';
@@ -71,48 +71,17 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import OrderProfitEditorModal from './OrderProfitEditorModal';
-import { PLATFORMS } from '../add-sales/page';
+import { PLATFORMS } from '@/lib/salePlatforms';
 import EditSaleModal from './EditSaleModal';
-import { usePrompt } from '@/components/admin/ConfirmProvider';
 import { useConfirm } from '@/components/admin/ConfirmProvider';
+import { apiErrorMessage, apiErrorStatus } from "@/lib/apiError";
+import { PAYMENT_METHOD_FILTERS, paymentMethodLabel, toMethodFilter } from '@/lib/paymentMethods';
+import { useCourierReturnPrompt } from '@/components/admin/courierReturn';
+import { isOrderStatus, orderDisplayLines } from '@/types/order.types';
+import type { Order, OrderListQuery, OrderListSummary } from '@/types/order.types';
 
-interface SaleItem {
-  id?: string;
-  name?: string;
-  product?: { name?: string; primaryImage?: string };
-  size?: string;
-  unit?: string;
-  quantity?: number;
-  qty?: number;
-  price?: number;
-  amount?: number;
-}
-
-interface Sale {
-  id: string;
-  invoice: string;
-  orderTime: string;
-  orderSource: string;
-  saleType: string;
-  platform?: string;
-  method: string;
-  salesman?: { name: string; email: string } | null;
-  amount: number;
-  status: string;
-  isPaid: boolean;
-  name: string;
-  phone?: string;
-  address?: string;
-  district?: string;
-  shippingCost?: number;
-  additionalNotes?: string;
-  consignmentId?: string;
-  trackingCode?: string;
-  trackingLink?: string;
-  cartItems?: SaleItem[];
-  orderItems?: SaleItem[];
-  orderItemCosts?: any[];
-}
+// A sale is an Order made in the admin (types/order.types.ts)
+type Sale = Order;
 
 type SortField = 'orderTime' | 'amount' | 'status';
 type SortOrder = 'asc' | 'desc';
@@ -120,17 +89,7 @@ type SortOrder = 'asc' | 'desc';
 const STATUS_OPTIONS = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'COMPLETED', 'CANCELED', 'RETURNED'] as const;
 const PAYMENT_OPTIONS = ['ALL', 'PAID', 'DUE'] as const;
 
-const METHOD_OPTIONS = [
-  { value: 'ALL', label: 'All Methods' },
-  { value: 'cash', label: 'Cash' },
-  { value: 'cashOnDelivery', label: 'Cash on Delivery' },
-  { value: 'onlinePayment', label: 'Online Payment' },
-  { value: 'bkash', label: 'bKash' },
-  { value: 'nagad', label: 'Nagad' },
-  { value: 'rocket', label: 'Rocket' },
-  { value: 'bankTransfer', label: 'Bank Transfer' },
-  { value: 'cardPayment', label: 'Card Payment' },
-];
+const METHOD_OPTIONS = PAYMENT_METHOD_FILTERS;
 
 function useDebouncedValue<T>(value: T, delay = 350) {
   const [debounced, setDebounced] = useState(value);
@@ -147,6 +106,12 @@ const SaleListClient = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebouncedValue(searchTerm, 350);
+
+  // /sales?q=<invoice> (links from the dashboard) opens the list searched for that sale
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get('q');
+    if (q) setSearchTerm(q);
+  }, []);
 
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState<number>(20);
@@ -194,7 +159,6 @@ const SaleListClient = () => {
   const [isProfitEditorVisible, setIsProfitEditorVisible] = useState(false);
 
   const [backfillCosts, { isLoading: isBackfilling }] = useBackfillHistoricalCostsMutation();
-  const [overrideProfit] = useOverrideOrderProfitMutation();
 
   const handleDatePresetChange = (preset: string) => {
     setDatePreset(preset);
@@ -241,22 +205,26 @@ const SaleListClient = () => {
   };
 
   const queryArgs = useMemo(() => {
-    const args: any = {
+    const args: OrderListQuery = {
       searchTerm: debouncedSearch?.trim() || undefined,
       page,
       limit,
     };
+    // Platform filter (it used to do nothing). Showroom = the order source, since an edited
+    // showroom sale keeps an empty platform.
+    if (platformFilter === 'SHOWROOM') args.source = 'SHOWROOM';
+    else if (platformFilter !== 'ALL') args.platform = platformFilter;
     if (status !== 'ALL') args.status = status;
     if (payment !== 'ALL') args.payment = payment;
     if (method !== 'ALL') args.method = method;
     if (dateFrom) args.dateFrom = dateFrom;
     if (dateTo) args.dateTo = dateTo;
     return args;
-  }, [debouncedSearch, page, limit, status, payment, method, dateFrom, dateTo]);
+  }, [debouncedSearch, page, limit, status, payment, method, dateFrom, dateTo, platformFilter]);
 
   const { data, isLoading, isFetching, refetch } = useGetAllSalesQuery(queryArgs);
   const [updateSale] = useUpdateSalesMutation();
-  const [deleteSale, { isLoading: isDeleting }] = useDeleteSaleMutation();
+  const [deleteSale] = useDeleteSaleMutation();
 
   const { data: invoiceData } = useGetSaleByIdQuery(invoiceSaleId || '', {
     skip: !invoiceSaleId,
@@ -283,35 +251,8 @@ const SaleListClient = () => {
       const res = await backfillCosts(payload).unwrap();
       toast.success(res?.message || 'Profits synced successfully!');
       refetch();
-    } catch (e: any) {
-      toast.error(e?.data?.message || 'Failed to sync profits');
-    }
-  };
-
-  const askValue = usePrompt();
-  const handleQuickEditProfit = async (saleId: string, currentProfit: number) => {
-    const newProfitStr = await askValue({
-      title: 'Correct net profit',
-      description: 'Replaces the calculated profit for this sale in Finance.',
-      label: 'Net profit (৳)',
-      inputType: 'number',
-      defaultValue: String(currentProfit),
-      confirmText: 'Save',
-    });
-    if (newProfitStr === null) return;
-
-    const profit = Number(newProfitStr);
-    if (newProfitStr.trim() === '' || isNaN(profit)) {
-      toast.error('Please enter a valid number');
-      return;
-    }
-
-    try {
-      await overrideProfit({ orderId: saleId, profit }).unwrap();
-      toast.success('Profit updated successfully!', { duration: 1000 });
-      refetch();
-    } catch (err: any) {
-      toast.error(err?.data?.message || 'Failed to update profit');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Failed to sync profits'));
     }
   };
 
@@ -331,11 +272,11 @@ const SaleListClient = () => {
     toast.success('Sales data refreshed successfully!', { duration: 1000 });
   };
 
-  const allSales: Sale[] = useMemo(() => (data as any)?.data || [], [data]);
-  const meta = (data as any)?.meta;
+  const allSales: Sale[] = useMemo(() => data?.data || [], [data]);
+  const meta = data?.meta;
 
   const summaryMetrics = useMemo(() => {
-    return (data as any)?.summary || {
+    const fallback: OrderListSummary = {
       totalCount: meta?.total || 0,
       totalValidCount: 0,
       totalCodAmount: 0,
@@ -344,24 +285,18 @@ const SaleListClient = () => {
       paidCount: 0,
       dueCount: 0,
     };
+    return data?.summary || fallback;
   }, [data, meta]);
 
   const sortedSales = useMemo(() => {
     const sorted = [...allSales];
     sorted.sort((a, b) => {
-      let valA: any = a[sortField];
-      let valB: any = b[sortField];
-
-      if (sortField === 'orderTime') {
-        valA = valA ? new Date(valA).getTime() : 0;
-        valB = valB ? new Date(valB).getTime() : 0;
-      } else if (sortField === 'amount') {
-        valA = Number(valA || 0);
-        valB = Number(valB || 0);
-      } else if (sortField === 'status') {
-        valA = String(valA || '');
-        valB = String(valB || '');
-      }
+      const key = (s: Sale): number | string =>
+        sortField === 'orderTime' ? (s.orderTime ? new Date(s.orderTime).getTime() : 0)
+          : sortField === 'amount' ? Number(s.amount || 0)
+            : String(s.status || '');
+      const valA = key(a);
+      const valB = key(b);
 
       if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
       if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
@@ -387,17 +322,21 @@ const SaleListClient = () => {
     if (!isSuperAdmin) return 0;
     return sortedSales.reduce((sum, sale) => {
       const orderItemCosts = sale.orderItemCosts || [];
-      const orderProfit = orderItemCosts.reduce((itemSum: number, ic: any) => itemSum + Number(ic.profit || 0), 0);
+      const orderProfit = orderItemCosts.reduce((itemSum, ic) => itemSum + Number(ic.profit || 0), 0);
       return sum + orderProfit;
     }, 0);
   }, [sortedSales, isSuperAdmin]);
 
-  const handleUpdateStatus = async (id: string, nextStatus: string) => {
+  // A sale that went out with Steadfast and comes back: ask what the customer paid (D-025), like orders do
+  const askReturnCharge = useCourierReturnPrompt();
+  const handleUpdateStatus = async (sale: Sale, nextStatus: string) => {
+    const extra = await askReturnCharge(sale, nextStatus);
+    if (extra === null) return; // closed the question: change nothing
     try {
-      const res = await updateSale({ id, status: nextStatus }).unwrap();
+      const res = await updateSale({ id: sale.id, status: nextStatus, ...(extra || {}) }).unwrap();
       if (res?.success) toast.success(`Sale marked as ${nextStatus}`);
       else toast.error('Failed to update sale status');
-    } catch (e) {
+    } catch {
       toast.error('Error updating sale status');
     }
   };
@@ -412,8 +351,8 @@ const SaleListClient = () => {
       } else {
         toast.error("Failed to delete order");
       }
-    } catch (e: any) {
-      toast.error(e?.data?.message || "Error deleting order");
+    } catch (e) {
+      toast.error(apiErrorMessage(e, "Error deleting order"));
     } finally {
       setSaleToDelete(null);
     }
@@ -426,14 +365,14 @@ const SaleListClient = () => {
         try {
           await deleteSale(id).unwrap();
           successCount++;
-        } catch (err) {
+        } catch {
           // continue
         }
       }
       toast.success(`Successfully deleted ${successCount} sale(s)`);
       setSelectedSaleIds([]);
       refetch();
-    } catch (e) {
+    } catch {
       toast.error('Error performing bulk deletion');
     } finally {
       setIsBulkDeleteModalOpen(false);
@@ -451,14 +390,14 @@ const SaleListClient = () => {
       } else {
         toast.error('Failed to send order to Steadfast');
       }
-    } catch (err: any) {
-      if (err?.status === 409 && !force) {
+    } catch (err) {
+      if (apiErrorStatus(err) === 409 && !force) {
         setSendingSaleId(null);
-        const again = await confirmRebook({ title: `#${invoice} is already with Steadfast`, description: `${err?.data?.message || ''} Booking again creates a new parcel and a new delivery charge.`, confirmText: 'Book again', danger: true });
+        const again = await confirmRebook({ title: `#${invoice} is already with Steadfast`, description: `${apiErrorMessage(err, '')} Booking again creates a new parcel and a new delivery charge.`, confirmText: 'Book again', danger: true });
         if (again) return handleSendToSteadfast(saleId, invoice, true);
         return;
       }
-      toast.error(err?.data?.message || 'Error submitting order to Steadfast');
+      toast.error(apiErrorMessage(err, 'Error submitting order to Steadfast'));
     } finally {
       setSendingSaleId(null);
     }
@@ -706,7 +645,7 @@ const SaleListClient = () => {
 
             <div className="space-y-1">
               <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Status</label>
-              <Select value={status} onValueChange={(v) => { setStatus(v as any); setPage(1); }}>
+              <Select value={status} onValueChange={(v) => { setStatus(isOrderStatus(v) ? v : 'ALL'); setPage(1); }}>
                 <SelectTrigger className={cn(
                   'bg-white h-8 text-xs transition-colors py-0',
                   status !== 'ALL' ? 'border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30' : 'border-gray-300 text-gray-700'
@@ -730,6 +669,7 @@ const SaleListClient = () => {
               <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Platform</label>
               <Select value={platformFilter} onValueChange={(val) => {
                 setPlatformFilter(val);
+                setPage(1);
               }}>
                 <SelectTrigger className="h-9 w-[160px]">
                   <SelectValue placeholder="Filter Platform" />
@@ -750,7 +690,7 @@ const SaleListClient = () => {
 
             <div className="space-y-1">
               <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Payment</label>
-              <Select value={payment} onValueChange={(v) => { setPayment(v as any); setPage(1); }}>
+              <Select value={payment} onValueChange={(v) => { setPayment(PAYMENT_OPTIONS.find((p) => p === v) ?? 'ALL'); setPage(1); }}>
                 <SelectTrigger className={cn(
                   'bg-white h-8 text-xs transition-colors py-0',
                   payment !== 'ALL' ? 'border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30' : 'border-gray-300 text-gray-700'
@@ -769,7 +709,7 @@ const SaleListClient = () => {
 
             <div className="space-y-1">
               <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Method</label>
-              <Select value={method} onValueChange={(v) => { setMethod(v as any); setPage(1); }}>
+              <Select value={method} onValueChange={(v) => { setMethod(toMethodFilter(v)); setPage(1); }}>
                 <SelectTrigger className={cn(
                   'bg-white h-8 text-xs transition-colors py-0',
                   method !== 'ALL' ? 'border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30' : 'border-gray-300 text-gray-700'
@@ -920,15 +860,15 @@ const SaleListClient = () => {
         >
           {sortedSales.map((sale) => {
             const isSelected = selectedSaleIds.includes(sale.id);
-            const saleItems: any[] = sale.orderItems || sale.cartItems || [];
+            const saleItems = orderDisplayLines(sale);
             const orderItemCosts = sale.orderItemCosts || [];
-            const profit = orderItemCosts.reduce((sum: number, ic: any) => sum + Number(ic.profit || 0), 0);
+            const profit = orderItemCosts.reduce((sum, ic) => sum + Number(ic.profit || 0), 0);
             const phone = sale.phone;
             const when = sale.orderTime ? new Date(sale.orderTime) : null;
             const source = sale.orderSource === 'SHOWROOM' ? 'Showroom' : String(sale.platform || sale.orderSource || '').replace(/_/g, ' ').toLowerCase();
             const itemsText = saleItems.length === 0
               ? 'No items'
-              : saleItems.slice(0, 2).map((it: any) => `${it.quantity ?? 1}× ${it.product?.name || it.name || 'Product'}${it.variant?.size ?? it.size ? ` ${it.variant?.size ?? it.size}${it.variant?.unit ?? it.unit ?? ''}` : ''}`).join(', ') + (saleItems.length > 2 ? ` +${saleItems.length - 2} more` : '');
+              : saleItems.slice(0, 2).map((it) => `${it.quantity ?? 1}× ${it.product?.name || it.name || 'Product'}${it.variant?.size ?? it.size ? ` ${it.variant?.size ?? it.size}${it.variant?.unit ?? it.unit ?? ''}` : ''}`).join(', ') + (saleItems.length > 2 ? ` +${saleItems.length - 2} more` : '');
             return (
               <MobileCard
                 key={sale.id}
@@ -957,7 +897,7 @@ const SaleListClient = () => {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start">
                         {STATUS_OPTIONS.map((st) => (
-                          <DropdownMenuItem key={st} onClick={() => handleUpdateStatus(sale.id, st)} className="py-2.5 text-sm">
+                          <DropdownMenuItem key={st} onClick={() => handleUpdateStatus(sale, st)} className="py-2.5 text-sm">
                             <span className={`mr-2 inline-block rounded px-1.5 py-0.5 text-[10px] font-bold text-white ${statusBadgeClass(st)}`}>{st}</span>
                           </DropdownMenuItem>
                         ))}
@@ -1086,12 +1026,12 @@ const SaleListClient = () => {
                 sortedSales.map((sale) => {
                   const isSelected = selectedSaleIds.includes(sale.id);
                   const isThisRowLoading = loadingInvoiceId === sale.id;
-                  const saleItems = sale.orderItems || sale.cartItems || [];
+                  const saleItems = orderDisplayLines(sale);
                   const isShowroom = sale.orderSource === 'SHOWROOM';
 
                   // Profit calculation for Super Admin
                   const orderItemCosts = sale.orderItemCosts || [];
-                  const totalOrderProfit = orderItemCosts.reduce((sum: number, ic: any) => sum + Number(ic.profit || 0), 0);
+                  const totalOrderProfit = orderItemCosts.reduce((sum, ic) => sum + Number(ic.profit || 0), 0);
 
                   return (
                     <TableRow key={sale.id} className={cn('hover:bg-gray-50/85 transition-colors', isSelected && 'bg-orange-50/40')}>
@@ -1119,7 +1059,7 @@ const SaleListClient = () => {
                               target="_blank"
                               href={sale.trackingLink || '#'}
                               className="text-xs text-emerald-700 border border-emerald-200 px-1 rounded font-mono inline-flex items-center gap-0.5 w-fit"
-                              title={sale.trackingCode}
+                              title={sale.trackingCode ?? undefined}
                             >
                               {sale.consignmentId}
                               <ArrowUpRight className="w-3 h-3" />
@@ -1174,7 +1114,7 @@ const SaleListClient = () => {
                       </TableCell>
 
                       <TableCell className="text-gray-900 align-middle py-3 max-w-[170px]">
-                        <div className="font-bold text-[13px] truncate text-gray-900" title={sale.name}>
+                        <div className="font-bold text-[13px] truncate text-gray-900" title={sale.name ?? undefined}>
                           {sale.name || 'Walk-in Customer'}
                         </div>
                         <div className="flex items-center gap-1.5 mt-0.5">
@@ -1198,7 +1138,7 @@ const SaleListClient = () => {
                       <TableCell className="align-top py-3 max-w-[260px]">
                         {saleItems.length > 0 ? (
                           <div className="space-y-1">
-                            {saleItems.map((item: any, idx: number) => {
+                            {saleItems.map((item, idx: number) => {
                               const productName = item.name || item.product?.name || "Product";
                               const itemSize = item.size ? `(${item.size}` : "";
                               const itemUnit = item.unit ? `${item.unit})` : "";
@@ -1247,7 +1187,7 @@ const SaleListClient = () => {
                       <TableCell className="font-bold text-gray-900 tabular-nums align-middle py-3">
                         <div>৳{Number(sale.amount || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}</div>
                         <div className="text-[10px] text-gray-500 capitalize font-medium">
-                          {sale.method ? sale.method.replace(/([A-Z])/g, ' $1').toLowerCase() : 'Cash'}
+                          {sale.method ? paymentMethodLabel(sale.method) : 'Cash'}
                         </div>
                       </TableCell>
 
@@ -1287,7 +1227,7 @@ const SaleListClient = () => {
                             {STATUS_OPTIONS.map((s) => (
                               <DropdownMenuItem
                                 key={s}
-                                onClick={() => handleUpdateStatus(sale.id, s)}
+                                onClick={() => handleUpdateStatus(sale, s)}
                                 className="text-xs font-medium cursor-pointer py-1"
                               >
                                 <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold text-white mr-1.5 ${statusBadgeClass(s)}`}>

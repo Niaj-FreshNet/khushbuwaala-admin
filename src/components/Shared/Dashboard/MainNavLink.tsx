@@ -40,9 +40,7 @@ export default function MainNavLink({
 
   useEffect(() => {
     const parent = allLinks.find((l) => l.subItems?.some((s) => s.href === pathname));
-    if (parent?.name && openSubMenu !== parent.name) {
-      setOpenSubMenu(parent.name);
-    }
+    if (parent?.name) setOpenSubMenu(parent.name);
   }, [pathname, allLinks]);
 
   const baseItemClasses = (active: boolean) =>

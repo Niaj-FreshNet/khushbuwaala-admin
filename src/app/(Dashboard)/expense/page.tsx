@@ -30,7 +30,6 @@ import {
   CheckSquare,
   Square,
   Trash2,
-  Loader2,
   ReceiptText,
   DollarSign,
   CheckCircle2,
@@ -63,18 +62,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { apiErrorMessage } from "@/lib/apiError";
+import type { Expense as ExpenseRecord, ExpenseListQuery, ExpenseStatus } from '@/types/expense.types';
 
-interface Expense {
-  id: string;
-  expenseTime: string;
-  expenseBy: { name: string } | string;
-  method: string;
-  amount: number;
-  status: string;
-  isPaid: boolean;
-  title: string;
-  category?: string | null;
-}
+type Expense = ExpenseRecord;
 
 type SortField = 'expenseTime' | 'amount' | 'status' | 'title';
 type SortOrder = 'asc' | 'desc';
@@ -90,7 +81,7 @@ const METHOD_OPTIONS = [
   { value: 'rocket', label: 'Rocket' },
   { value: 'bank', label: 'Bank Transfer' },
   { value: 'card', label: 'Card Payment' },
-];
+] as const;
 
 function useDebouncedValue<T>(value: T, delay = 350) {
   const [debounced, setDebounced] = useState(value);
@@ -190,7 +181,7 @@ const ExpenseListPage = () => {
   };
 
   const queryArgs = useMemo(() => {
-    const args: any = {
+    const args: ExpenseListQuery = {
       searchTerm: debouncedSearch?.trim() || undefined,
       page,
       limit,
@@ -206,7 +197,7 @@ const ExpenseListPage = () => {
 
   const { data, isLoading, isFetching, refetch } = useGetAllExpensesQuery(queryArgs);
   const [updateExpense] = useUpdateExpenseMutation();
-  const [deleteExpense, { isLoading: isDeleting }] = useDeleteExpenseMutation();
+  const [deleteExpense] = useDeleteExpenseMutation();
 
   const handleManualRefresh = () => {
     refetch();
@@ -216,7 +207,9 @@ const ExpenseListPage = () => {
   const allExpenses: Expense[] = useMemo(() => data?.data?.data || [], [data]);
   const meta = data?.data?.meta;
 
+  // Totals of everything that matches the filters, from the server (it used to add up only this page)
   const summaryMetrics = useMemo(() => {
+    if (data?.data?.summary) return data.data.summary;
     const totalCount = meta?.total || allExpenses.length;
     const totalAmount = allExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
     const paidCount = allExpenses.filter((e) => e.isPaid).length;
@@ -232,24 +225,17 @@ const ExpenseListPage = () => {
       paidAmount,
       dueAmount,
     };
-  }, [allExpenses, meta]);
+  }, [data, allExpenses, meta]);
 
   const sortedExpenses = useMemo(() => {
     const sorted = [...allExpenses];
     sorted.sort((a, b) => {
-      let valA: any = a[sortField];
-      let valB: any = b[sortField];
-
-      if (sortField === 'expenseTime') {
-        valA = valA ? new Date(valA).getTime() : 0;
-        valB = valB ? new Date(valB).getTime() : 0;
-      } else if (sortField === 'amount') {
-        valA = Number(valA || 0);
-        valB = Number(valB || 0);
-      } else if (sortField === 'status' || sortField === 'title') {
-        valA = String(valA || '');
-        valB = String(valB || '');
-      }
+      const key = (e: Expense): number | string =>
+        sortField === 'expenseTime' ? (e.expenseTime ? new Date(e.expenseTime).getTime() : 0)
+          : sortField === 'amount' ? Number(e.amount || 0)
+            : String(e[sortField] || '');
+      const valA = key(a);
+      const valB = key(b);
 
       if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
       if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
@@ -271,12 +257,12 @@ const ExpenseListPage = () => {
     return sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 ml-1 inline text-[#FB923C]" /> : <ArrowDown className="w-3.5 h-3.5 ml-1 inline text-[#FB923C]" />;
   };
 
-  const handleUpdateStatus = async (id: string, nextStatus: string) => {
+  const handleUpdateStatus = async (id: string, nextStatus: ExpenseStatus) => {
     try {
       const res = await updateExpense({ id, status: nextStatus }).unwrap();
       if (res?.success) toast.success(`Expense marked as ${nextStatus}`);
       else toast.error('Failed to update expense status');
-    } catch (e) {
+    } catch {
       toast.error('Error updating expense status');
     }
   };
@@ -286,8 +272,8 @@ const ExpenseListPage = () => {
     try {
       const res = await deleteExpense(expenseToDelete.id).unwrap();
       toast.success(res?.message || `Expense "${expenseToDelete.title}" deleted successfully`);
-    } catch (err: any) {
-      toast.error(err?.data?.message || 'Failed to delete expense');
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete expense'));
     } finally {
       setExpenseToDelete(null);
     }
@@ -307,8 +293,8 @@ const ExpenseListPage = () => {
         toast.error('Failed to delete selected expenses');
       }
       setSelectedExpenseIds([]);
-    } catch (err: any) {
-      toast.error(err?.data?.message || 'Error performing bulk deletion');
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Error performing bulk deletion'));
     } finally {
       setIsBulkDeleteModalOpen(false);
     }
@@ -519,7 +505,7 @@ const ExpenseListPage = () => {
 
             <div className="space-y-1">
               <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Status</label>
-              <Select value={status} onValueChange={(v) => { setStatus(v as any); setPage(1); }}>
+              <Select value={status} onValueChange={(v) => { setStatus(STATUS_OPTIONS.find((s) => s === v) ?? 'ALL'); setPage(1); }}>
                 <SelectTrigger className={cn(
                   'bg-white h-8 text-xs transition-colors py-0',
                   status !== 'ALL' ? 'border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30' : 'border-gray-300 text-gray-700'
@@ -541,7 +527,7 @@ const ExpenseListPage = () => {
 
             <div className="space-y-1">
               <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Payment</label>
-              <Select value={payment} onValueChange={(v) => { setPayment(v as any); setPage(1); }}>
+              <Select value={payment} onValueChange={(v) => { setPayment(PAYMENT_OPTIONS.find((p) => p === v) ?? 'ALL'); setPage(1); }}>
                 <SelectTrigger className={cn(
                   'bg-white h-8 text-xs transition-colors py-0',
                   payment !== 'ALL' ? 'border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30' : 'border-gray-300 text-gray-700'
@@ -560,7 +546,7 @@ const ExpenseListPage = () => {
 
             <div className="space-y-1">
               <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Method</label>
-              <Select value={method} onValueChange={(v) => { setMethod(v as any); setPage(1); }}>
+              <Select value={method} onValueChange={(v) => { setMethod(METHOD_OPTIONS.find((m) => m.value === v)?.value ?? 'ALL'); setPage(1); }}>
                 <SelectTrigger className={cn(
                   'bg-white h-8 text-xs transition-colors py-0',
                   method !== 'ALL' ? 'border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30' : 'border-gray-300 text-gray-700'
@@ -710,7 +696,7 @@ const ExpenseListPage = () => {
         >
           {sortedExpenses.map((expense) => {
             const isSelected = selectedExpenseIds.includes(expense.id);
-            const by = typeof expense.expenseBy === 'object' ? expense.expenseBy?.name : expense.expenseBy;
+            const by = expense.expenseBy?.name;
             const when = expense.expenseTime ? new Date(expense.expenseTime) : null;
             return (
               <MobileCard
@@ -755,7 +741,7 @@ const ExpenseListPage = () => {
                       size="icon"
                       className="h-10 w-10 text-rose-600"
                       aria-label="Delete expense"
-                      onClick={() => setExpenseToDelete({ id: expense.id, title: expense.title })}
+                      onClick={() => setExpenseToDelete({ id: expense.id, title: expense.title || 'this expense' })}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -829,7 +815,7 @@ const ExpenseListPage = () => {
               ) : (
                 sortedExpenses.map((expense) => {
                   const isSelected = selectedExpenseIds.includes(expense.id);
-                  const expenseByName = typeof expense.expenseBy === 'object' ? expense.expenseBy?.name : expense.expenseBy;
+                  const expenseByName = expense.expenseBy?.name;
 
                   return (
                     <TableRow key={expense.id} className={cn('hover:bg-gray-50/85 transition-colors', isSelected && 'bg-orange-50/40')}>
@@ -871,7 +857,7 @@ const ExpenseListPage = () => {
                       </TableCell>
 
                       <TableCell className="font-bold text-gray-900 align-middle py-3 max-w-[200px]">
-                        <div className="truncate" title={expense.title}>{expense.title}</div>
+                        <div className="truncate" title={expense.title ?? undefined}>{expense.title}</div>
                         <div className="truncate text-[10px] font-medium text-gray-500">{categoryLabel(expense.category)}</div>
                       </TableCell>
 
@@ -949,7 +935,7 @@ const ExpenseListPage = () => {
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 text-rose-600 hover:bg-rose-50"
-                            onClick={() => setExpenseToDelete({ id: expense.id, title: expense.title })}
+                            onClick={() => setExpenseToDelete({ id: expense.id, title: expense.title || 'this expense' })}
                             title="Delete Expense"
                           >
                             <Trash2 className="w-3.5 h-3.5" />

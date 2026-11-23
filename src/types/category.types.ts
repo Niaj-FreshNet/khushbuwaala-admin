@@ -7,6 +7,9 @@ export interface Category {
   unit: string;
   specification: 'male' | 'female' | 'unisex';
   published: boolean;
+  createdAt?: string;
+  // how many products use it (admin list)
+  _count?: { Product?: number };
 }
 
 export interface CategoryFormValues {

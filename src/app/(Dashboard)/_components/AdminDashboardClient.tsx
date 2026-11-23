@@ -30,10 +30,10 @@ export default function AdminDashboardClient() {
     const metricsData = data?.data;
     const formatBDT = (v: number) => `৳${Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
-    const todayData = (metricsData as any)?.today ?? (metricsData as any)?.today;
-    const weekData = (metricsData as any)?.thisWeek ?? (metricsData as any)?.weekly;
-    const monthlyData = (metricsData as any)?.thisMonth ?? (metricsData as any)?.monthly;
-    const last3MonthsData = (metricsData as any)?.last3Months ?? (metricsData as any)?.last3Months;
+    const todayData = metricsData?.today;
+    const weekData = metricsData?.thisWeek;
+    const monthlyData = metricsData?.thisMonth;
+    const last3MonthsData = metricsData?.last3Months;
 
     // 4 Consolidated Metric Cards showing Orders & Sales Amount beside each other
     const metrics = [

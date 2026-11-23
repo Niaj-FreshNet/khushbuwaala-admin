@@ -6,15 +6,11 @@ import { Plus } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import { v4 as uuidv4 } from "uuid";
 
-interface Props {
-  selectedSizes: string[];
-}
-
 interface FormValues {
   variants: VariantForForm[];
 }
 
-export default function AddVariantButton({ selectedSizes }: Props) {
+export default function AddVariantButton() {
   const form = useFormContext<FormValues>();
 
   return (

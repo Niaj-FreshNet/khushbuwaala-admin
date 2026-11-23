@@ -1,4 +1,8 @@
 import baseApi from '../../api/baseApi';
+import type { ApiEnvelope } from '@/types/api.types';
+
+/** POST /steadfast/send-order: Steadfast's booking (consignment) */
+export type SteadfastBooking = { consignment_id?: number; tracking_code?: string; invoice?: string; status?: string; [k: string]: unknown };
 
 export type CourierParcel = {
   consignmentId: number;
@@ -57,14 +61,14 @@ export type CourierReviewOrder = {
 export const steadfastApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     // force: book again although the order already has a consignment (only after it was cancelled)
-    sendOrderToSteadfast: builder.mutation<any, string | { orderId: string; force?: boolean }>({
+    sendOrderToSteadfast: builder.mutation<ApiEnvelope<SteadfastBooking>, string | { orderId: string; force?: boolean }>({
       query: (arg) => {
         const { orderId, force } = typeof arg === 'string' ? { orderId: arg, force: false } : arg;
         return { url: `/steadfast/send-order/${orderId}`, method: 'POST', body: force ? { force: true } : {} };
       },
       invalidatesTags: ['Order', 'Sales'],
     }),
-    getSteadfastBalance: builder.query<any, void>({
+    getSteadfastBalance: builder.query<ApiEnvelope<{ current_balance?: number; [k: string]: unknown }>, void>({
       query: () => '/steadfast/balance',
     }),
 
@@ -84,7 +88,7 @@ export const steadfastApi = baseApi.injectEndpoints({
       query: (arg) => ({ url: '/steadfast/sync', method: 'POST', body: arg || {} }),
       invalidatesTags: ['Courier', 'Order', 'Sales', 'Finance', 'Product'],
     }),
-    resolveCourierReview: builder.mutation<any, string>({
+    resolveCourierReview: builder.mutation<{ success: boolean; message?: string }, string>({
       query: (orderId) => ({ url: `/steadfast/review/${orderId}/resolve`, method: 'PATCH' }),
       invalidatesTags: ['Courier', 'Order'],
     }),

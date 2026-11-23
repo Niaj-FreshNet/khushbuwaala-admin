@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useMemo } from 'react';
@@ -51,15 +50,15 @@ const StockLogsPage = () => {
   const router = useRouter();
   const { data, isLoading } = useGetStockLogsQuery(productId as string);
 
-  const stockLogs: StockLog[] = useMemo(() => {
-    const raw: any = data;
-    return Array.isArray(raw?.data) ? raw.data : [];
-  }, [data]);
+  const stockLogs: StockLog[] = useMemo(() => data?.data ?? [], [data]);
 
   const productName = stockLogs[0]?.product?.name || 'Product';
   const totals = useMemo(() => {
     let added = 0, removed = 0;
-    for (const l of stockLogs) (l.change > 0 ? (added += l.change) : (removed += l.change));
+    for (const l of stockLogs) {
+      if (l.change > 0) added += l.change;
+      else removed += l.change;
+    }
     return { added, removed };
   }, [stockLogs]);
 

@@ -1,8 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useMemo } from 'react';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
@@ -40,6 +38,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useConfirm } from '@/components/admin/ConfirmProvider';
 import { MobileCard, MobileCardList } from '@/components/admin/MobileCards';
+import type { Category } from '@/types/category.types';
 
 const BASE_SIZES = [
     "0.5", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13",
@@ -163,7 +162,7 @@ export default function CategoryList() {
 
     const [addModalOpen, setAddModalOpen] = useState(false);
     const [editModalOpen, setEditModalOpen] = useState(false);
-    const [editingCategory, setEditingCategory] = useState<any>(null);
+    const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -185,7 +184,7 @@ export default function CategoryList() {
     const filteredCategories = useMemo(() => {
         const q = searchTerm.toLowerCase().trim();
         if (!q) return allCategories;
-        return allCategories.filter((cat: any) => String(cat.categoryName || '').toLowerCase().includes(q));
+        return allCategories.filter((cat) => String(cat.categoryName || '').toLowerCase().includes(q));
     }, [searchTerm, allCategories]);
 
     const togglePublished = async (id: string, checked: boolean) => {
@@ -237,13 +236,13 @@ export default function CategoryList() {
         }
     };
 
-    const handleEdit = (category: any) => {
+    const handleEdit = (category: Category) => {
         setEditingCategory(category);
         setEditModalOpen(true);
         setImagePreview(category.imageUrl || null);
         setImageFile(null);
 
-        const existingSizes = (category?.sizes || []).map((s: any) => String(s).trim());
+        const existingSizes = (category?.sizes || []).map((s) => String(s).trim());
         const existingUnit = category?.unit ? [String(category.unit).trim()] : [];
 
         setSizeOptions(uniqKeepTyped([...BASE_SIZES, ...existingSizes]));
@@ -361,7 +360,7 @@ export default function CategoryList() {
             <div className="bg-white border border-gray-200/80 rounded-xl shadow-2xs overflow-hidden">
                 {/* Phones: one card per category */}
                 <MobileCardList className="p-2" isLoading={isLoading} isEmpty={!isLoading && filteredCategories.length === 0} emptyText="No categories found.">
-                    {filteredCategories.map((category: any) => {
+                    {filteredCategories.map((category) => {
                         const productCount = category._count?.Product ?? 0;
                         return (
                             <MobileCard
@@ -432,7 +431,7 @@ export default function CategoryList() {
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                filteredCategories.map((category: any) => {
+                                filteredCategories.map((category) => {
                                     const productCount = category._count?.Product ?? 0;
                                     return (
                                         <TableRow key={category.id} className="hover:bg-gray-50/80 transition-colors">
@@ -549,7 +548,6 @@ export default function CategoryList() {
                                 published: true,
                             }}
                             onSubmit={handleCreate}
-                            successMessage="Category added successfully!"
                             errorMessage="Failed to add category"
                             submitButtonText={isCreating ? 'Creating...' : 'Save Category'}
                             submitButtonClassName="bg-green-600 hover:bg-green-700 active:bg-green-800 text-xs font-bold h-8 px-5 shadow-2xs transition-colors"
@@ -658,7 +656,6 @@ export default function CategoryList() {
                                 published: editingCategory?.published ?? true,
                             }}
                             onSubmit={handleUpdate}
-                            successMessage="Category updated successfully!"
                             errorMessage="Failed to update category"
                             submitButtonText={isUpdating ? 'Updating...' : 'Update Category'}
                             submitButtonClassName="bg-green-600 hover:bg-green-700 active:bg-green-800 text-xs font-bold h-8 px-5 shadow-2xs transition-colors"

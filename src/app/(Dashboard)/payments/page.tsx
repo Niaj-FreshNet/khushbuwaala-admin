@@ -81,7 +81,7 @@ export default function PaymentManagementPage() {
                         isEmpty={!isLoading && payments.length === 0}
                         emptyText="No payments found."
                     >
-                        {payments.map((payment: any) => (
+                        {payments.map((payment) => (
                             <MobileCard
                                 key={payment.id}
                                 title={`৳${Number(payment.amount || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })} · ${payment.provider}`}
@@ -129,7 +129,7 @@ export default function PaymentManagementPage() {
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    payments.map((payment: any, index: number) => (
+                                    payments.map((payment, index: number) => (
                                         <TableRow key={payment.id} className="hover:bg-gray-50/80 transition-colors">
                                             <TableCell className="font-medium text-gray-500">
                                                 {(page - 1) * limit + index + 1}.

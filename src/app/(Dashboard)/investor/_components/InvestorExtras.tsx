@@ -6,6 +6,8 @@ import { CheckCircle2, Clock, KeyRound, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useGetMyLedgerAccessQuery, useRequestLedgerAccessMutation } from '@/redux/store/api/investor/investorApi';
 import { formatTaka } from '@/lib/money';
+import { apiErrorMessage } from "@/lib/apiError";
+import type { InvestorMonthlyProfit } from '@/types/investor.types';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const money = (v: unknown) => formatTaka(v, 2);
@@ -13,7 +15,7 @@ const when = (d?: string | null) =>
   d ? new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true }) : '';
 
 /** Profit credited to this investor, month by month (after Super Admin approval). */
-export function MonthlyProfitHistory({ items }: { items: any[] }) {
+export function MonthlyProfitHistory({ items }: { items: InvestorMonthlyProfit[] }) {
   return (
     <section className="rounded-2xl border border-stone-200/60 bg-white p-4 shadow-sm">
       <h3 className="text-sm font-bold text-stone-900">Profit credited by month</h3>
@@ -56,8 +58,8 @@ export function LedgerAccessCard() {
     try {
       await requestAccess({}).unwrap();
       toast.success('Request sent. You will be able to open the ledger once it is approved.');
-    } catch (e: any) {
-      toast.error(e?.data?.message || 'Could not send the request');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Could not send the request'));
     }
   };
 

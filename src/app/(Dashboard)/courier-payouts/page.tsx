@@ -23,6 +23,7 @@ import {
   useResolveCourierReviewMutation,
   useSyncCourierMutation,
 } from '@/redux/store/api/steadfast/steadfastApi';
+import { apiErrorMessage } from "@/lib/apiError";
 
 const when = (d?: string | null) =>
   d ? new Date(d).toLocaleString('en-GB', { timeZone: 'Asia/Dhaka', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }) : '—';
@@ -119,8 +120,8 @@ export default function CourierPayoutsPage() {
       const ch = r.data?.changes || [];
       setLastChanges(ch);
       toast.success(ch.length ? `Synced with Steadfast: ${ch.length} update(s)` : 'Synced with Steadfast: everything was up to date');
-    } catch (e: any) {
-      toast.error(e?.data?.message || 'Could not reach Steadfast');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Could not reach Steadfast'));
     }
   };
 

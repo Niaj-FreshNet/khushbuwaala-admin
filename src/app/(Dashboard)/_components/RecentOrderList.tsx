@@ -21,10 +21,8 @@ import {
     ArrowUp,
     ArrowDown,
     Download,
-    MapPin,
     FileText,
     RefreshCw,
-    ArrowUpRight,
 } from "lucide-react";
 import {
     Select,
@@ -46,24 +44,15 @@ import {
 } from "@/redux/store/api/sales/salesApi"; // Adjust path if necessary
 
 import OrderInvoice from "../orders/_components/OrderInvoice";
+import { paymentMethodLabel } from "@/lib/paymentMethods";
+import { orderDisplayLines } from "@/types/order.types";
+import type { Order, OrderListResponse } from "@/types/order.types";
+
+/** One row: a website order or an admin sale */
+type Row = Order & { _type: "ORDER" | "SALE"; date: string };
 
 type SortField = "orderTime" | "amount" | "status" | "invoice";
 type SortOrder = "asc" | "desc";
-
-const METHOD_OPTIONS = [
-    { value: "ALL", label: "All Methods" },
-    { value: "cash", label: "Cash" },
-    { value: "bkashPayment", label: "Bkash Payment" },
-    { value: "bkashPersonal", label: "Bkash Personal" },
-    { value: "nagadPayment", label: "Nagad Payment" },
-    { value: "nagadPersonal", label: "Nagad Personal" },
-    { value: "rocketPayment", label: "Rocket Payment" },
-    { value: "rocketPersonal", label: "Rocket Personal" },
-    { value: "bankTransfer", label: "Bank Transfer" },
-    { value: "cardPayment", label: "Card Payment" },
-    { value: "cashOnDelivery", label: "Cash On Delivery" },
-    { value: "onlinePayment", label: "Online Payment" },
-] as const;
 
 function useDebouncedValue<T>(value: T, delay = 350) {
     const [debounced, setDebounced] = useState(value);
@@ -90,35 +79,10 @@ const statusBadgeClass = (s: string) => {
                             : "bg-orange-500 text-white shadow-sm font-bold text-xs";
 };
 
-const methodLabel = (m: string) => {
-    const found = METHOD_OPTIONS.find((x) => x.value === m);
-    return found?.label || m || "Unknown";
-};
+const methodLabel = paymentMethodLabel;
 
-function generateSlug(str: string) {
-    return str
-        .toLowerCase()
-        .trim()
-        .replace(/[^\w\s-]/g, "")
-        .replace(/[\s_-]+/g, "-")
-        .replace(/^-+|-+$/g, "");
-}
-
-// Deep extractors to permanently solve the "No Data" issue by checking all standard payload formats
-const extractList = (res: any) => {
-    if (!res) return [];
-    if (Array.isArray(res)) return res;
-    if (Array.isArray(res.data)) return res.data;
-    if (res.data && Array.isArray(res.data.data)) return res.data.data;
-    return [];
-};
-
-const extractMeta = (res: any) => {
-    if (!res) return null;
-    if (res.meta) return res.meta;
-    if (res.data && res.data.meta) return res.data.meta;
-    return null;
-};
+const EMPTY: Order[] = [];
+const metaOf = (res?: OrderListResponse) => (res?.meta ? { total: res.meta.total, totalPage: res.meta.totalPage ?? 1 } : null);
 
 
 export default function RecentOrderList({ type = "website" }: { type?: "all" | "website" | "manual" }) {
@@ -153,18 +117,18 @@ export default function RecentOrderList({ type = "website" }: { type?: "all" | "
     const { data: invOrderData } = useGetOrderByIdQuery(invoiceId || "", { skip: invoiceType !== "ORDER" || !invoiceId });
     const { data: invSaleData } = useGetSaleByIdQuery(invoiceId || "", { skip: invoiceType !== "SALE" || !invoiceId });
 
-    const invoiceOrder = invoiceType === "ORDER" ? (invOrderData as any)?.data : (invSaleData as any)?.data;
+    const invoiceOrder = (invoiceType === "ORDER" ? invOrderData?.data : invSaleData?.data) ?? undefined;
 
-    const ordersRaw = extractList(oData);
-    const salesRaw = extractList(sData);
+    const ordersRaw = oData?.data ?? EMPTY;
+    const salesRaw = sData?.data ?? EMPTY;
 
     const combinedMeta = useMemo(() => {
-        if (type === "website") return extractMeta(oData);
-        if (type === "manual") return extractMeta(sData);
+        if (type === "website") return metaOf(oData);
+        if (type === "manual") return metaOf(sData);
 
         // Combine meta for "all"
-        const oMeta = extractMeta(oData) || { total: 0, totalPage: 1 };
-        const sMeta = extractMeta(sData) || { total: 0, totalPage: 1 };
+        const oMeta = metaOf(oData) || { total: 0, totalPage: 1 };
+        const sMeta = metaOf(sData) || { total: 0, totalPage: 1 };
         return {
             total: oMeta.total + sMeta.total,
             totalPage: Math.max(oMeta.totalPage, sMeta.totalPage)
@@ -172,28 +136,21 @@ export default function RecentOrderList({ type = "website" }: { type?: "all" | "
     }, [type, oData, sData]);
 
     const unifiedList = useMemo(() => {
-        const list: any[] = [];
+        const list: Row[] = [];
         if (fetchOrders) {
-            list.push(...ordersRaw.map((o: any) => ({ ...o, _type: 'ORDER', date: o.orderTime || o.createdAt })));
+            list.push(...ordersRaw.map((o): Row => ({ ...o, _type: 'ORDER', date: o.orderTime || o.createdAt })));
         }
         if (fetchSales) {
-            list.push(...salesRaw.map((s: any) => ({ ...s, _type: 'SALE', date: s.saleTime || s.orderTime || s.createdAt })));
+            list.push(...salesRaw.map((s): Row => ({ ...s, _type: 'SALE', date: s.orderTime || s.createdAt })));
         }
 
+        const key = (r: Row): number | string =>
+            sortField === "orderTime" ? (r.date ? new Date(r.date).getTime() : 0)
+                : sortField === "amount" ? Number(r.amount || 0)
+                    : String(r[sortField] || "");
         list.sort((a, b) => {
-            let valA: any = a[sortField];
-            let valB: any = b[sortField];
-
-            if (sortField === "orderTime") {
-                valA = a.date ? new Date(a.date).getTime() : 0;
-                valB = b.date ? new Date(b.date).getTime() : 0;
-            } else if (sortField === "amount") {
-                valA = Number(valA || 0);
-                valB = Number(valB || 0);
-            } else {
-                valA = String(valA || "");
-                valB = String(valB || "");
-            }
+            const valA = key(a);
+            const valB = key(b);
 
             if (valA < valB) return sortOrder === "asc" ? -1 : 1;
             if (valA > valB) return sortOrder === "asc" ? 1 : -1;
@@ -325,10 +282,10 @@ export default function RecentOrderList({ type = "website" }: { type?: "all" | "
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            unifiedList.map((order: any, idx: number) => {
-                                const orderItems = order.items || order.orderItems || order.cartItems || [];
+                            unifiedList.map((order, idx: number) => {
+                                const orderItems = orderDisplayLines(order);
                                 const shipping = Number(order.shippingCost || 0);
-                                const itemsSubtotal = orderItems.reduce((acc: number, it: any) => acc + (Number(it.price || 0) * Number(it.quantity || it.qty || 1)), 0);
+                                const itemsSubtotal = orderItems.reduce((acc, it) => acc + (Number(it.price || 0) * Number(it.quantity || it.qty || 1)), 0);
                                 const productBill = itemsSubtotal > 0 ? itemsSubtotal : Math.max(0, Number(order.amount || 0) - shipping);
 
                                 const districtLower = String(order.shipping?.district || "").toLowerCase();
@@ -370,7 +327,7 @@ export default function RecentOrderList({ type = "website" }: { type?: "all" | "
                                                         {order._type}
                                                     </span>
                                                 </div>
-                                                <Link href={`/${order._type === 'SALE' ? 'sales' : 'orders'}/${order.id}`} className="text-blue-600 font-semibold hover:underline mt-0.5 block">
+                                                <Link href={order._type === 'SALE' ? `/sales?q=${encodeURIComponent(order.invoice)}` : `/orders/${order.id}`} className="text-blue-600 font-semibold hover:underline mt-0.5 block">
                                                     #{order.invoice}
                                                 </Link>
                                             </div>
@@ -424,7 +381,7 @@ export default function RecentOrderList({ type = "website" }: { type?: "all" | "
                                         <TableCell className="align-top py-2.5 max-w-[240px]">
                                             {orderItems.length > 0 ? (
                                                 <div className="space-y-0.5">
-                                                    {orderItems.map((item: any, iIdx: number) => {
+                                                    {orderItems.map((item, iIdx: number) => {
                                                         const productName = item.name || item.product?.name || "Product";
                                                         const itemQty = item.quantity ?? item.qty ?? 1;
                                                         const itemPrice = item.price || item.amount || 0;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useFormContext } from 'react-hook-form';
+import { useFormContext, get } from "react-hook-form";
 import { Label } from '@/components/ui/label';
 import { Bold, Italic, List, ListOrdered, Heading2, Quote, Eraser, Edit3, Eye, Type } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -11,7 +11,6 @@ interface RichDescriptionEditorProps {
     label?: string;
     placeholder?: string;
     maxLength?: number;
-    rows?: number;
 }
 
 export function RichDescriptionEditor({
@@ -19,12 +18,11 @@ export function RichDescriptionEditor({
     label = 'Description & Story',
     placeholder = 'Write a professional product description...',
     maxLength = 3000,
-    rows,
 }: RichDescriptionEditorProps) {
     const { register, watch, setValue, formState: { errors } } = useFormContext();
     const editorRef = useRef<HTMLDivElement>(null);
     const formValue = watch(name) || '';
-    const errorMsg = (errors as Record<string, any>)?.[name]?.message as string | undefined;
+    const errorMsg = (get(errors, name) as { message?: string } | undefined)?.message;
 
     const [charCount, setCharCount] = useState(0);
     const [mode, setMode] = useState<'edit' | 'preview'>('edit');

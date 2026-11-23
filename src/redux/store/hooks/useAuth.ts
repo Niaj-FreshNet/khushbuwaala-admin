@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch, useSelector, useStore } from 'react-redux';
+import type { RootState } from '@/redux/store/store';
 import { jwtDecode } from 'jwt-decode';
 import Cookies from 'js-cookie';
 import { TUser } from '@/types/auth.types';
@@ -13,8 +14,11 @@ export const useAuth = () => {
   const dispatch = useDispatch();
 
   // 1️⃣ Pull current auth state from Redux
-  const reduxUser = useSelector((state: any) => state.auth?.user);
-  const reduxToken = useSelector((state: any) => state.auth?.accessToken);
+  const reduxUser = useSelector((state: RootState) => state.auth.user);
+  const reduxToken = useSelector((state: RootState) => state.auth.accessToken);
+  // Effects read the latest auth state from the store when they run, so they do not need it as a
+  // dependency (listing it would re-run them on every change they make themselves).
+  const store = useStore<RootState>();
 
   const [isLoading, setIsLoading] = useState(true);
   const isRefreshing = useRef(false);
@@ -25,7 +29,7 @@ export const useAuth = () => {
       : null;
 
   // 2️⃣ Fetch fresh user profile details from backend
-  const { data: userData, isSuccess, isError, refetch } = useGetMeUserQuery(undefined, {
+  const { data: userData, isSuccess, refetch } = useGetMeUserQuery(undefined, {
     skip: !storedToken && !reduxToken,
     refetchOnMountOrArgChange: true,
   });
@@ -35,14 +39,15 @@ export const useAuth = () => {
   // 3️⃣ 👉 UPDATE HERE: Sync full profile (name, image) into Redux whenever getMe succeeds
   useEffect(() => {
     if (isSuccess && userData?.data) {
+      const { user, accessToken } = store.getState().auth;
       dispatch(
         setUser({
-          user: { ...reduxUser, ...userData.data },
-          accessToken: localStorage.getItem('accessToken') || reduxToken || '',
+          user: { ...user, ...userData.data },
+          accessToken: localStorage.getItem('accessToken') || accessToken || '',
         })
       );
     }
-  }, [isSuccess, userData, dispatch]);
+  }, [isSuccess, userData, dispatch, store]);
 
   // 4️⃣ Token initialization and refresh logic
   useEffect(() => {
@@ -59,7 +64,7 @@ export const useAuth = () => {
         localStorage.setItem('refreshToken', refresh);
       }
 
-      if (token && !reduxUser) {
+      if (token && !store.getState().auth.user) {
         try {
           const decoded = jwtDecode<TUser>(token);
           dispatch(setUser({ user: decoded, accessToken: token }));
@@ -91,7 +96,7 @@ export const useAuth = () => {
     };
 
     initAuth();
-  }, [dispatch, refetch, refreshTokenApi]);
+  }, [dispatch, refetch, refreshTokenApi, store]);
 
   return {
     user: reduxUser,

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -8,8 +7,8 @@ import Image from 'next/image';
 import { toast } from 'sonner';
 import {
     AlertCircle, ArrowDown, ArrowLeft, ArrowUp, Bookmark, Calculator, Check, ChevronDown, Copy, Download,
-    Eye, EyeOff, Filter, Grid3X3, GripVertical, History, Keyboard, ListTree, Loader2, Maximize2, Package,
-    Palette, Percent, Pin, Plus, RotateCcw, Save, Search, Settings2, Trash2, Undo2, Wallet, X,
+    Eye, EyeOff, Filter, Grid3X3, GripVertical, Keyboard, ListTree, Loader2, Maximize2, Package,
+    Palette, Percent, Pin, Plus, RotateCcw, Save, Search, Settings2, Trash2, Undo2, X,
 } from 'lucide-react';
 import {
     useGetAllProductsAdminQuery,
@@ -26,6 +25,10 @@ import {
 } from '@/redux/store/api/finance/financeApi';
 import { useAuth } from '@/redux/store/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { apiErrorMessage } from "@/lib/apiError";
+import type { CostCategory } from '@/redux/store/api/finance/financeApi';
+import type { Category } from '@/types/category.types';
+import type { IDiscount } from '@/types/product.types';
 
 // ============================================================
 // ⚙️ SETTINGS YOU MAY WANT TO ADJUST
@@ -57,7 +60,7 @@ const themeVars = (t: Theme): React.CSSProperties => ({
     '--kw-border': t.border, '--kw-text': t.text, '--kw-muted': t.muted, '--kw-rowA': t.rowA,
     '--kw-rowB': t.rowB, '--kw-hover': t.hover, '--kw-accent': t.accent, '--kw-soft': t.soft,
     colorScheme: t.scheme,
-} as any);
+} as React.CSSProperties);
 const VarsCtx = createContext<React.CSSProperties>({});
 
 // ============================================================
@@ -67,7 +70,28 @@ type ViewMode = 'products' | 'variants';
 type Density = 'dense' | 'normal' | 'roomy';
 const ROW_H: Record<Density, number> = { dense: 28, normal: 34, roomy: 44 };
 
-interface Row { id: string; p: any; v?: any }
+/** A size as the sheet sees it (admin listing; cost fields only reach a super admin). */
+interface SheetVariant {
+    id: string; sku: string; size: number; unit: string; price: number;
+    published?: boolean; isDefault?: boolean;
+    compareAtPrice?: number | null; costPrice?: number | null; weightGrams?: number | null; lowStockAlert?: number | null;
+    barcode?: string | null; gtin?: string | null; mpn?: string | null;
+    [field: string]: unknown; // edited fields are merged in by name
+}
+type SheetCategory = { id?: string; _id?: string; categoryName?: string; unit?: string };
+/** A product after the sheet merged in unsaved edits and resolved its category */
+interface SheetProduct {
+    id: string; name: string; primaryImage?: string; categoryId?: string; category?: SheetCategory | null;
+    published?: boolean; stock?: number; totalStock?: number; brand?: string | null; supplier?: string | null;
+    salesCount?: number; averageRating?: number; reviewCount?: number; tags?: string[];
+    createdAt?: string; updatedAt?: string;
+    variants: SheetVariant[];
+    [field: string]: unknown;
+}
+interface Row { id: string; p: SheetProduct; v?: SheetVariant }
+// variant-view rows always have a size; this keeps the column code free of "maybe missing" checks
+const NO_VARIANT: SheetVariant = { id: '', sku: '', size: 0, unit: '', price: 0 };
+const vOf = (r: Row): SheetVariant => r.v ?? NO_VARIANT;
 interface Sort { id: string; dir: 'asc' | 'desc' }
 interface ColState { order: string[]; hidden: string[]; widths: Record<string, number>; frozen: number }
 interface Filters {
@@ -87,35 +111,38 @@ interface EditSpec {
 interface ColDef {
     id: string; label: string; width: number; min?: number; align?: 'left' | 'right' | 'center';
     views: ViewMode[]; superOnly?: boolean; off?: boolean; mono?: boolean; money?: boolean; zeroEmpty?: boolean;
-    get: (r: Row) => any; text?: (r: Row) => string;
-    render?: (r: Row, raw: any, ctx: Ctx) => React.ReactNode; edit?: EditSpec;
+    get: (r: Row) => unknown; text?: (r: Row) => string;
+    render?: (r: Row, raw: unknown, ctx: Ctx) => React.ReactNode; edit?: EditSpec;
 }
-interface Ctx { isSuper: boolean; discountFor: (p: any, v: any) => any; offerPrice: (p: any, v: any) => number | null }
+interface Ctx { isSuper: boolean; discountFor: (p: SheetProduct, v: SheetVariant) => IDiscount | null; offerPrice: (p: SheetProduct, v: SheetVariant) => number | null }
 interface Preset { id: string; name: string; desc?: string; view: ViewMode; col: ColState; sort: Sort[]; filters?: Partial<Filters>; density?: Density; superOnly?: boolean; builtin?: boolean }
-interface Change { t: { entity: 'PRODUCT' | 'VARIANT'; id: string; field: string }; from: any; to: any }
+interface Change { t: { entity: 'PRODUCT' | 'VARIANT'; id: string; field: string }; from: unknown; to: unknown }
 
-const num = (x: any) => { const n = Number(x); return Number.isFinite(n) ? n : 0; };
-const money = (x: any) => (x === null || x === undefined || x === '' ? '' : `৳${num(x).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`);
-const vKey = (v: any) => `${num(v.size)}_${String(v.unit || 'ML').toUpperCase()}`;
-const pStock = (p: any) => num(p.totalStock ?? p.stock);
+const num = (x: unknown) => { const n = Number(x); return Number.isFinite(n) ? n : 0; };
+const money = (x: unknown) => (x === null || x === undefined || x === '' ? '' : `৳${num(x).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`);
+const vKey = (v: { size?: unknown; unit?: unknown }) => `${num(v.size)}_${String(v.unit || 'ML').toUpperCase()}`;
+const pStock = (p: { totalStock?: unknown; stock?: unknown }) => num(p.totalStock ?? p.stock);
 // Stock is kept per product (ml/gm); a size has no stock of its own. Bottles of this size the stock can still fill:
-const bottlesLeft = (p: any, v: any) => (num(v?.size) > 0 ? Math.floor(Math.max(0, pStock(p)) / num(v.size)) : 0);
-const fmtDate = (d: any) => (d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }) : '');
+const bottlesLeft = (p: { totalStock?: unknown; stock?: unknown }, v?: { size?: unknown }) => (num(v?.size) > 0 ? Math.floor(Math.max(0, pStock(p)) / num(v?.size)) : 0);
+const fmtDate = (d: unknown) => (d ? new Date(String(d)).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }) : '');
 const roundTo = (n: number, step: number) => (step > 1 ? Math.round(n / step) * step : Math.round(n));
-const marginOf = (v: any) => {
+const marginOf = (v: { costPrice?: unknown; price?: unknown }) => {
     const c = num(v.costPrice), pr = num(v.price);
     if (c <= 0 || pr <= 0) return null;
     return { amt: pr - c, pct: ((pr - c) / pr) * 100 };
 };
-const csvCell = (s: any) => `"${String(s ?? '').replace(/"/g, '""')}"`;
+const csvCell = (s: unknown) => `"${String(s ?? '').replace(/"/g, '""')}"`;
 const download = (name: string, text: string, type: string) => {
     const url = URL.createObjectURL(new Blob([text], { type }));
     const a = document.createElement('a');
     a.href = url; a.download = name; a.click();
     URL.revokeObjectURL(url);
 };
-const findVariant = (p: any, key: string) => (p.variants || []).find((v: any) => vKey(v) === key);
-async function runPool<T>(items: T[], worker: (x: T) => Promise<any>, size = 4) {
+const findVariant = (p: SheetProduct, key: string) => (p.variants || []).find((v) => vKey(v) === key);
+/** What the quick-cell endpoint accepts */
+const toCellValue = (v: unknown): string | number | boolean | null =>
+    typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean' ? v : v === null || v === undefined ? null : String(v);
+async function runPool<T>(items: T[], worker: (x: T) => Promise<unknown>, size = 4) {
     const q = [...items];
     await Promise.all(Array.from({ length: Math.min(size, q.length) }, async () => { while (q.length) await worker(q.shift() as T); }));
 }
@@ -125,7 +152,10 @@ async function runPool<T>(items: T[], worker: (x: T) => Promise<any>, size = 4) 
 // ============================================================
 const inp = 'h-8 px-2 text-xs rounded-md border border-[var(--kw-border)] bg-[var(--kw-bg)] text-[var(--kw-text)] outline-none focus:border-[var(--kw-accent)]';
 
-function Btn({ children, onClick, active, title, className, disabled }: any) {
+function Btn({ children, onClick, active, title, className, disabled }: {
+    children?: React.ReactNode; onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+    active?: boolean; title?: string; className?: string; disabled?: boolean;
+}) {
     return (
         <button type="button" title={title} disabled={disabled} onClick={onClick}
             className={cn('h-8 px-2.5 inline-flex items-center justify-center gap-1.5 rounded-md border text-xs font-semibold select-none transition-colors disabled:opacity-40 shrink-0',
@@ -240,14 +270,16 @@ function MultiPick({ label, options, value, onChange }: { label: string; options
     );
 }
 
+const showValue = (x: unknown, zeroEmpty?: boolean) => (x === null || x === undefined || (zeroEmpty && num(x) === 0) ? '' : String(x));
+
 /** Small field used inside drawers: commits on blur / Enter */
 function MiniField({ value, type = 'text', options, onSave, upper, className, zeroEmpty }: {
-    value: any; type?: 'text' | 'number' | 'select'; options?: { value: string; label: string }[];
-    onSave: (v: any) => void; upper?: boolean; className?: string; zeroEmpty?: boolean;
+    value: unknown; type?: 'text' | 'number' | 'select'; options?: { value: string; label: string }[];
+    onSave: (v: string | number) => void; upper?: boolean; className?: string; zeroEmpty?: boolean;
 }) {
-    const show = (x: any) => (x === null || x === undefined || (zeroEmpty && num(x) === 0) ? '' : String(x));
+    const show = (x: unknown) => showValue(x, zeroEmpty);
     const [d, setD] = useState(show(value));
-    useEffect(() => setD(show(value)), [value]); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => setD(showValue(value, zeroEmpty)), [value, zeroEmpty]);
     const commit = () => {
         if (type === 'number') {
             const t = d.trim().replace(/[৳,\s]/g, '');
@@ -285,7 +317,7 @@ function Switch({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 // ============================================================
 // 🧬 COLUMN DEFINITIONS
 // ============================================================
-const nameNode = (p: any) => (
+const nameNode = (p: SheetProduct) => (
     <span className="flex items-center gap-2 min-w-0">
         <span className="relative w-5 h-5 rounded-sm overflow-hidden shrink-0 border border-[var(--kw-border)] bg-[var(--kw-head)]">
             {p.primaryImage && <Image src={p.primaryImage} alt="" fill sizes="20px" className="object-cover" />}
@@ -299,7 +331,7 @@ const liveNode = (on: boolean) => (
     </span>
 );
 
-function buildColumns(sizeCols: { key: string; label: string }[], categories: any[]): ColDef[] {
+function buildColumns(sizeCols: { key: string; label: string }[], categories: Category[]): ColDef[] {
     const P: ViewMode[] = ['products'];
     const V: ViewMode[] = ['variants'];
     const catOptions = categories.map((c) => ({ value: c.id, label: c.categoryName }));
@@ -312,14 +344,14 @@ function buildColumns(sizeCols: { key: string; label: string }[], categories: an
         { id: 'name', label: 'Product', width: 250, min: 140, views: P, get: (r) => r.p.name, edit: pEdit('name', 'text', { required: true }), render: (r) => nameNode(r.p) },
         { id: 'category', label: 'Category', width: 130, views: P, get: (r) => r.p.categoryId, text: (r) => r.p.category?.categoryName || '', edit: pEdit('categoryId', 'select', { options: catOptions }), render: (r) => <span className="truncate">{r.p.category?.categoryName || '—'}</span> },
         { id: 'live', label: 'Live', width: 64, align: 'center', views: P, get: (r) => !!r.p.published, edit: pEdit('published', 'bool'), render: (r) => liveNode(!!r.p.published) },
-        { id: 'pstock', label: 'Stock', width: 100, align: 'right', views: P, mono: true, get: (r) => pStock(r.p), edit: pEdit('stock', 'number'), render: (r, raw) => <span>{raw}<span className="ml-1 text-[10px] opacity-60">{r.p.category?.unit || ''}</span></span> },
+        { id: 'pstock', label: 'Stock', width: 100, align: 'right', views: P, mono: true, get: (r) => pStock(r.p), edit: pEdit('stock', 'number'), render: (r, raw) => <span>{num(raw)}<span className="ml-1 text-[10px] opacity-60">{r.p.category?.unit || ''}</span></span> },
         ...sizeCols.map<ColDef>((sc) => ({
             id: `size:${sc.key}`, label: sc.label, width: 92, align: 'right', views: P, mono: true, money: true,
             get: (r) => findVariant(r.p, sc.key)?.price,
             edit: { entity: 'VARIANT', field: 'price', type: 'number', target: (r) => findVariant(r.p, sc.key)?.id ?? null },
             render: (r, raw) => { const v = findVariant(r.p, sc.key); if (!v) return <span className="opacity-30">—</span>; return <span className={cn(v.published === false && 'opacity-50 line-through')}>{money(raw)}</span>; },
         })),
-        { id: 'range', label: 'Range', width: 120, align: 'right', views: P, mono: true, get: (r) => { const a = (r.p.variants || []).map((v: any) => num(v.price)); return a.length ? Math.min(...a) : 0; }, text: (r) => { const a = (r.p.variants || []).map((v: any) => num(v.price)); if (!a.length) return ''; const lo = Math.min(...a), hi = Math.max(...a); return lo === hi ? `${lo}` : `${lo}-${hi}`; }, render: (r) => { const a = (r.p.variants || []).map((v: any) => num(v.price)); if (!a.length) return '—'; const lo = Math.min(...a), hi = Math.max(...a); return <span className="opacity-80">{lo === hi ? money(lo) : `${money(lo)} – ${money(hi)}`}</span>; } },
+        { id: 'range', label: 'Range', width: 120, align: 'right', views: P, mono: true, get: (r) => { const a = (r.p.variants || []).map((v) => num(v.price)); return a.length ? Math.min(...a) : 0; }, text: (r) => { const a = (r.p.variants || []).map((v) => num(v.price)); if (!a.length) return ''; const lo = Math.min(...a), hi = Math.max(...a); return lo === hi ? `${lo}` : `${lo}-${hi}`; }, render: (r) => { const a = (r.p.variants || []).map((v) => num(v.price)); if (!a.length) return '—'; const lo = Math.min(...a), hi = Math.max(...a); return <span className="opacity-80">{lo === hi ? money(lo) : `${money(lo)} – ${money(hi)}`}</span>; } },
         { id: 'brand', label: 'Brand', width: 120, views: P, off: true, get: (r) => r.p.brand, edit: pEdit('brand', 'text') },
         { id: 'supplier', label: 'Supplier', width: 130, views: P, off: true, get: (r) => r.p.supplier, edit: pEdit('supplier', 'text') },
         { id: 'sold', label: 'Sold', width: 72, align: 'right', views: P, mono: true, get: (r) => num(r.p.salesCount) },
@@ -330,24 +362,24 @@ function buildColumns(sizeCols: { key: string; label: string }[], categories: an
         // ---------- VARIANTS VIEW ----------
         { id: 'vname', label: 'Product', width: 240, min: 140, views: V, get: (r) => r.p.name, render: (r) => nameNode(r.p) },
         { id: 'vcat', label: 'Category', width: 120, views: V, get: (r) => r.p.category?.categoryName || '' },
-        { id: 'size', label: 'Size', width: 70, align: 'right', views: V, mono: true, get: (r) => num(r.v.size), edit: vEdit('size', 'number', { positive: true }) },
-        { id: 'unit', label: 'Unit', width: 64, views: V, get: (r) => r.v.unit, edit: vEdit('unit', 'text', { required: true, upper: true }) },
-        { id: 'sku', label: 'SKU', width: 160, views: V, mono: true, get: (r) => r.v.sku, edit: vEdit('sku', 'text', { required: true, upper: true }) },
-        { id: 'price', label: 'Selling Price', width: 110, align: 'right', views: V, mono: true, money: true, get: (r) => r.v.price, edit: vEdit('price', 'number') },
-        { id: 'compare', label: 'Regular Price', width: 110, align: 'right', views: V, mono: true, money: true, zeroEmpty: true, get: (r) => r.v.compareAtPrice, edit: vEdit('compareAtPrice', 'number') },
-        { id: 'discpct', label: 'Markdown %', width: 96, align: 'right', views: V, mono: true, get: (r) => { const c = num(r.v.compareAtPrice), p = num(r.v.price); return c > p && p > 0 ? Math.round(((c - p) / c) * 100) : 0; }, render: (_r, raw) => (raw ? <span className="text-rose-500">-{raw}%</span> : <span className="opacity-30">—</span>) },
-        { id: 'offer', label: 'Offer Price', width: 110, align: 'right', views: V, mono: true, get: (r) => r.v.price, render: (r, _raw, ctx) => { const o = ctx.offerPrice(r.p, r.v); return o === null ? <span className="opacity-30">—</span> : <span className="text-rose-500 font-bold" title="Active automatic discount applied">{money(o)}</span>; } },
-        { id: 'cost', label: 'Cost Price', width: 104, align: 'right', views: V, superOnly: true, mono: true, money: true, zeroEmpty: true, get: (r) => r.v.costPrice, edit: vEdit('costPrice', 'number') },
-        { id: 'margin', label: 'Margin ৳', width: 96, align: 'right', views: V, superOnly: true, mono: true, get: (r) => marginOf(r.v)?.amt ?? null, render: (_r, raw) => (raw === null ? <span className="opacity-30">—</span> : money(raw)) },
-        { id: 'marginpct', label: 'Margin %', width: 92, align: 'right', views: V, superOnly: true, mono: true, get: (r) => marginOf(r.v)?.pct ?? null, render: (_r, raw) => (raw === null ? <span className="opacity-30">—</span> : <span className={cn('font-bold', mTone(raw))}>{raw.toFixed(1)}%</span>) },
-        { id: 'vstock', label: 'Bottles left', width: 96, align: 'right', views: V, mono: true, get: (r) => bottlesLeft(r.p, r.v), render: (r, raw) => <span title={`${pStock(r.p)} ${r.p.category?.unit || ''} in stock ÷ ${r.v.size}`} className={cn(raw <= 0 ? 'text-rose-500 font-bold' : raw <= 5 && 'text-amber-500 font-bold')}>{raw}</span> },
-        { id: 'vlive', label: 'Live', width: 64, align: 'center', views: V, get: (r) => r.v.published !== false, edit: vEdit('published', 'bool'), render: (r) => liveNode(r.v.published !== false) },
-        { id: 'lowalert', label: 'Low-stock alert (not used)', width: 112, align: 'right', views: V, off: true, mono: true, get: (r) => r.v.lowStockAlert, edit: vEdit('lowStockAlert', 'number') },
-        { id: 'barcode', label: 'Barcode', width: 130, views: V, off: true, mono: true, get: (r) => r.v.barcode, edit: vEdit('barcode', 'text') },
-        { id: 'gtin', label: 'GTIN', width: 130, views: V, off: true, mono: true, get: (r) => r.v.gtin, edit: vEdit('gtin', 'text') },
-        { id: 'mpn', label: 'MPN', width: 110, views: V, off: true, mono: true, get: (r) => r.v.mpn, edit: vEdit('mpn', 'text') },
-        { id: 'weight', label: 'Weight (g)', width: 96, align: 'right', views: V, off: true, mono: true, zeroEmpty: true, get: (r) => r.v.weightGrams, edit: vEdit('weightGrams', 'number') },
-        { id: 'isdef', label: 'Default', width: 70, align: 'center', views: V, off: true, get: (r) => !!r.v.isDefault, text: (r) => (r.v.isDefault ? 'Yes' : ''), render: (r) => (r.v.isDefault ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : null) },
+        { id: 'size', label: 'Size', width: 70, align: 'right', views: V, mono: true, get: (r) => num(vOf(r).size), edit: vEdit('size', 'number', { positive: true }) },
+        { id: 'unit', label: 'Unit', width: 64, views: V, get: (r) => vOf(r).unit, edit: vEdit('unit', 'text', { required: true, upper: true }) },
+        { id: 'sku', label: 'SKU', width: 160, views: V, mono: true, get: (r) => vOf(r).sku, edit: vEdit('sku', 'text', { required: true, upper: true }) },
+        { id: 'price', label: 'Selling Price', width: 110, align: 'right', views: V, mono: true, money: true, get: (r) => vOf(r).price, edit: vEdit('price', 'number') },
+        { id: 'compare', label: 'Regular Price', width: 110, align: 'right', views: V, mono: true, money: true, zeroEmpty: true, get: (r) => vOf(r).compareAtPrice, edit: vEdit('compareAtPrice', 'number') },
+        { id: 'discpct', label: 'Markdown %', width: 96, align: 'right', views: V, mono: true, get: (r) => { const c = num(vOf(r).compareAtPrice), p = num(vOf(r).price); return c > p && p > 0 ? Math.round(((c - p) / c) * 100) : 0; }, render: (_r, raw) => (raw ? <span className="text-rose-500">-{num(raw)}%</span> : <span className="opacity-30">—</span>) },
+        { id: 'offer', label: 'Offer Price', width: 110, align: 'right', views: V, mono: true, get: (r) => vOf(r).price, render: (r, _raw, ctx) => { const o = ctx.offerPrice(r.p, vOf(r)); return o === null ? <span className="opacity-30">—</span> : <span className="text-rose-500 font-bold" title="Active automatic discount applied">{money(o)}</span>; } },
+        { id: 'cost', label: 'Cost Price', width: 104, align: 'right', views: V, superOnly: true, mono: true, money: true, zeroEmpty: true, get: (r) => vOf(r).costPrice, edit: vEdit('costPrice', 'number') },
+        { id: 'margin', label: 'Margin ৳', width: 96, align: 'right', views: V, superOnly: true, mono: true, get: (r) => marginOf(vOf(r))?.amt ?? null, render: (_r, raw) => (raw === null ? <span className="opacity-30">—</span> : money(raw)) },
+        { id: 'marginpct', label: 'Margin %', width: 92, align: 'right', views: V, superOnly: true, mono: true, get: (r) => marginOf(vOf(r))?.pct ?? null, render: (_r, raw) => (raw === null ? <span className="opacity-30">—</span> : <span className={cn('font-bold', mTone(num(raw)))}>{num(raw).toFixed(1)}%</span>) },
+        { id: 'vstock', label: 'Bottles left', width: 96, align: 'right', views: V, mono: true, get: (r) => bottlesLeft(r.p, vOf(r)), render: (r, raw) => <span title={`${pStock(r.p)} ${r.p.category?.unit || ''} in stock ÷ ${vOf(r).size}`} className={cn(num(raw) <= 0 ? 'text-rose-500 font-bold' : num(raw) <= 5 && 'text-amber-500 font-bold')}>{num(raw)}</span> },
+        { id: 'vlive', label: 'Live', width: 64, align: 'center', views: V, get: (r) => vOf(r).published !== false, edit: vEdit('published', 'bool'), render: (r) => liveNode(vOf(r).published !== false) },
+        { id: 'lowalert', label: 'Low-stock alert (not used)', width: 112, align: 'right', views: V, off: true, mono: true, get: (r) => vOf(r).lowStockAlert, edit: vEdit('lowStockAlert', 'number') },
+        { id: 'barcode', label: 'Barcode', width: 130, views: V, off: true, mono: true, get: (r) => vOf(r).barcode, edit: vEdit('barcode', 'text') },
+        { id: 'gtin', label: 'GTIN', width: 130, views: V, off: true, mono: true, get: (r) => vOf(r).gtin, edit: vEdit('gtin', 'text') },
+        { id: 'mpn', label: 'MPN', width: 110, views: V, off: true, mono: true, get: (r) => vOf(r).mpn, edit: vEdit('mpn', 'text') },
+        { id: 'weight', label: 'Weight (g)', width: 96, align: 'right', views: V, off: true, mono: true, zeroEmpty: true, get: (r) => vOf(r).weightGrams, edit: vEdit('weightGrams', 'number') },
+        { id: 'isdef', label: 'Default', width: 70, align: 'center', views: V, off: true, get: (r) => !!vOf(r).isDefault, text: (r) => (vOf(r).isDefault ? 'Yes' : ''), render: (r) => (vOf(r).isDefault ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : null) },
     ];
     return cols;
 }
@@ -357,16 +389,16 @@ function buildColumns(sizeCols: { key: string; label: string }[], categories: an
 // ============================================================
 const PKG_CATS = ['BOTTLE', 'PACKAGING', 'LABEL', 'GIFT_WRAP', 'OTHER'];
 const BUY_CATS = ['STOCK_BILL', 'CARRYING', 'OTHER'];
-type DrawerSave = (entity: 'PRODUCT' | 'VARIANT', id: string, field: string, value: any, prev: any) => Promise<boolean>;
+type DrawerSave = (entity: 'PRODUCT' | 'VARIANT', id: string, field: string, value: unknown, prev: unknown) => Promise<boolean>;
 
-function VariantCostRow({ p, v, wac, save }: { p: any; v: any; wac: number; save: any }) {
+function VariantCostRow({ v, wac }: { v: SheetVariant; wac: number }) {
     const { data, isFetching } = useGetPackagingCostsQuery(v.sku);
     const [setCosts, { isLoading: saving }] = useSetPackagingCostsMutation();
     const [open, setOpen] = useState(false);
     const [lines, setLines] = useState<{ category: string; label?: string; amount: number | string }[]>([]);
-    const serverLines = (data as any)?.data?.costLines;
-    useEffect(() => { setLines((serverLines || []).map((l: any) => ({ ...l }))); }, [serverLines]);
-    const pkg = (data as any)?.data?.totalCost ?? 0;
+    const serverLines = data?.data?.costLines;
+    useEffect(() => { setLines((serverLines || []).map((l) => ({ ...l }))); }, [serverLines]);
+    const pkg = data?.data?.totalCost ?? 0;
     const liquid = wac * num(v.size);
     const total = liquid + num(pkg);
     const profit = num(v.price) - total;
@@ -374,9 +406,9 @@ function VariantCostRow({ p, v, wac, save }: { p: any; v: any; wac: number; save
     const linesTotal = lines.reduce((s, l) => s + num(l.amount), 0);
     const submit = async () => {
         try {
-            await setCosts({ sku: v.sku, costLines: lines.filter((l) => num(l.amount) >= 0 && l.amount !== '').map((l) => ({ category: l.category as any, label: l.label || undefined, amount: num(l.amount) })) }).unwrap();
+            await setCosts({ sku: v.sku, costLines: lines.filter((l) => num(l.amount) >= 0 && l.amount !== '').map((l) => ({ category: l.category as CostCategory, label: l.label || undefined, amount: num(l.amount) })) }).unwrap();
             toast.success(`Packaging cost saved for ${v.sku}`);
-        } catch (e: any) { toast.error(e?.data?.message || 'Failed to save packaging cost'); }
+        } catch (e) { toast.error(apiErrorMessage(e, 'Failed to save packaging cost')); }
     };
     return (
         <>
@@ -415,7 +447,7 @@ function VariantCostRow({ p, v, wac, save }: { p: any; v: any; wac: number; save
     );
 }
 
-function ReceiveStockCard({ p, wac }: { p: any; wac: number }) {
+function ReceiveStockCard({ p, wac }: { p: SheetProduct; wac: number }) {
     const [receive, { isLoading }] = useReceiveStockPurchaseMutation();
     const [qty, setQty] = useState('');
     const [supplier, setSupplier] = useState(p.supplier || '');
@@ -430,10 +462,10 @@ function ReceiveStockCard({ p, wac }: { p: any; wac: number }) {
         if (q <= 0) return toast.error('Enter quantity received');
         if (total <= 0) return toast.error('Enter at least the stock bill amount');
         try {
-            await receive({ productId: p.id, payload: { quantity: q, unit: p.category?.unit || undefined, supplier: supplier || undefined, billNo: billNo || undefined, note: note || undefined, costLines: lines.filter((l) => num(l.amount) > 0).map((l) => ({ category: l.category as any, amount: num(l.amount) })) } }).unwrap();
+            await receive({ productId: p.id, payload: { quantity: q, unit: p.category?.unit || undefined, supplier: supplier || undefined, billNo: billNo || undefined, note: note || undefined, costLines: lines.filter((l) => num(l.amount) > 0).map((l) => ({ category: l.category as CostCategory, amount: num(l.amount) })) } }).unwrap();
             toast.success('Stock received and average cost updated');
             setQty(''); setBillNo(''); setNote(''); setLines(lines.map((l) => ({ ...l, amount: '' })));
-        } catch (e: any) { toast.error(e?.data?.message || 'Failed to receive stock'); }
+        } catch (e) { toast.error(apiErrorMessage(e, 'Failed to receive stock')); }
     };
     return (
         <div className="rounded-lg border border-[var(--kw-border)] p-3 space-y-2">
@@ -461,21 +493,23 @@ function ReceiveStockCard({ p, wac }: { p: any; wac: number }) {
     );
 }
 
-function ProductDrawer({ p, categories, isSuper, save, onClose, onFull }: { p: any; categories: any[]; isSuper: boolean; save: DrawerSave; onClose: () => void; onFull: () => void }) {
-    const [tab, setTab] = useState<'overview' | 'variants' | 'costing' | 'history'>('overview');
+type DrawerTab = 'overview' | 'variants' | 'costing' | 'history';
+
+function ProductDrawer({ p, categories, isSuper, save, onClose, onFull }: { p: SheetProduct; categories: Category[]; isSuper: boolean; save: DrawerSave; onClose: () => void; onFull: () => void }) {
+    const [tab, setTab] = useState<DrawerTab>('overview');
     const { data: wacRes } = useGetLiveWACQuery(p.id, { skip: !isSuper || tab !== 'costing' });
     const { data: logsRes, isFetching: logsLoading } = useGetStockLogsQuery(p.id, { skip: tab !== 'history' });
-    const wac = num((wacRes as any)?.data?.avgCostPerUnit);
-    const last = num((wacRes as any)?.data?.lastCostPerUnit);
-    const logs: any[] = Array.isArray(logsRes) ? (logsRes as any) : (logsRes as any)?.data || [];
+    const wac = num(wacRes?.data?.avgCostPerUnit);
+    const last = num(wacRes?.data?.lastCostPerUnit);
+    const logs = logsRes?.data ?? [];
     const catOptions = categories.map((c) => ({ value: c.id, label: c.categoryName }));
-    const tabs = [{ v: 'overview', l: 'Overview' }, { v: 'variants', l: `Variants (${p.variants.length})` }, ...(isSuper ? [{ v: 'costing', l: 'Costing & Margin' }] : []), { v: 'history', l: 'Stock history' }] as const;
+    const tabs: { v: DrawerTab; l: string }[] = [{ v: 'overview', l: 'Overview' }, { v: 'variants', l: `Variants (${p.variants.length})` }, ...(isSuper ? [{ v: 'costing' as const, l: 'Costing & Margin' }] : []), { v: 'history', l: 'Stock history' }];
     const field = (label: string, node: React.ReactNode) => <label className="space-y-1 block"><span className="text-[11px] font-bold uppercase tracking-wide opacity-60">{label}</span>{node}</label>;
     return (
         <Overlay drawer title={p.name} subtitle={`${p.category?.categoryName || ''} · ${p.variants.length} variants · stock ${pStock(p)} ${p.category?.unit || ''}`} onClose={onClose}>
             <div className="flex gap-1 px-3 pt-2 border-b border-[var(--kw-border)] overflow-x-auto">
                 {tabs.map((t) => (
-                    <button key={t.v} onClick={() => setTab(t.v as any)} className={cn('px-3 py-2 text-xs font-bold border-b-2 whitespace-nowrap', tab === t.v ? 'border-[var(--kw-accent)] text-[var(--kw-accent)]' : 'border-transparent opacity-60 hover:opacity-100')}>{t.l}</button>
+                    <button key={t.v} onClick={() => setTab(t.v)} className={cn('px-3 py-2 text-xs font-bold border-b-2 whitespace-nowrap', tab === t.v ? 'border-[var(--kw-accent)] text-[var(--kw-accent)]' : 'border-transparent opacity-60 hover:opacity-100')}>{t.l}</button>
                 ))}
                 <button onClick={onFull} className="ml-auto px-3 py-2 text-xs font-bold text-[var(--kw-accent)] whitespace-nowrap">Open full editor →</button>
             </div>
@@ -490,7 +524,7 @@ function ProductDrawer({ p, categories, isSuper, save, onClose, onFull }: { p: a
                         {field('Visible on website', <div className="flex items-center gap-2 h-8"><Switch on={!!p.published} onChange={(v) => save('PRODUCT', p.id, 'published', v, !!p.published)} /><span>{p.published ? 'Live' : 'Hidden'}</span></div>)}
                         <div className="sm:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-[var(--kw-border)]">
                             {[['Sold', p.salesCount ?? 0], ['Rating', p.averageRating ? `★ ${Number(p.averageRating).toFixed(1)} (${p.reviewCount || 0})` : '—'], ['Created', fmtDate(p.createdAt)], ['Updated', fmtDate(p.updatedAt)]].map(([a, b]) => (
-                                <div key={String(a)} className="rounded-md bg-[var(--kw-bg)] p-2"><div className="opacity-60 text-[10px] uppercase font-bold">{a}</div><div className="font-bold">{b as any}</div></div>
+                                <div key={String(a)} className="rounded-md bg-[var(--kw-bg)] p-2"><div className="opacity-60 text-[10px] uppercase font-bold">{a}</div><div className="font-bold">{b}</div></div>
                             ))}
                         </div>
                     </div>
@@ -500,9 +534,9 @@ function ProductDrawer({ p, categories, isSuper, save, onClose, onFull }: { p: a
                         <table className="w-full min-w-[860px]">
                             <thead><tr className="text-left text-[10px] uppercase opacity-60">{['Size', 'Unit', 'SKU', 'Selling', 'Regular', ...(isSuper ? ['Cost', 'Margin'] : []), 'Bottles left', 'Barcode', 'Live'].map((h) => <th key={h} className="px-1.5 py-1 font-bold">{h}</th>)}</tr></thead>
                             <tbody>
-                                {p.variants.map((v: any) => {
+                                {p.variants.map((v) => {
                                     const m = marginOf(v);
-                                    const sv = (f: string, val: any, prev: any) => save('VARIANT', v.id, f, val, prev);
+                                    const sv = (f: string, val: unknown, prev: unknown) => save('VARIANT', v.id, f, val, prev);
                                     return (
                                         <tr key={v.id} className="border-t border-[var(--kw-border)]">
                                             <td className="p-1 w-16"><MiniField type="number" value={v.size} onSave={(x) => sv('size', x, v.size)} /></td>
@@ -533,7 +567,7 @@ function ProductDrawer({ p, categories, isSuper, save, onClose, onFull }: { p: a
                         <div className="overflow-x-auto rounded-lg border border-[var(--kw-border)]">
                             <table className="w-full min-w-[760px]">
                                 <thead><tr className="text-left text-[10px] uppercase opacity-60 bg-[var(--kw-bg)]">{['Variant', 'Price', 'Liquid cost', 'Packaging', 'True cost', 'Profit', ''].map((h) => <th key={h} className="px-2 py-1.5 font-bold">{h}</th>)}</tr></thead>
-                                <tbody>{p.variants.map((v: any) => <VariantCostRow key={v.id} p={p} v={v} wac={wac} save={save} />)}</tbody>
+                                <tbody>{p.variants.map((v) => <VariantCostRow key={v.id} v={v} wac={wac} />)}</tbody>
                             </table>
                         </div>
                         <p className="opacity-60">True cost = average liquid cost × size + packaging lines. This is the same formula your profit reports use for new orders.</p>
@@ -545,7 +579,7 @@ function ProductDrawer({ p, categories, isSuper, save, onClose, onFull }: { p: a
                         {logsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : logs.length === 0 ? <p className="opacity-60">No stock movements recorded yet.</p> : (
                             <table className="w-full max-w-2xl">
                                 <thead><tr className="text-left text-[10px] uppercase opacity-60"><th className="py-1">Date</th><th className="text-right">Change</th><th className="pl-4">Reason</th></tr></thead>
-                                <tbody>{logs.map((l: any) => (
+                                <tbody>{logs.map((l) => (
                                     <tr key={l.id} className="border-t border-[var(--kw-border)]">
                                         <td className="py-1.5 whitespace-nowrap">{new Date(l.createdAt).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</td>
                                         <td className={cn('text-right font-mono font-bold', l.change < 0 ? 'text-rose-500' : 'text-emerald-500')}>{l.change > 0 ? '+' : ''}{l.change}</td>
@@ -563,9 +597,11 @@ function ProductDrawer({ p, categories, isSuper, save, onClose, onFull }: { p: a
 // ============================================================
 // 🧮 BULK EDIT MODAL
 // ============================================================
+type BulkChange = { p: SheetProduct; v: SheetVariant; field: string; from: number; to: number };
+
 function BulkModal({ targets, sizeOptions, isSuper, selCount, onClose, onApply, onVisibility }: {
-    targets: { p: any; v: any }[]; sizeOptions: { value: string; label: string }[]; isSuper: boolean; selCount: number;
-    onClose: () => void; onApply: (c: { p: any; v: any; field: string; from: number; to: number }[]) => Promise<void>; onVisibility: (live: boolean) => Promise<void>;
+    targets: { p: SheetProduct; v: SheetVariant }[]; sizeOptions: { value: string; label: string }[]; isSuper: boolean; selCount: number;
+    onClose: () => void; onApply: (c: BulkChange[]) => Promise<void>; onVisibility: (live: boolean) => Promise<void>;
 }) {
     const [field, setField] = useState<'price' | 'compareAtPrice' | 'costPrice'>('price');
     const [mode, setMode] = useState<'percent' | 'add' | 'set' | 'ofPrice'>('percent');
@@ -595,7 +631,7 @@ function BulkModal({ targets, sizeOptions, isSuper, selCount, onClose, onApply, 
                     <h3 className="font-extrabold flex items-center gap-1.5"><Calculator className="w-4 h-4" /> Change prices</h3>
                     <div className="grid grid-cols-2 gap-2">
                         <label className="space-y-1"><span className="opacity-60">Field</span>
-                            <select value={field} onChange={(e) => setField(e.target.value as any)} className={cn(inp, 'w-full')}>
+                            <select value={field} onChange={(e) => setField(e.target.value === 'compareAtPrice' || e.target.value === 'costPrice' ? e.target.value : 'price')} className={cn(inp, 'w-full')}>
                                 <option value="price">Selling price</option><option value="compareAtPrice">Regular price</option>{isSuper && <option value="costPrice">Cost price</option>}
                             </select></label>
                         <label className="space-y-1"><span className="opacity-60">Round to nearest</span>
@@ -656,12 +692,9 @@ export default function DedicatedPriceListPage() {
     const { data: discRes } = useGetAllDiscountsAdminQuery();
     const [quickUpdateCell] = useQuickUpdateCellMutation();
 
-    const rawProducts: any[] = useMemo(() => (productsRes as any)?.data || [], [productsRes]);
-    const categories: any[] = useMemo(() => {
-        const c: any = catRes;
-        return c?.data?.data || (Array.isArray(c?.data) ? c.data : []) || [];
-    }, [catRes]);
-    const discounts: any[] = useMemo(() => (Array.isArray(discRes) ? discRes : (discRes as any)?.data || []), [discRes]);
+    const rawProducts = useMemo(() => productsRes?.data ?? [], [productsRes]);
+    const categories: Category[] = useMemo(() => catRes?.data?.data ?? [], [catRes]);
+    const discounts: IDiscount[] = useMemo(() => discRes?.data ?? [], [discRes]);
     const catById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
 
     // ---------- preferences ----------
@@ -676,7 +709,8 @@ export default function DedicatedPriceListPage() {
     const [showFilters, setShowFilters] = useState(true);
 
     // ---------- grid state ----------
-    const [overrides, setOverrides] = useState<Record<string, any>>({});
+    // unsaved/just-saved values per "ENTITY:id", shown at once (field -> value)
+    const [overrides, setOverrides] = useState<Record<string, Record<string, unknown>>>({});
     const [cellStates, setCellStates] = useState<Record<string, 'saving' | 'saved' | 'error'>>({});
     const [active, setActive] = useState<{ rowId: string; colId: string } | null>(null);
     const [editing, setEditing] = useState<{ rowId: string; colId: string; initial?: string } | null>(null);
@@ -745,26 +779,31 @@ export default function DedicatedPriceListPage() {
     }, [editing]);
 
     // ---------- merged data ----------
-    const merged = useMemo(() => rawProducts.map((p) => {
+    const merged = useMemo(() => rawProducts.map((p): SheetProduct => {
         const po = overrides[`PRODUCT:${p.id}`];
-        const variants = (p.variants || []).map((v: any) => ({ ...v, ...(overrides[`VARIANT:${v.id}`] || {}) }))
-            .sort((a: any, b: any) => num(a.size) - num(b.size) || String(a.unit).localeCompare(String(b.unit)));
-        const base: any = { ...p, ...(po || {}), variants };
+        const variants: SheetVariant[] = (p.variants || []).map((v) => ({ ...v, ...(overrides[`VARIANT:${v.id}`] || {}) }))
+            .sort((a, b) => num(a.size) - num(b.size) || String(a.unit).localeCompare(String(b.unit)));
         // the admin list may not send categoryId, so fall back to the nested category object
         // category can arrive as an object, an id, or just a name depending on the endpoint — resolve all of them
-        const rawCat: any = p.category;
+        const rawCat = p.category as SheetCategory | string | null | undefined;
         const catName = typeof rawCat === 'string' ? rawCat : rawCat?.categoryName;
         const byName = catName ? categories.find((c) => String(c.categoryName).toLowerCase() === String(catName).toLowerCase()) : undefined;
-        base.categoryId = po?.categoryId ?? p.categoryId ?? rawCat?.id ?? rawCat?._id ?? byName?.id;
-        if (po?.categoryId) base.category = catById.get(po.categoryId) || p.category;
-        else if (typeof rawCat === 'string' && byName) base.category = byName;
-        if (po && 'stock' in po) base.totalStock = po.stock;
+        const editedCat = typeof po?.categoryId === 'string' ? po.categoryId : undefined;
+        const objCat = typeof rawCat === 'string' ? undefined : rawCat ?? undefined;
+        const base: SheetProduct = {
+            ...p,
+            ...(po || {}),
+            variants,
+            categoryId: editedCat ?? p.categoryId ?? objCat?.id ?? objCat?._id ?? byName?.id,
+            category: editedCat ? (catById.get(editedCat) || objCat || null) : typeof rawCat === 'string' ? (byName ?? null) : (objCat ?? null),
+        };
+        if (po && 'stock' in po) base.totalStock = num(po.stock);
         return base;
     }), [rawProducts, overrides, catById, categories]);
 
     const sizeCols = useMemo(() => {
         const m = new Map<string, { key: string; size: number; label: string }>();
-        merged.forEach((p) => (p.variants || []).forEach((v: any) => {
+        merged.forEach((p) => (p.variants || []).forEach((v) => {
             const k = vKey(v);
             if (!m.has(k)) m.set(k, { key: k, size: num(v.size), label: `${num(v.size)} ${String(v.unit || 'ML').toUpperCase()}` });
         }));
@@ -774,11 +813,11 @@ export default function DedicatedPriceListPage() {
     // ---------- discounts ----------
     const activeAuto = useMemo(() => {
         const now = new Date();
-        return discounts.filter((d: any) => !d.code && (!d.startDate || new Date(d.startDate) <= now) && (!d.endDate || new Date(d.endDate) >= now));
+        return discounts.filter((d) => !d.code && (!d.startDate || new Date(d.startDate) <= now) && (!d.endDate || new Date(d.endDate) >= now));
     }, [discounts]);
-    const discountFor = useCallback((p: any, v: any) =>
-        activeAuto.find((d: any) => d.scope === 'VARIANT' && d.variantId === v.id) || activeAuto.find((d: any) => d.scope === 'PRODUCT' && d.productId === p.id) || null, [activeAuto]);
-    const offerPrice = useCallback((p: any, v: any) => {
+    const discountFor = useCallback((p: SheetProduct, v: SheetVariant) =>
+        activeAuto.find((d) => d.scope === 'VARIANT' && d.variantId === v.id) || activeAuto.find((d) => d.scope === 'PRODUCT' && d.productId === p.id) || null, [activeAuto]);
+    const offerPrice = useCallback((p: SheetProduct, v: SheetVariant) => {
         const d = discountFor(p, v);
         if (!d) return null;
         const pr = num(v.price);
@@ -808,13 +847,11 @@ export default function DedicatedPriceListPage() {
     const cols = allOrdered.filter((c) => !st.hidden.includes(c.id));
     const frozenN = Math.min(st.frozen, cols.length);
     const colW = (c: ColDef, idx: number) => { const w = st.widths[c.id] ?? c.width; return isNarrow && idx < frozenN ? Math.min(w, 150) : w; };
-    const leftMap = useMemo(() => {
-        const m: Record<string, number> = {};
+    const leftMap: Record<string, number> = {};
+    {
         let x = CTRL_W;
-        cols.forEach((c, i) => { if (i < frozenN) { m[c.id] = x; x += colW(c, i); } });
-        return m;
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [cols, frozenN, st.widths, isNarrow]);
+        cols.forEach((c, i) => { if (i < frozenN) { leftMap[c.id] = x; x += colW(c, i); } });
+    }
     const frozenW = CTRL_W + cols.slice(0, frozenN).reduce((s, c, i) => s + colW(c, i), 0);
     const totalW = CTRL_W + cols.reduce((s, c, i) => s + colW(c, i), 0);
 
@@ -825,7 +862,7 @@ export default function DedicatedPriceListPage() {
         const maxP = filters.maxPrice !== '' ? Number(filters.maxPrice) : null;
         const thr = filters.marginBelow !== '' ? Number(filters.marginBelow) : 30;
         const variantLevel = filters.sizes.length > 0 || minP !== null || maxP !== null || filters.flags.length > 0;
-        const variantPass = (p: any, v: any) => {
+        const variantPass = (p: SheetProduct, v: SheetVariant) => {
             if (filters.sizes.length && !filters.sizes.includes(vKey(v))) return false;
             const pr = num(v.price);
             if (minP !== null && pr < minP) return false;
@@ -840,13 +877,13 @@ export default function DedicatedPriceListPage() {
             return true;
         };
         const stockOk = (s: number) => filters.stock === 'ALL' || (filters.stock === 'IN' && s > 0) || (filters.stock === 'LOW' && s > 0 && s <= filters.lowThreshold) || (filters.stock === 'OUT' && s <= 0);
-        const productPass = (p: any) => {
+        const productPass = (p: SheetProduct) => {
             if (q) {
                 const hit = [p.name, p.category?.categoryName, p.brand, p.supplier, ...(p.tags || [])].some((x) => String(x || '').toLowerCase().includes(q))
-                    || (p.variants || []).some((v: any) => [v.sku, v.barcode, v.gtin].some((x) => String(x || '').toLowerCase().includes(q)));
+                    || (p.variants || []).some((v) => [v.sku, v.barcode, v.gtin].some((x) => String(x || '').toLowerCase().includes(q)));
                 if (!hit) return false;
             }
-            if (filters.categories.length && !filters.categories.includes(p.categoryId)) return false;
+            if (filters.categories.length && !filters.categories.includes(p.categoryId ?? '')) return false;
             if (filters.brands.length && !filters.brands.includes(p.brand || '')) return false;
             if (filters.suppliers.length && !filters.suppliers.includes(p.supplier || '')) return false;
             return true;
@@ -858,7 +895,7 @@ export default function DedicatedPriceListPage() {
                 if (filters.status === 'LIVE' && !p.published) continue;
                 if (filters.status === 'HIDDEN' && p.published) continue;
                 if (!stockOk(pStock(p))) continue;
-                if (variantLevel && !(p.variants || []).some((v: any) => variantPass(p, v))) continue;
+                if (variantLevel && !(p.variants || []).some((v) => variantPass(p, v))) continue;
                 out.push({ id: p.id, p });
             } else {
                 for (const v of p.variants || []) {
@@ -896,7 +933,7 @@ export default function DedicatedPriceListPage() {
         merged.forEach((p) => {
             if (pStock(p) <= 0) out++;
             if (!p.published) hidden++;
-            (p.variants || []).forEach((v: any) => { if (v.costPrice !== undefined) costData = true; if (!(num(v.costPrice) > 0)) noCost++; if (!(num(v.compareAtPrice) > 0)) noCmp++; });
+            (p.variants || []).forEach((v) => { if (v.costPrice !== undefined) costData = true; if (!(num(v.costPrice) > 0)) noCost++; if (!(num(v.compareAtPrice) > 0)) noCmp++; });
         });
         return { out, hidden, noCost, noCmp, costData };
     }, [merged]);
@@ -912,18 +949,18 @@ export default function DedicatedPriceListPage() {
 
     // ---------- saving ----------
     const setCell = (key: string, s?: 'saving' | 'saved' | 'error') => setCellStates((p) => { const c = { ...p }; if (s) c[key] = s; else delete c[key]; return c; });
-    const runCommit = useCallback(async (t: Change['t'], value: any, prev: any, cellKey?: string) => {
+    const runCommit = useCallback(async (t: Change['t'], value: unknown, prev: unknown, cellKey?: string) => {
         const ok = `${t.entity}:${t.id}`;
         setOverrides((p) => ({ ...p, [ok]: { ...(p[ok] || {}), [t.field]: value } }));
         if (cellKey) setCell(cellKey, 'saving');
         try {
-            await quickUpdateCell({ entity: t.entity, id: t.id, field: t.field, value }).unwrap();
+            await quickUpdateCell({ entity: t.entity, id: t.id, field: t.field, value: toCellValue(value) }).unwrap();
             if (cellKey) { setCell(cellKey, 'saved'); setTimeout(() => setCell(cellKey), 1200); }
             return true;
-        } catch (err: any) {
+        } catch (err) {
             setOverrides((p) => { const o = { ...(p[ok] || {}) }; if (prev === undefined) delete o[t.field]; else o[t.field] = prev; return { ...p, [ok]: o }; });
             if (cellKey) { setCell(cellKey, 'error'); setTimeout(() => setCell(cellKey), 2500); }
-            toast.error(err?.data?.message || `Failed to update ${t.field}`);
+            toast.error(apiErrorMessage(err, `Failed to update ${t.field}`));
             return false;
         }
     }, [quickUpdateCell]);
@@ -942,11 +979,11 @@ export default function DedicatedPriceListPage() {
     };
 
     const isEditable = (r: Row, c: ColDef) => !!c.edit && !!c.edit.target(r);
-    const applyValue = async (r: Row, c: ColDef, val: any): Promise<boolean> => {
+    const applyValue = async (r: Row, c: ColDef, val: unknown): Promise<boolean> => {
         const e = c.edit; if (!e) return false;
         const id = e.target(r); if (!id) return false;
         const prevRaw = c.get(r);
-        let v: any = val;
+        let v: unknown = val;
         if (e.type === 'number') {
             const t = String(val).trim().replace(/[৳,\s]/g, '');
             const n = t === '' ? 0 : Number(t);
@@ -954,10 +991,11 @@ export default function DedicatedPriceListPage() {
             v = n;
             if (n === num(prevRaw)) return true;
         } else if (e.type === 'text') {
-            v = String(val ?? '').trim();
-            if (e.upper) v = v.toUpperCase();
-            if (e.required && !v) { toast.error(`${c.label} cannot be empty`); return false; }
-            if (v === String(prevRaw ?? '')) return true;
+            let text = String(val ?? '').trim();
+            if (e.upper) text = text.toUpperCase();
+            if (e.required && !text) { toast.error(`${c.label} cannot be empty`); return false; }
+            if (text === String(prevRaw ?? '')) return true;
+            v = text;
         } else if (e.type === 'select') {
             v = String(val);
             if (v === String(prevRaw ?? '')) return true;
@@ -967,7 +1005,7 @@ export default function DedicatedPriceListPage() {
         return ok;
     };
 
-    const bulkApply = async (changes: { p: any; v: any; field: string; from: number; to: number }[]) => {
+    const bulkApply = async (changes: BulkChange[]) => {
         const done: Change[] = [];
         let failed = 0;
         await runPool(changes, async (c) => {
@@ -975,17 +1013,17 @@ export default function DedicatedPriceListPage() {
             if (await runCommit(t, c.to, c.from)) done.push({ t, from: c.from, to: c.to }); else failed++;
         });
         pushUndo(done);
-        failed ? toast.error(`${done.length} updated, ${failed} failed`) : toast.success(`${done.length} prices updated. Ctrl+Z to undo`);
+        if (failed) toast.error(`${done.length} updated, ${failed} failed`);
+        else toast.success(`${done.length} prices updated. Ctrl+Z to undo`);
     };
-    const selectedRows = rows.filter((r) => selected.has(r.id));
-    const bulkTargets = useMemo(() => view === 'products' ? selectedRows.flatMap((r) => (r.p.variants || []).map((v: any) => ({ p: r.p, v }))) : selectedRows.map((r) => ({ p: r.p, v: r.v })),
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [selected, rows, view]);
+    const selectedRows = useMemo(() => rows.filter((r) => selected.has(r.id)), [rows, selected]);
+    const bulkTargets = useMemo(() => view === 'products' ? selectedRows.flatMap((r) => (r.p.variants || []).map((v) => ({ p: r.p, v }))) : selectedRows.flatMap((r) => (r.v ? [{ p: r.p, v: r.v }] : [])),
+        [selectedRows, view]);
     const bulkVisibility = async (live: boolean) => {
         const done: Change[] = [];
         await runPool(selectedRows, async (r) => {
-            const t = view === 'products' ? { entity: 'PRODUCT' as const, id: r.p.id, field: 'published' } : { entity: 'VARIANT' as const, id: r.v.id, field: 'published' };
-            const prev = view === 'products' ? !!r.p.published : r.v.published !== false;
+            const t = view === 'products' ? { entity: 'PRODUCT' as const, id: r.p.id, field: 'published' } : { entity: 'VARIANT' as const, id: vOf(r).id, field: 'published' };
+            const prev = view === 'products' ? !!r.p.published : vOf(r).published !== false;
             if (prev !== live && (await runCommit(t, live, prev))) done.push({ t, from: prev, to: live });
         });
         pushUndo(done);
@@ -1074,6 +1112,7 @@ export default function DedicatedPriceListPage() {
             if (td.offsetLeft < el.scrollLeft + frozenW) el.scrollLeft = td.offsetLeft - frozenW;
             else if (td.offsetLeft + td.offsetWidth > el.scrollLeft + el.clientWidth) el.scrollLeft = td.offsetLeft + td.offsetWidth - el.clientWidth;
         });
+        // only when the active cell changes (not on every scroll/resize); the layout values are read as they are now
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [active]);
 
@@ -1296,10 +1335,10 @@ export default function DedicatedPriceListPage() {
                         {brandOptions.length > 0 && <MultiPick label="Brand" options={brandOptions} value={filters.brands} onChange={(v) => setF({ brands: v })} />}
                         {supplierOptions.length > 0 && <MultiPick label="Supplier" options={supplierOptions} value={filters.suppliers} onChange={(v) => setF({ suppliers: v })} />}
                         <MultiPick label="Size" options={sizeOptions} value={filters.sizes} onChange={(v) => setF({ sizes: v })} />
-                        <select value={filters.status} onChange={(e) => setF({ status: e.target.value as any })} className={cn(inp, 'h-7')}>
+                        <select value={filters.status} onChange={(e) => { const v = e.target.value; setF({ status: v === 'LIVE' || v === 'HIDDEN' ? v : 'ALL' }); }} className={cn(inp, 'h-7')}>
                             <option value="ALL">Status: all</option><option value="LIVE">Live only</option><option value="HIDDEN">Hidden only</option>
                         </select>
-                        <select value={filters.stock} onChange={(e) => setF({ stock: e.target.value as any })} className={cn(inp, 'h-7')}>
+                        <select value={filters.stock} onChange={(e) => { const v = e.target.value; setF({ stock: v === 'IN' || v === 'LOW' || v === 'OUT' ? v : 'ALL' }); }} className={cn(inp, 'h-7')}>
                             <option value="ALL">Stock: all</option><option value="IN">In stock</option><option value="LOW">Low stock</option><option value="OUT">Out of stock</option>
                         </select>
                         {filters.stock === 'LOW' && <label className="flex items-center gap-1 opacity-80">≤<input type="number" value={filters.lowThreshold} onChange={(e) => setF({ lowThreshold: Number(e.target.value) || 0 })} className={cn(inp, 'h-7 w-14')} /></label>}
@@ -1399,7 +1438,7 @@ export default function DedicatedPriceListPage() {
                                             <tr key={r.id} className={cn(isSel && 'kw-sel')} style={{ height: rowH }}>
                                                 <td style={{ position: 'sticky', left: 0, zIndex: 25, background: bg, borderRight: bd, borderBottom: bd, height: rowH, padding: 0 }}>
                                                     <div className="flex items-center justify-center gap-1.5">
-                                                        <input type="checkbox" checked={isSel} onChange={() => setSelected((p) => { const n = new Set(p); n.has(r.id) ? n.delete(r.id) : n.add(r.id); return n; })} />
+                                                        <input type="checkbox" checked={isSel} onChange={() => setSelected((p) => { const n = new Set(p); if (n.has(r.id)) n.delete(r.id); else n.add(r.id); return n; })} />
                                                         <span className="text-[10px] font-mono opacity-50 w-6 text-right">{i + 1}</span>
                                                         <button onClick={() => setDrawerPid(r.p.id)} title="Open product details" className="p-0.5 rounded hover:bg-[var(--kw-accent)] hover:text-white opacity-70"><Maximize2 className="w-3 h-3" /></button>
                                                     </div>
@@ -1475,25 +1514,27 @@ export default function DedicatedPriceListPage() {
 // ✏️ INLINE CELL EDITOR
 // ============================================================
 function CellEditor({ spec, value, initial, align, onFinish, onCancel }: {
-    spec: EditSpec; value: any; initial?: string; align?: 'left' | 'right' | 'center';
+    spec: EditSpec; value: unknown; initial?: string; align?: 'left' | 'right' | 'center';
     onFinish: (v: string, nav: 'up' | 'down' | 'left' | 'right' | null) => void; onCancel: () => void;
 }) {
     const [d, setD] = useState(initial !== undefined ? initial : value === null || value === undefined ? '' : String(value));
-    const ref = useRef<any>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+    const selectRef = useRef<HTMLSelectElement>(null);
     const done = useRef(false);
-    useEffect(() => { ref.current?.focus(); if (initial === undefined) ref.current?.select?.(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    // focus once when the editor opens (select the text unless typing started it)
+    useEffect(() => { selectRef.current?.focus(); inputRef.current?.focus(); if (initial === undefined) inputRef.current?.select(); }, []); // eslint-disable-line react-hooks/exhaustive-deps -- once, when the editor opens
     const finish = (nav: 'up' | 'down' | 'left' | 'right' | null) => { if (done.current) return; done.current = true; onFinish(d, nav); };
     const cancel = () => { if (done.current) return; done.current = true; onCancel(); };
     if (spec.type === 'select') {
         return (
-            <select ref={ref} value={d} onChange={(e) => { if (done.current) return; done.current = true; onFinish(e.target.value, null); }} onBlur={cancel}
+            <select ref={selectRef} value={d} onChange={(e) => { if (done.current) return; done.current = true; onFinish(e.target.value, null); }} onBlur={cancel}
                 onKeyDown={(e) => { if (e.key === 'Escape') cancel(); }} className="w-full h-full bg-transparent outline-none text-xs">
                 {spec.options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
         );
     }
     return (
-        <input ref={ref} value={d} onChange={(e) => setD(e.target.value)} inputMode={spec.type === 'number' ? 'decimal' : undefined}
+        <input ref={inputRef} value={d} onChange={(e) => setD(e.target.value)} inputMode={spec.type === 'number' ? 'decimal' : undefined}
             onBlur={() => finish(null)}
             onKeyDown={(e) => {
                 if (e.key === 'Enter') { e.preventDefault(); finish(e.shiftKey ? 'up' : 'down'); }

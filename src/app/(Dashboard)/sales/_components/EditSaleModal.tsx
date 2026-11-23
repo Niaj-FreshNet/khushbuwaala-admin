@@ -34,39 +34,29 @@ import {
 } from "@/redux/store/api/sales/salesApi";
 import { useGetAllProductsQuery } from "@/redux/store/api/product/productApi";
 import SalesInvoice from "./SalesInvoice";
-import { PLATFORMS } from "../add-sales/page";
+import { PLATFORMS } from "@/lib/salePlatforms";
+import { PAYMENT_METHODS } from "@/lib/paymentMethods";
+import { toast } from "sonner";
+import { apiErrorMessage } from "@/lib/apiError";
+import { useCourierReturnPrompt } from "@/components/admin/courierReturn";
+import { editableLinePayload, newEditableLine, toEditableLines, ORDER_STATUSES } from "@/types/order.types";
+import type { EditableLineField, EditableOrderLine } from "@/types/order.types";
+import type { IProductResponse, IProductVariantResponse } from "@/types/product.types";
+import type { UpdateSalePayload } from "@/redux/store/api/sales/salesApi";
 
-type OrderStatus =
-    | "PENDING"
-    | "PROCESSING"
-    | "SHIPPED"
-    | "DELIVERED"
-    | "COMPLETED"
-    | "CANCELED"
-    | "RETURNED"
-    | "CANCEL";
+const STATUS_LIST = ORDER_STATUSES;
 
-const STATUS_LIST: OrderStatus[] = [
-    "PENDING",
-    "PROCESSING",
-    "SHIPPED",
-    "DELIVERED",
-    "COMPLETED",
-    "CANCELED",
-    "RETURNED",
-    "CANCEL",
-];
+type SaleForm = {
+    shippingCost: number;
+    discountAmount: number;
+    additionalNotes: string;
+    name: string;
+    phone: string;
+    address: string;
+    district: string;
+};
 
-const METHOD_OPTIONS = [
-    { value: "cash", label: "Cash" },
-    { value: "cashOnDelivery", label: "Cash on Delivery" },
-    { value: "onlinePayment", label: "Online Payment" },
-    { value: "bkash", label: "bKash" },
-    { value: "nagad", label: "Nagad" },
-    { value: "rocket", label: "Rocket" },
-    { value: "bankTransfer", label: "Bank Transfer" },
-    { value: "cardPayment", label: "Card Payment" },
-] as const;
+const METHOD_OPTIONS = PAYMENT_METHODS;
 
 interface EditSaleModalProps {
     saleId: string | null;
@@ -94,6 +84,7 @@ export default function EditSaleModal({
     const sale = data?.data;
 
     const [updateSale, { isLoading: saving }] = useUpdateSalesMutation();
+    const askReturnCharge = useCourierReturnPrompt();
 
     const [showInvoice, setShowInvoice] = useState(false);
     const [statusValue, setStatusValue] = useState<string>("PENDING");
@@ -102,10 +93,10 @@ export default function EditSaleModal({
     const [platformValue, setPlatformValue] = useState<string>("");
     const [orderSourceValue, setOrderSourceValue] = useState<"SHOWROOM" | "MANUAL">("SHOWROOM");
 
-    const [editableItems, setEditableItems] = useState<any[]>([]);
+    const [editableItems, setEditableItems] = useState<EditableOrderLine[]>([]);
     const [amountInput, setAmountInput] = useState<number>(0);
 
-    const [form, setForm] = useState<any>({
+    const [form, setForm] = useState<SaleForm>({
         shippingCost: 0,
         discountAmount: 0,
         additionalNotes: "",
@@ -122,7 +113,7 @@ export default function EditSaleModal({
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [productSearchTerm, setProductSearchTerm] = useState("");
     const [selectedProductForVariant, setSelectedProductForVariant] =
-        useState<any | null>(null);
+        useState<IProductResponse | null>(null);
 
     const {
         data: productQueryResult,
@@ -134,7 +125,7 @@ export default function EditSaleModal({
 
     const productList = productQueryResult?.data ?? [];
 
-    const normalizeNumber = (v: any) => {
+    const normalizeNumber = (v: unknown) => {
         const n = Number(v);
         return Number.isFinite(n) ? n : 0;
     };
@@ -150,7 +141,8 @@ export default function EditSaleModal({
             name: sale.name ?? "",
             phone: sale.phone ?? "",
             address: sale.address ?? "",
-            district: sale.district ?? "",
+            // district is kept in the shipping copy (that is what the invoice prints)
+            district: sale.shipping?.district ?? "",
         });
 
         setStatusValue(sale.status ?? "PENDING");
@@ -167,17 +159,8 @@ export default function EditSaleModal({
         setOrderSourceValue(isShowroom ? "SHOWROOM" : "MANUAL");
         setPlatformValue(sale.platform ?? "");
 
-        const rawItems = sale.orderItems || sale.cartItems || [];
-
-        setEditableItems(
-            rawItems.map((it: any) => ({
-                ...it,
-                quantity: Number(it.quantity ?? it.qty ?? 1),
-                size: Number(it.size ?? 1),
-                unit: it.unit ?? "PCS",
-                price: Number(it.price ?? 0),
-            }))
-        );
+        const rawItems = sale.orderItems?.length ? sale.orderItems : sale.cartItems || [];
+        setEditableItems(toEditableLines(rawItems, "PCS"));
 
         setAmountInput(Number(sale.amount ?? 0));
         setDirty(false);
@@ -187,7 +170,7 @@ export default function EditSaleModal({
         if (!editableItems.length) return 0;
 
         return editableItems.reduce((sum, it) => {
-            const qty = normalizeNumber(it.quantity ?? it.qty ?? 0);
+            const qty = normalizeNumber(it.quantity ?? 0);
             const price = normalizeNumber(it.price ?? 0);
 
             return sum + price * qty;
@@ -205,10 +188,8 @@ export default function EditSaleModal({
         form?.discountAmount,
     ]);
 
-    const setField = (key: string, value: any) => {
-        setForm((prev: any) => {
-            if (!prev) return prev;
-
+    const setField = <K extends keyof SaleForm>(key: K, value: SaleForm[K]) => {
+        setForm((prev) => {
             setDirty(true);
 
             return {
@@ -220,30 +201,15 @@ export default function EditSaleModal({
 
     const handleItemFieldChange = (
         itemId: string,
-        field: string,
-        value: any
+        field: EditableLineField,
+        value: string
     ) => {
         setEditableItems((prev) =>
-            prev.map((item) => {
-                if ((item.id || item.productId) === itemId) {
-                    let updatedVal = value;
-
-                    if (
-                        field === "quantity" ||
-                        field === "size" ||
-                        field === "price"
-                    ) {
-                        updatedVal = normalizeNumber(value);
-                    }
-
-                    return {
-                        ...item,
-                        [field]: updatedVal,
-                    };
-                }
-
-                return item;
-            })
+            prev.map((item) =>
+                item.id !== itemId ? item
+                    : field === "unit" ? { ...item, unit: value }
+                        : { ...item, [field]: normalizeNumber(value) }
+            )
         );
 
         setDirty(true);
@@ -251,32 +217,14 @@ export default function EditSaleModal({
 
     const handleRemoveItem = (itemId: string) => {
         setEditableItems((prev) =>
-            prev.filter(
-                (item) => (item.id || item.productId) !== itemId
-            )
+            prev.filter((item) => item.id !== itemId)
         );
 
         setDirty(true);
     };
 
-    const handleAddVariantToOrder = (prod: any, variant: any) => {
-        const newItem = {
-            id: `temp_${Date.now()}_${Math.random()
-                .toString(36)
-                .substr(2, 5)}`,
-            productId: prod.id,
-            variantId: variant?.id || "default_variant",
-            size: Number(variant?.size ?? 1),
-            unit: variant?.unit ?? "PCS",
-            quantity: 1,
-            price: Number(variant?.price ?? 0),
-            product: {
-                name: prod.name,
-                primaryImage: prod.primaryImage || "/placeholder.png",
-            },
-        };
-
-        setEditableItems((prev) => [...prev, newItem]);
+    const handleAddVariantToOrder = (prod: IProductResponse, variant?: IProductVariantResponse | null) => {
+        setEditableItems((prev) => [...prev, { ...newEditableLine(prod, variant), unit: variant?.unit ?? "PCS" }]);
         setDirty(true);
         setSelectedProductForVariant(null);
         setIsProductModalOpen(false);
@@ -285,20 +233,18 @@ export default function EditSaleModal({
     const handleSaveAll = async () => {
         if (!saleId || !form || !sale) return;
 
-        const orderItemsPayload = editableItems.map((it) => ({
-            id: it.id?.startsWith("temp_") ? undefined : it.id,
-            productId: it.productId || it.product?.id,
-            variantId: it.variantId,
-            size: normalizeNumber(it.size),
-            unit: (it.unit ?? "PCS").toString().trim(),
-            quantity: Math.max(
-                1,
-                Math.floor(normalizeNumber(it.quantity ?? it.qty))
-            ),
-            price: normalizeNumber(it.price),
-        }));
+        const orderItemsPayload = editableItems.map(editableLinePayload);
 
-        const payload: any = {
+        // A courier parcel coming back: ask what the customer paid the rider (D-025), like orders do
+        let extra: { returnChargeCollected: number | null } | undefined;
+        if (statusValue !== sale.status) {
+            const answer = await askReturnCharge(sale, statusValue);
+            if (answer === null) return; // closed the question: save nothing
+            extra = answer;
+        }
+
+        const payload: UpdateSalePayload = {
+            ...extra,
             id: saleId,
             ...form,
             status: statusValue,
@@ -314,6 +260,7 @@ export default function EditSaleModal({
 
         try {
             await updateSale(payload).unwrap();
+            toast.success("Sale saved");
 
             setDirty(false);
             refetch();
@@ -322,7 +269,8 @@ export default function EditSaleModal({
 
             onClose();
         } catch (error) {
-            console.error("Failed to update sale:", error);
+            // used to fail silently (console only)
+            toast.error(apiErrorMessage(error, "Could not save the sale"));
         }
     };
 
@@ -640,10 +588,10 @@ export default function EditSaleModal({
                                         </p>
                                     ) : (
                                         editableItems.map((item) => {
-                                            const qty = item.quantity ?? item.qty ?? 1;
+                                            const qty = item.quantity ?? 1;
                                             const price = normalizeNumber(item.price ?? 0);
                                             const lineTotal = price * normalizeNumber(qty);
-                                            const itemId = item.id || item.productId;
+                                            const itemId = item.id;
 
                                             return (
                                                 <div
@@ -653,14 +601,14 @@ export default function EditSaleModal({
                                                     <div className="flex items-center gap-2.5 w-full sm:w-auto">
                                                         <Image
                                                             src={item.product?.primaryImage || "/placeholder.png"}
-                                                            alt={item.product?.name || item.name || "Product"}
+                                                            alt={item.product?.name || "Product"}
                                                             width={38}
                                                             height={38}
                                                             className="rounded object-cover border flex-shrink-0"
                                                         />
 
                                                         <p className="font-medium text-xs text-gray-900 truncate flex-1 sm:w-44">
-                                                            {item.product?.name || item.name || "Product Item"}
+                                                            {item.product?.name || "Product Item"}
                                                         </p>
                                                     </div>
 
@@ -934,7 +882,7 @@ export default function EditSaleModal({
                                                 No products found.
                                             </p>
                                         ) : (
-                                            productList.map((prod: any) => (
+                                            productList.map((prod) => (
                                                 <div
                                                     key={prod.id}
                                                     onClick={() => {
@@ -944,12 +892,8 @@ export default function EditSaleModal({
                                                         ) {
                                                             setSelectedProductForVariant(prod);
                                                         } else {
-                                                            handleAddVariantToOrder(prod, {
-                                                                id: "default",
-                                                                size: 1,
-                                                                unit: "PCS",
-                                                                price: 0,
-                                                            });
+                                                            // no sizes: add the product itself (set size and price on the line)
+                                                            handleAddVariantToOrder(prod, null);
                                                         }
                                                     }}
                                                     className="flex items-center gap-2.5 p-1.5 rounded border hover:bg-green-50 hover:border-green-300 cursor-pointer transition-colors"
@@ -986,7 +930,7 @@ export default function EditSaleModal({
                                         Select a specific variant / size / price for this item:
                                     </p>
 
-                                    {selectedProductForVariant.variants.map((v: any) => (
+                                    {selectedProductForVariant.variants.map((v) => (
                                         <div
                                             key={v.id}
                                             onClick={() =>

@@ -85,7 +85,7 @@ export default function BestSelling() {
                                     tickLine={false}
                                 />
                                 <Tooltip
-                                    formatter={(v: any) => [`${v} units`, "Total Sold"]}
+                                    formatter={(v) => [`${v} units`, "Total Sold"]}
                                     labelFormatter={(label) => `${label}`}
                                     contentStyle={{
                                         backgroundColor: "#ffffff",

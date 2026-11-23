@@ -4,6 +4,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { IOrderData } from "@/redux/store/api/order/ordersApi";
+import { isOrderStatus, orderDisplayLines } from "@/types/order.types";
+import type { Order, OrderListQuery, OrderListSummary } from "@/types/order.types";
 import {
   Table,
   TableBody,
@@ -84,18 +86,8 @@ import EditOrderModal from "./_components/EditOrderModal";
 import OrderProfitEditorModal from "../sales/_components/OrderProfitEditorModal";
 import { useCourierReturnPrompt } from "@/components/admin/courierReturn";
 import { useConfirm } from "@/components/admin/ConfirmProvider";
-
-interface OrderItem {
-  id?: string;
-  name?: string;
-  product?: { name?: string };
-  size?: string;
-  unit?: string;
-  quantity?: number;
-  qty?: number;
-  price?: number;
-  amount?: number;
-}
+import { apiErrorMessage, apiErrorStatus } from "@/lib/apiError";
+import { PAYMENT_METHOD_FILTERS, isCashOnDelivery, paymentMethodLabel } from "@/lib/paymentMethods";
 
 type SortField = "orderTime" | "amount" | "status";
 type SortOrder = "asc" | "desc";
@@ -103,19 +95,13 @@ type SortOrder = "asc" | "desc";
 const STATUS_OPTIONS = ["PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "COMPLETED", "CANCELED", "RETURNED"] as const;
 const PAYMENT_OPTIONS = ["ALL", "PAID", "DUE"] as const;
 
-const METHOD_OPTIONS = [
-  { value: "ALL", label: "All Methods" },
-  { value: "cash", label: "Cash" },
-  { value: "online", label: "Online" },
-  { value: "cashOnDelivery", label: "Cash On Delivery" },
-  { value: "bkashPayment", label: "Bkash Payment" },
-] as const;
+const METHOD_OPTIONS = PAYMENT_METHOD_FILTERS;
 
 // Money shown per order (bill, what the courier pays us, profit). One place for both layouts.
-function getOrderRowMoney(order: any) {
-  const orderItems = order.items || order.orderItems || order.cartItems || [];
+function getOrderRowMoney(order: Order) {
+  const orderItems = orderDisplayLines(order);
   const shipping = Number(order.shippingCost || 0);
-  const itemsSubtotal = orderItems.reduce((acc: any, it: any) => acc + (Number(it.price || 0) * Number(it.quantity || it.qty || 1)), 0);
+  const itemsSubtotal = orderItems.reduce((acc, it) => acc + (Number(it.price || 0) * Number(it.quantity || it.qty || 1)), 0);
   const productBill = itemsSubtotal > 0 ? itemsSubtotal : Math.max(0, Number(order.amount || 0) - shipping);
 
   const districtLower = String(order.shipping?.district || "").toLowerCase();
@@ -124,7 +110,7 @@ function getOrderRowMoney(order: any) {
   const isShippingIncludedInCod = shipping > 0;
   const effectiveDeliveryDeduction = isShippingIncludedInCod ? 0 : courierDeliveryCharge;
 
-  const isCod = String(order.method || "").toLowerCase().includes("cash") || String(order.method || "").toLowerCase().includes("cod");
+  const isCod = isCashOnDelivery(order.method);
   const codCharge = isCod ? Math.round(productBill * 0.01) : 0;
   const codOrTotalAmount = Number(order.amount || 0);
   const orderStatus = String(order.status || "").toUpperCase();
@@ -140,7 +126,7 @@ function getOrderRowMoney(order: any) {
   const rcvColorClass = rcvColorByStatus[orderStatus] ?? "text-orange-500";
 
   const orderItemCosts = order.orderItemCosts || [];
-  const totalOrderProfit = orderItemCosts.reduce((sum: number, ic: any) => sum + Number(ic.profit || 0), 0);
+  const totalOrderProfit = orderItemCosts.reduce((sum, ic) => sum + Number(ic.profit || 0), 0);
 
   return {
     orderItems, shipping, productBill, courierDeliveryCharge, isShippingIncludedInCod, isCod, codCharge,
@@ -173,12 +159,12 @@ function ProductPicker({
   const debouncedProductSearch = useDebouncedValue(localSearch, 300);
 
   const { data, isLoading } = useGetAllProductsAdminQuery(
-    { page: 1, limit: 100, searchTerm: debouncedProductSearch } as any,
+    { page: 1, limit: 100, searchTerm: debouncedProductSearch },
     { skip: !open }
   );
 
-  const products = (data as any)?.data || [];
-  const selected = products.find((p: any) => p.id === value);
+  const products = data?.data || [];
+  const selected = products.find((p) => p.id === value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -224,7 +210,7 @@ function ProductPicker({
               <Check className={cn("mr-2 h-3.5 w-3.5", !value ? "opacity-100" : "opacity-0")} />
               All Products
             </CommandItem>
-            {products.map((p: any) => (
+            {products.map((p) => (
               <CommandItem
                 key={p.id}
                 onSelect={() => {
@@ -302,7 +288,7 @@ const OrderList = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // ✅ Profit Editor Modal State
-  const [profitEditorOrder, setProfitEditorOrder] = useState<any | null>(null);
+  const [profitEditorOrder, setProfitEditorOrder] = useState<Order | null>(null);
   const [isProfitEditorVisible, setIsProfitEditorVisible] = useState(false);
 
   const handleDatePresetChange = (preset: string) => {
@@ -350,7 +336,7 @@ const OrderList = () => {
   };
 
   const queryArgs = useMemo(() => {
-    const args: any = {
+    const args: OrderListQuery = {
       searchTerm: debouncedSearch?.trim() || undefined,
       page,
       limit,
@@ -392,8 +378,8 @@ const OrderList = () => {
       const res = await backfillCosts(payload).unwrap();
       toast.success(res?.message || "Profits synced successfully!");
       refetch();
-    } catch (e: any) {
-      toast.error(e?.data?.message || "Failed to sync profits");
+    } catch (e) {
+      toast.error(apiErrorMessage(e, "Failed to sync profits"));
     }
   };
 
@@ -432,25 +418,18 @@ const OrderList = () => {
     }, 50);
   };
 
-  const allOrders: any[] = useMemo(() => (data as any)?.data || [], [data]);
-  const meta = (data as any)?.meta;
+  const allOrders: Order[] = useMemo(() => data?.data || [], [data]);
+  const meta = data?.meta;
 
   const sortedOrders = useMemo(() => {
     const sorted = [...allOrders];
     sorted.sort((a, b) => {
-      let valA: any = a[sortField];
-      let valB: any = b[sortField];
-
-      if (sortField === "orderTime") {
-        valA = valA ? new Date(valA).getTime() : 0;
-        valB = valB ? new Date(valB).getTime() : 0;
-      } else if (sortField === "amount") {
-        valA = Number(valA || 0);
-        valB = Number(valB || 0);
-      } else if (sortField === "status") {
-        valA = String(valA || "");
-        valB = String(valB || "");
-      }
+      const key = (o: Order): number | string =>
+        sortField === "orderTime" ? (o.orderTime ? new Date(o.orderTime).getTime() : 0)
+          : sortField === "amount" ? Number(o.amount || 0)
+            : String(o.status || "");
+      const valA = key(a);
+      const valB = key(b);
 
       if (valA < valB) return sortOrder === "asc" ? -1 : 1;
       if (valA > valB) return sortOrder === "asc" ? 1 : -1;
@@ -460,7 +439,7 @@ const OrderList = () => {
   }, [allOrders, sortField, sortOrder]);
 
   const summaryMetrics = useMemo(() => {
-    return (data as any)?.summary || {
+    const fallback: OrderListSummary = {
       totalCount: meta?.total || 0,
       totalValidCount: 0,
       totalCodAmount: 0,
@@ -469,6 +448,7 @@ const OrderList = () => {
       paidCount: 0,
       dueCount: 0,
     };
+    return data?.summary || fallback;
   }, [data, meta]);
 
   // ✅ Net Profit Sum for Filtered Orders
@@ -476,7 +456,7 @@ const OrderList = () => {
     if (!isSuperAdmin) return 0;
     return sortedOrders.reduce((sum, order) => {
       const orderItemCosts = order.orderItemCosts || [];
-      const orderProfit = orderItemCosts.reduce((itemSum: number, ic: any) => itemSum + Number(ic.profit || 0), 0);
+      const orderProfit = orderItemCosts.reduce((itemSum, ic) => itemSum + Number(ic.profit || 0), 0);
       return sum + orderProfit;
     }, 0);
   }, [sortedOrders, isSuperAdmin]);
@@ -495,7 +475,7 @@ const OrderList = () => {
   };
 
   const askReturnCharge = useCourierReturnPrompt();
-  const handleUpdateStatus = async (id: string, nextStatus: string, order?: any) => {
+  const handleUpdateStatus = async (id: string, nextStatus: string, order?: Order) => {
     const extra = await askReturnCharge(order, nextStatus);
     if (extra === null) return; // closed the question: change nothing
     try {
@@ -503,7 +483,7 @@ const OrderList = () => {
       const res = await updateOrderStatus({ id, status: nextStatus, ...(extra || {}) }).unwrap();
       if (res?.success) toast.success(`Order marked as ${nextStatus}`);
       else toast.error("Failed to update order");
-    } catch (e) {
+    } catch {
       toast.error("Error updating order");
     } finally {
       setUpdatingStatusId(null);
@@ -516,7 +496,7 @@ const OrderList = () => {
       const res = await updatePaymentStatus({ id, isPaid }).unwrap();
       if (res?.success) toast.success(isPaid ? "Marked as PAID" : "Marked as DUE");
       else toast.error("Failed to update payment");
-    } catch (e) {
+    } catch {
       toast.error("Error updating payment");
     } finally {
       setUpdatingPaymentId(null);
@@ -532,8 +512,8 @@ const OrderList = () => {
       } else {
         toast.error("Failed to delete order");
       }
-    } catch (e: any) {
-      toast.error(e?.data?.message || "Error deleting order");
+    } catch (e) {
+      toast.error(apiErrorMessage(e, "Error deleting order"));
     } finally {
       setOrderToDelete(null);
     }
@@ -546,13 +526,13 @@ const OrderList = () => {
         try {
           await deleteOrder(id).unwrap();
           successCount++;
-        } catch (err) {
+        } catch {
           // continue
         }
       }
       toast.success(`Successfully deleted ${successCount} order(s)`);
       setSelectedOrderIds([]);
-    } catch (e) {
+    } catch {
       toast.error("Error performing bulk deletion");
     } finally {
       setIsBulkDeleteModalOpen(false);
@@ -569,15 +549,15 @@ const OrderList = () => {
       } else {
         toast.error("Failed to send order to Steadfast");
       }
-    } catch (err: any) {
+    } catch (err) {
       // Already booked: a second booking means a second parcel and a second delivery charge
-      if (err?.status === 409 && !force) {
+      if (apiErrorStatus(err) === 409 && !force) {
         setSendingOrderId(null);
-        const again = await confirmRebook({ title: `#${invoice} is already with Steadfast`, description: `${err?.data?.message || ''} Booking again creates a new parcel and a new delivery charge.`, confirmText: 'Book again', danger: true });
+        const again = await confirmRebook({ title: `#${invoice} is already with Steadfast`, description: `${apiErrorMessage(err, '')} Booking again creates a new parcel and a new delivery charge.`, confirmText: 'Book again', danger: true });
         if (again) return handleSendToSteadfast(orderId, invoice, true);
         return;
       }
-      toast.error(err?.data?.message || "Error submitting order to Steadfast");
+      toast.error(apiErrorMessage(err, "Error submitting order to Steadfast"));
     } finally {
       setSendingOrderId(null);
     }
@@ -599,10 +579,7 @@ const OrderList = () => {
 
   const handlePrint = () => window.print();
 
-  const methodLabel = (m: string) => {
-    const found = METHOD_OPTIONS.find((x) => x.value === m);
-    return found?.label || "Unknown";
-  };
+  const methodLabel = paymentMethodLabel;
 
   const statusBadgeClass = (s: string) => {
     return s === "COMPLETED"
@@ -868,7 +845,7 @@ const OrderList = () => {
 
             <div className="space-y-1">
               <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Status</label>
-              <Select value={status} onValueChange={(v) => { setStatus(v as any); setPage(1); }}>
+              <Select value={status} onValueChange={(v) => { setStatus(isOrderStatus(v) ? v : "ALL"); setPage(1); }}>
                 <SelectTrigger className={cn(
                   "bg-white h-8 text-xs transition-colors py-0",
                   status !== "ALL" ? "border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30" : "border-gray-300 text-gray-700"
@@ -890,7 +867,7 @@ const OrderList = () => {
 
             <div className="space-y-1">
               <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Payment</label>
-              <Select value={payment} onValueChange={(v) => { setPayment(v as any); setPage(1); }}>
+              <Select value={payment} onValueChange={(v) => { setPayment(PAYMENT_OPTIONS.find((p) => p === v) ?? "ALL"); setPage(1); }}>
                 <SelectTrigger className={cn(
                   "bg-white h-8 text-xs transition-colors py-0",
                   payment !== "ALL" ? "border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30" : "border-gray-300 text-gray-700"
@@ -909,7 +886,7 @@ const OrderList = () => {
 
             <div className="space-y-1">
               <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Method</label>
-              <Select value={method} onValueChange={(v) => { setMethod(v as any); setPage(1); }}>
+              <Select value={method} onValueChange={(v) => { setMethod(METHOD_OPTIONS.find((o) => o.value === v)?.value ?? "ALL"); setPage(1); }}>
                 <SelectTrigger className={cn(
                   "bg-white h-8 text-xs transition-colors py-0",
                   method !== "ALL" ? "border-[#FB923C] text-[#FB923C] font-semibold bg-orange-50/30" : "border-gray-300 text-gray-700"
@@ -1078,11 +1055,11 @@ const OrderList = () => {
             const m = getOrderRowMoney(order);
             const isSelected = selectedOrderIds.includes(order.id);
             const phone = order.customer?.phone || order.shipping?.phone;
-            const items = m.orderItems as any[];
+            const items = m.orderItems;
             const when = order.orderTime ? new Date(order.orderTime) : null;
             const itemsText = items.length === 0
               ? "No items"
-              : items.slice(0, 2).map((it: any) => `${it.quantity ?? it.qty ?? 1}× ${it.name || it.product?.name || "Product"}${it.size ? ` ${it.size}${it.unit || ""}` : ""}`).join(", ") + (items.length > 2 ? ` +${items.length - 2} more` : "");
+              : items.slice(0, 2).map((it) => `${it.quantity ?? it.qty ?? 1}× ${it.name || it.product?.name || "Product"}${it.size ? ` ${it.size}${it.unit || ""}` : ""}`).join(", ") + (items.length > 2 ? ` +${items.length - 2} more` : "");
             return (
               <MobileCard
                 key={order.id}
@@ -1150,7 +1127,7 @@ const OrderList = () => {
                         <DropdownMenuItem className="py-2.5" disabled={loadingInvoiceId === order.id} onClick={() => handleOpenInvoice(order.id)}>
                           <Download className="mr-2 h-4 w-4" /> Invoice PDF
                         </DropdownMenuItem>
-                        {!(order as any).consignmentId && (
+                        {!order.consignmentId && (
                           <DropdownMenuItem className="py-2.5" disabled={sendingOrderId === order.id} onClick={() => handleSendToSteadfast(order.id, order.invoice)}>
                             <Truck className="mr-2 h-4 w-4" /> Send to Steadfast
                           </DropdownMenuItem>
@@ -1180,7 +1157,7 @@ const OrderList = () => {
                     </span>
                   </MobileField>
                 )}
-                {(order as any).consignmentId && <MobileField label="Courier">#{(order as any).consignmentId}</MobileField>}
+                {order.consignmentId && <MobileField label="Courier">#{order.consignmentId}</MobileField>}
                 {order.shipping?.address && <MobileField label="Address" full>{order.shipping.address}</MobileField>}
               </MobileCard>
             );
@@ -1277,11 +1254,16 @@ const OrderList = () => {
                             </button>
                           </div>
                           <div>
-                            {(order as any).consignmentId ? (
-                              <Link target="_blank" href={`${(order as any).trackingLink}`} className="text-xs text-emerald-700 border border-emerald-200 px-1 py-0.2 rounded font-mono truncate max-w-30" title={(order as any).trackingCode}>
-                                {(order as any).consignmentId}
-                                <ArrowUpRight className="w-3 h-3 inline-block ml-0.5" />
-                              </Link>
+                            {order.consignmentId ? (
+                              // no tracking link saved: show the number without a broken "null" link
+                              order.trackingLink ? (
+                                <Link target="_blank" href={order.trackingLink} className="text-xs text-emerald-700 border border-emerald-200 px-1 py-0.2 rounded font-mono truncate max-w-30" title={order.trackingCode ?? undefined}>
+                                  {order.consignmentId}
+                                  <ArrowUpRight className="w-3 h-3 inline-block ml-0.5" />
+                                </Link>
+                              ) : (
+                                <span className="text-xs text-emerald-700 border border-emerald-200 px-1 py-0.2 rounded font-mono" title={order.trackingCode ?? undefined}>{order.consignmentId}</span>
+                              )
                             ) : null}
                           </div>
                         </div>
@@ -1370,7 +1352,7 @@ const OrderList = () => {
                       <TableCell className="align-top py-3 max-w-[260px]">
                         {orderItems.length > 0 ? (
                           <div className="space-y-1">
-                            {orderItems.map((item: any, idx: number) => {
+                            {orderItems.map((item, idx: number) => {
                               const productName = item.name || item.product?.name || "Product";
                               const itemSize = item.size ? `(${item.size}` : "";
                               const itemUnit = item.unit ? `${item.unit})` : "";
@@ -1526,7 +1508,7 @@ const OrderList = () => {
 
                       <TableCell className="text-right pr-2 align-top py-3 whitespace-nowrap">
                         <div className="inline-flex justify-end items-center gap-1">
-                          {!(order as any).consignmentId ? (
+                          {!order.consignmentId ? (
                             <Button
                               variant="ghost"
                               size="icon"

@@ -13,6 +13,7 @@ import {
     CartesianGrid,
 } from "recharts";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import type { Order } from "@/types/order.types";
 
 type Row = {
     day?: string;
@@ -20,7 +21,7 @@ type Row = {
     totalSales: number;
     totalNetReceivable?: number;
     totalOrders: number;
-    orders?: any[];
+    orders?: Order[];
 };
 
 interface AdminSalesChartProps {
@@ -52,19 +53,14 @@ export default function AdminSalesOrdersBreakdownChart({
 
         const map = new Map<string, Row>();
 
-        // Safely extract the inner array whether monthlyData is an array or an API response object
-        const rawMonthlyArray = Array.isArray(monthlyData)
-            ? monthlyData
-            : (monthlyData as any)?.data || (monthlyData as any)?.result || [];
-
-        rawMonthlyArray.forEach((item: any) => {
+        monthlyData.forEach((item) => {
             const rawDate = item.date || item.day;
             if (rawDate) {
                 map.set(String(rawDate).trim(), {
                     ...item,
-                    totalSales: Number(item.totalSales ?? item.sales ?? 0),
-                    totalNetReceivable: Number(item.totalNetReceivable ?? item.netReceivable ?? 0),
-                    totalOrders: Number(item.totalOrders ?? item.ordersCount ?? (item.orders ? item.orders.length : 0)),
+                    totalSales: Number(item.totalSales ?? 0),
+                    totalNetReceivable: Number(item.totalNetReceivable ?? 0),
+                    totalOrders: Number(item.totalOrders ?? item.orders?.length ?? 0),
                     orders: item.orders || [],
                 });
             }

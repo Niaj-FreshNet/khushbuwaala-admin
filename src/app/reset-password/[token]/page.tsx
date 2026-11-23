@@ -8,10 +8,10 @@ import { toast } from 'sonner';
 import Link from 'next/link';
 import { Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
 import { useState } from 'react';
-import AuthLayout from '@/components/Layout/AuthLayout/AuthLayout';
 import FormWrapper from '@/components/ReusableUI/FormWrapper';
 import FormInput from '@/components/ReusableUI/FormInput';
 import { useResetPasswordMutation } from '@/redux/store/api/auth/authApi';
+import { apiErrorMessage } from "@/lib/apiError";
 
 export default function ResetPassword() {
   const [showPassword, setShowPassword] = useState(false);
@@ -29,8 +29,8 @@ export default function ResetPassword() {
       await resetPassword({ token, password: data.password }).unwrap();
       toast.success('Password reset successfully! Please log in.');
       router.push('/login');
-    } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to reset password.');
+    } catch (error) {
+      toast.error(apiErrorMessage(error, 'Failed to reset password.'));
     }
   };
 

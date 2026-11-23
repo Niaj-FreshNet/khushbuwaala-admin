@@ -12,8 +12,12 @@ const compat = new FlatCompat({
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
-    // ~300 legacy "any" types: kept visible as warnings and typed gradually, so real errors stand out (A-27)
-    rules: { "@typescript-eslint/no-explicit-any": "warn" },
+    // Strict since 2026-11-23: no `any` (use a real type or `unknown`) and no unused code. Lint runs with --max-warnings 0.
+    rules: {
+      "@typescript-eslint/no-explicit-any": "error",
+      // _name marks an argument or binding that is required by a signature but not used
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_", ignoreRestSiblings: true }],
+    },
   },
   { ignores: [".next/**", "node_modules/**", "next-env.d.ts"] },
 ];

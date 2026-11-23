@@ -1,10 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useForm, FormProvider, Controller } from 'react-hook-form';
+import { useForm, FormProvider, Controller, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
@@ -22,6 +21,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { apiErrorMessage } from "@/lib/apiError";
+
+type SignUpValues = z.infer<typeof signUpSchema> & { role: string };
 
 export default function SignUp() {
   const [showPassword, setShowPassword] = useState(false);
@@ -29,7 +31,7 @@ export default function SignUp() {
   const [registerUser, { isLoading }] = useRegisterMutation();
   const router = useRouter();
 
-  const methods = useForm<z.infer<typeof signUpSchema> & { role: string }>({
+  const methods = useForm<SignUpValues>({
     resolver: zodResolver(signUpSchema.extend({ role: z.string().min(1, "Please select a role") })),
     defaultValues: {
       fullName: '',
@@ -47,7 +49,7 @@ export default function SignUp() {
     formState: { errors },
   } = methods;
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: SignUpValues) => {
     const { fullName, email, password, role } = data;
     const name = fullName;
 
@@ -55,18 +57,16 @@ export default function SignUp() {
       await registerUser({ name, email, password, role }).unwrap();
       toast.success('Please verify your email.');
       router.push(`/verify-email?email=${encodeURIComponent(email)}`);
-    } catch (error: any) {
+    } catch (error) {
       toast.error(
-        error?.data?.message ||
-        error?.message ||
-        'Sign-up failed. Please try again.'
+        apiErrorMessage(error, 'Sign-up failed. Please try again.')
       );
     }
   };
 
-  const onInvalid = (formErrors: any) => {
+  const onInvalid = (formErrors: FieldErrors<SignUpValues>) => {
     console.error('Validation errors:', formErrors);
-    const firstError = Object.values(formErrors)[0] as any;
+    const firstError = Object.values(formErrors)[0] as { message?: string } | undefined;
     if (firstError?.message) {
       toast.error(firstError.message);
     }

@@ -9,6 +9,7 @@ import { Loader2, ArrowRight, ArrowLeft } from 'lucide-react';
 import AuthLayout from '@/components/Layout/AuthLayout/AuthLayout';
 import FormInput from '@/components/ReusableUI/FormInput';
 import { useForgotPasswordMutation } from '@/redux/store/api/auth/authApi';
+import { apiErrorMessage } from "@/lib/apiError";
 
 export default function ForgotPassword() {
   const [forgotPassword, { isLoading }] = useForgotPasswordMutation();
@@ -24,8 +25,8 @@ export default function ForgotPassword() {
     try {
       await forgotPassword(data).unwrap();
       toast.success('Password reset link sent to your email!');
-    } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to send reset link.');
+    } catch (error) {
+      toast.error(apiErrorMessage(error, 'Failed to send reset link.'));
     }
   };
 

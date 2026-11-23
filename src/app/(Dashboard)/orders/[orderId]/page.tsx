@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { ArrowLeft, Loader2, Receipt, Save, ChevronDown, ChevronUp, Trash2, Plus, Search } from "lucide-react";
@@ -25,6 +25,12 @@ import { useGetAllProductsQuery } from "@/redux/store/api/product/productApi";
 import OrderInvoice from "../_components/OrderInvoice";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCourierReturnPrompt } from "@/components/admin/courierReturn";
+import { toast } from "sonner";
+import { apiErrorMessage } from "@/lib/apiError";
+import { editableLinePayload, isOrderStatus, newEditableLine, toEditableLines } from "@/types/order.types";
+import type { EditableLineField, EditableOrderLine, OrderStatus } from "@/types/order.types";
+import type { IProductResponse } from "@/types/product.types";
+import { PAYMENT_METHODS } from "@/lib/paymentMethods";
 
 type Address = {
     name?: string | null;
@@ -35,23 +41,14 @@ type Address = {
     thana?: string | null;
 };
 
-type OrderStatus = "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "COMPLETED" | "CANCELED" | "RETURNED";
 const STATUS_LIST: OrderStatus[] = ["PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "COMPLETED", "CANCELED", "RETURNED"];
 
-const METHOD_OPTIONS = [
-    { value: "ALL", label: "All Methods" },
-    { value: "cash", label: "Cash" },
-    { value: "online", label: "Online" },
-    { value: "cashOnDelivery", label: "Cash On Delivery" },
-    { value: "bkashPayment", label: "Bkash Payment" },
-] as const;
-
-type MethodValue = (typeof METHOD_OPTIONS)[number]["value"];
+const METHOD_OPTIONS = PAYMENT_METHODS;
 
 export default function Page() {
     const params = useParams();
     const router = useRouter();
-    const orderId = (params as any)?.orderId as string | undefined;
+    const orderId = typeof params?.orderId === "string" ? params.orderId : undefined;
 
     const { data, isLoading, isFetching, isError, refetch } = useGetOrderByIdQuery(orderId as string, {
         skip: !orderId,
@@ -67,7 +64,7 @@ export default function Page() {
     const [statusValue, setStatusValue] = useState<OrderStatus>("PENDING");
     const [paymentValue, setPaymentValue] = useState<"PAID" | "DUE" | "SHIPPED" | "RETURNED">("DUE");
 
-    const [editableItems, setEditableItems] = useState<any[]>([]);
+    const [editableItems, setEditableItems] = useState<EditableOrderLine[]>([]);
     const [amountInput, setAmountInput] = useState<number>(0);
 
     const [form, setForm] = useState<Partial<IUpdateOrderPayload> | null>(null);
@@ -80,18 +77,26 @@ export default function Page() {
     const { data: productQueryResult, isLoading: loadingProducts } = useGetAllProductsQuery({ limit: 20, searchTerm: productSearchTerm });
     const productList = productQueryResult?.data ?? [];
 
-    const normalizeNumber = (v: any) => {
+    const normalizeNumber = (v: unknown) => {
         const n = Number(v);
         return Number.isFinite(n) ? n : 0;
     };
 
+    // Load the order into the form when it opens, and again after it changes on the server
+    // (save, status change), but never over edits that are not saved yet.
+    const loadedVersion = useRef<string | null>(null);
     useEffect(() => {
         if (!order) return;
+        const version = `${order.id}:${order.updatedAt}`;
+        if (loadedVersion.current === version) return;
+        const sameOrder = loadedVersion.current?.startsWith(`${order.id}:`);
+        if (sameOrder && dirty) return;
+        loadedVersion.current = version;
 
         setForm({
-            method: (order.method as MethodValue) ?? "cash",
-            orderSource: order.orderSource as any,
-            saleType: order.saleType as any ?? null,
+            method: order.method ?? "cash",
+            orderSource: order.orderSource,
+            saleType: order.saleType ?? null,
             shippingCost: Number(order.shippingCost ?? 0),
             discountAmount: Number(order.discountAmount ?? 0),
             coupon: order.coupon ?? "",
@@ -120,22 +125,14 @@ export default function Page() {
             customerId: order.customerId ?? null,
         });
 
-        setStatusValue((order.status as OrderStatus) ?? "PENDING");
+        setStatusValue(order.status ?? "PENDING");
         setPaymentValue(order.isPaid ? "PAID" : "DUE");
 
-        setEditableItems(
-            (order.orderItems ?? []).map((it) => ({
-                ...it,
-                quantity: Number(it.quantity ?? 1),
-                size: Number(it.size ?? 1),
-                unit: it.unit ?? "ML",
-                price: Number(it.price ?? 0),
-            }))
-        );
+        setEditableItems(toEditableLines(order.orderItems));
 
         setAmountInput(Number(order.amount ?? 0));
         setDirty(false);
-    }, [order?.id]);
+    }, [order, dirty]);
 
     const computedItemsTotal = useMemo(() => {
         if (!editableItems.length) return 0;
@@ -161,7 +158,7 @@ export default function Page() {
         });
     };
 
-    const setAddressField = (type: "shipping" | "billing", key: keyof Address, value: any) => {
+    const setAddressField = (type: "shipping" | "billing", key: keyof Address, value: string) => {
         setForm((prev) => {
             if (!prev) return prev;
             setDirty(true);
@@ -175,18 +172,13 @@ export default function Page() {
         });
     };
 
-    const handleItemFieldChange = (itemId: string, field: string, value: any) => {
+    const handleItemFieldChange = (itemId: string, field: EditableLineField, value: string) => {
         setEditableItems((prev) =>
-            prev.map((item) => {
-                if (item.id === itemId) {
-                    let updatedVal = value;
-                    if (field === "quantity" || field === "size" || field === "price") {
-                        updatedVal = normalizeNumber(value);
-                    }
-                    return { ...item, [field]: updatedVal };
-                }
-                return item;
-            })
+            prev.map((item) =>
+                item.id !== itemId ? item
+                    : field === "unit" ? { ...item, unit: value }
+                        : { ...item, [field]: normalizeNumber(value) }
+            )
         );
         setDirty(true);
     };
@@ -196,21 +188,9 @@ export default function Page() {
         setDirty(true);
     };
 
-    const handleSelectProductToAdd = (prod: any) => {
-        const newItem = {
-            id: `temp_${Date.now()}`,
-            productId: prod.id,
-            variantId: prod.variants?.[0]?.id || "default_variant",
-            size: prod.variants?.[0]?.size || 3,
-            unit: prod.variants?.[0]?.unit || "ML",
-            quantity: 1,
-            price: prod.variants?.[0]?.price || 150,
-            product: {
-                name: prod.name,
-                primaryImage: prod.primaryImage || "/placeholder.png",
-            }
-        };
-        setEditableItems((prev) => [...prev, newItem]);
+    const handleSelectProductToAdd = (prod: IProductResponse) => {
+        // first size of the product; the price can be changed on the line
+        setEditableItems((prev) => [...prev, newEditableLine(prod, prod.variants?.[0])]);
         setDirty(true);
         setIsProductModalOpen(false);
     };
@@ -218,15 +198,7 @@ export default function Page() {
     const handleSaveAll = async () => {
         if (!orderId || !form || !order) return;
 
-        const orderItemsPayload = editableItems.map((it) => ({
-            id: it.id?.startsWith("temp_") ? undefined : it.id,
-            productId: it.productId,
-            variantId: it.variantId,
-            size: normalizeNumber(it.size),
-            unit: (it.unit ?? "").toString().trim(),
-            quantity: Math.max(1, Math.floor(normalizeNumber(it.quantity))),
-            price: normalizeNumber(it.price),
-        }));
+        const orderItemsPayload = editableItems.map(editableLinePayload);
 
         const payload: IUpdateOrderPayload = {
             id: orderId,
@@ -237,19 +209,25 @@ export default function Page() {
             method: (form.method ?? "").toString().trim() || null,
             additionalNotes: (form.additionalNotes ?? "").toString().trim() || null,
             amount: normalizeNumber(amountInput),
-            orderItems: orderItemsPayload as any,
+            orderItems: orderItemsPayload,
         };
 
-        await updateOrder(payload).unwrap();
-        setDirty(false);
-        refetch();
+        try {
+            await updateOrder(payload).unwrap();
+            toast.success("Order saved");
+            setDirty(false);
+            refetch();
+        } catch (e) {
+            // used to fail silently: the button just stopped spinning
+            toast.error(apiErrorMessage(e, "Could not save the order"));
+        }
     };
 
     const askReturnCharge = useCourierReturnPrompt();
     const onStatusChange = async (val: string) => {
-        const next = val as OrderStatus;
-        if (!orderId) return;
-        const extra = await askReturnCharge(order as any, next);
+        if (!orderId || !isOrderStatus(val)) return;
+        const next = val;
+        const extra = await askReturnCharge(order, next);
         if (extra === null) return; // closed the question: change nothing
         setStatusValue(next);
 
@@ -257,7 +235,7 @@ export default function Page() {
             await updateStatus({ id: orderId, status: next, ...(extra || {}) }).unwrap();
             refetch();
         } catch {
-            setStatusValue((order?.status as OrderStatus) ?? "PENDING");
+            setStatusValue(order?.status ?? "PENDING");
         }
     };
 
@@ -390,7 +368,7 @@ export default function Page() {
 
                 <div>
                     <label className="text-[11px] text-gray-500 font-medium mb-1 block">Payment Method</label>
-                    <Select value={(form.method ?? "") as any} onValueChange={(val) => setField("method", val as any)}>
+                    <Select value={form.method ?? ""} onValueChange={(val) => setField("method", val)}>
                         <SelectTrigger className="h-8 w-full text-xs border-orange-300">
                             <SelectValue placeholder="Method" />
                         </SelectTrigger>
@@ -637,7 +615,7 @@ export default function Page() {
                             ) : productList.length === 0 ? (
                                 <p className="text-xs text-gray-500 text-center py-4">No products found.</p>
                             ) : (
-                                productList.map((prod: any) => (
+                                productList.map((prod) => (
                                     <div
                                         key={prod.id}
                                         onClick={() => handleSelectProductToAdd(prod)}

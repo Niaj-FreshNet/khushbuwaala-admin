@@ -1,31 +1,27 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import FormInput from "@/components/ReusableUI/FormInput";
 import { Button } from "@/components/ui/button";
 import { VariantForForm } from "@/types/product.types";
 import { X, ImagePlus, CheckCircle2, LucideAlertCircle, Eye, EyeOff } from "lucide-react";
 import { useFormContext, useWatch } from "react-hook-form";
-
-interface Props {
-  selectedSizes: string[];
-}
+import Thumb from "@/components/admin/Thumb";
 
 interface FormValues {
   name: string;
   variants: VariantForForm[];
 }
 
-export const VariantsSection = ({ selectedSizes }: Props) => {
+export const VariantsSection = () => {
   const form = useFormContext<FormValues>();
   const { formState: { errors } } = form;
 
   const productName = useWatch({ control: form.control, name: "name" });
   const variants = useWatch({ control: form.control, name: "variants" }) || [];
 
-  const [variantPreviews, setVariantPreviews] = useState<Record<number, string[]>>({});
-
+  // re-run when the name or any size/unit changes (not on every other edit)
+  const sizeKey = variants.map((v) => `${v.size}-${v.unit}`).join("|");
   useEffect(() => {
     const existing = form.getValues("variants") || [];
     const updated = existing.map((variant) => {
@@ -49,7 +45,7 @@ export const VariantsSection = ({ selectedSizes }: Props) => {
     if (changed) {
       form.setValue("variants", updated, { shouldDirty: true });
     }
-  }, [productName, variants.map(v => `${v.size}-${v.unit}`).join("|"), form]);
+  }, [productName, sizeKey, form]);
 
   if (variants.length === 0) {
     return (
@@ -65,7 +61,7 @@ export const VariantsSection = ({ selectedSizes }: Props) => {
       {variants.map((variant, index) => {
         const currentImages = (Array.isArray(variant.images) ? variant.images : []) as (File | string)[];
 
-        const variantErrors = (errors?.variants as any)?.[index];
+        const variantErrors = errors?.variants?.[index];
         const sizeError = variantErrors?.size?.message;
         const priceError = variantErrors?.price?.message;
 
@@ -145,7 +141,7 @@ export const VariantsSection = ({ selectedSizes }: Props) => {
             {/* Fully Responsive Grid Layout */}
             <div
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 items-end"
-              onWheel={(e) => {
+              onWheel={() => {
                 if (document.activeElement instanceof HTMLInputElement && document.activeElement.type === 'number') {
                   document.activeElement.blur();
                 }
@@ -268,7 +264,7 @@ export const VariantsSection = ({ selectedSizes }: Props) => {
                     const previewSrc = img instanceof File ? URL.createObjectURL(img) : img;
                     return (
                       <div key={imgIdx} className="relative w-11 h-11 rounded border border-gray-300 overflow-hidden bg-white shadow-2xs shrink-0">
-                        <img src={previewSrc} alt="Variant swatch preview" className="w-full h-full object-cover" />
+                        <Thumb src={previewSrc} alt="Variant swatch preview" size={44} className="w-full h-full object-cover" />
                         <button
                           type="button"
                           onClick={() => {

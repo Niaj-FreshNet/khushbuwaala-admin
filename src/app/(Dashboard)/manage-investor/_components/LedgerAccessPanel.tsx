@@ -10,6 +10,7 @@ import {
   useGetLedgerAccessRequestsQuery,
   useRevokeLedgerAccessMutation,
 } from '@/redux/store/api/investor/investorApi';
+import { apiErrorMessage } from "@/lib/apiError";
 
 const DURATIONS = [
   { value: '2', label: '2 hours' },
@@ -26,7 +27,7 @@ export default function LedgerAccessPanel() {
   const [decide, { isLoading: deciding }] = useDecideLedgerAccessMutation();
   const [revoke, { isLoading: revoking }] = useRevokeLedgerAccessMutation();
   const [hours, setHours] = useState<Record<string, string>>({});
-  const all: any[] = data?.data ?? [];
+  const all = data?.data ?? [];
   const pending = all.filter((r) => r.status === 'PENDING');
   const active = all.filter((r) => r.isActive);
 
@@ -34,8 +35,8 @@ export default function LedgerAccessPanel() {
     try {
       await decide({ id, status, hours: Number(hours[id] || 24) }).unwrap();
       toast.success(status === 'APPROVED' ? 'Access granted' : 'Request rejected');
-    } catch (e: any) {
-      toast.error(e?.data?.message || 'Could not update the request');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Could not update the request'));
     }
   };
 
@@ -86,7 +87,7 @@ export default function LedgerAccessPanel() {
                 className="h-10 text-xs"
                 disabled={revoking}
                 onClick={async () => {
-                  try { await revoke(r.id).unwrap(); toast.success('Access ended'); } catch (e: any) { toast.error(e?.data?.message || 'Could not end access'); }
+                  try { await revoke(r.id).unwrap(); toast.success('Access ended'); } catch (e) { toast.error(apiErrorMessage(e, 'Could not end access')); }
                 }}
               >
                 End now

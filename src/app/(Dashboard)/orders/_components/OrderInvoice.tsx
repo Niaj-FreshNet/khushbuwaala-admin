@@ -1,17 +1,18 @@
 "use client";
 
-import React, { useMemo, useRef, useState, useEffect } from "react";
+import React, { useMemo, useRef, useState} from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
-import type { IOrderResponse } from "@/redux/store/api/order/ordersApi";
 import Link from "next/link";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import type { Order } from "@/types/order.types";
+import { paymentMethodLabel } from "@/lib/paymentMethods";
 
 interface OrderInvoiceProps {
-    order: any;
+    order: Order | null | undefined;
 
     visible: boolean;
     onClose: () => void;
@@ -36,14 +37,8 @@ export default function OrderInvoice({ order, visible, onClose }: OrderInvoicePr
         return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
     };
 
-    const paymentLabel = useMemo(() => {
-        const m = String(order?.method || "").toLowerCase();
-        if (m === "cashondelivery" || m.includes("cash")) return "Cash On Delivery";
-        if (m.includes("bkash")) return "bKash";
-        if (m.includes("nagad")) return "Nagad";
-        if (!m) return "N/A";
-        return formatText(m);
-    }, [order?.method]);
+    // (used to print "Cash On Delivery" for a plain cash sale)
+    const paymentLabel = order?.method ? paymentMethodLabel(order.method) : "N/A";
 
     const bill = order?.billing || order?.shipping;
     const billName = bill?.name || order?.customer?.name || "Valued Customer";
@@ -56,7 +51,7 @@ export default function OrderInvoice({ order, visible, onClose }: OrderInvoicePr
 
     const lines = useMemo(() => {
         const items = order?.orderItems ?? [];
-        return items.map((it: any, idx: number) => {
+        return items.map((it, idx: number) => {
             const qty = Math.max(1, Number(it.quantity || 1));
             const productId = it.productId || it.product?.id || "";
             const variantId = it.variantId || it.variant?.id || "";
@@ -66,7 +61,7 @@ export default function OrderInvoice({ order, visible, onClose }: OrderInvoicePr
 
             const hasExplicitSavedPrices = it.originalPrice !== undefined && it.originalPrice !== null;
             if (!hasExplicitSavedPrices && totalOrderDiscount > 0) {
-                const nameLower = String(it.product?.name || it.name || "").toLowerCase();
+                const nameLower = String(it.product?.name || "").toLowerCase();
                 const unitUpper = String(it.unit || it.variant?.unit || "").toUpperCase();
 
                 if ((unitUpper === "PACKAGE" || nameLower.includes("combo")) && unitOriginal === 880) {
@@ -103,13 +98,13 @@ export default function OrderInvoice({ order, visible, onClose }: OrderInvoicePr
     }, [order, totalOrderDiscount]);
 
     const totals = useMemo(() => {
-        const subtotalOriginal = lines.reduce((s: any, x: { lineOriginal: any; }) => s + x.lineOriginal, 0);
-        const itemDiscountsSum = lines.reduce((s: any, x: { save: any; }) => s + x.save, 0);
+        const subtotalOriginal = lines.reduce((s, x) => s + x.lineOriginal, 0);
+        const itemDiscountsSum = lines.reduce((s, x) => s + x.save, 0);
         const displayDiscountAmount = Math.max(itemDiscountsSum, totalOrderDiscount);
 
         const coupon = order?.coupon ? String(order.coupon).toUpperCase() : null;
         const shipping = Math.max(0, Number(order?.shippingCost ?? 0));
-        const tax = Math.max(0, Number(order?.estimatedTaxes ?? 0));
+        const tax = 0; // orders carry no tax (the storefront field this read never existed on admin orders)
 
         const totalPayable = Math.max(
             0,
@@ -289,7 +284,7 @@ export default function OrderInvoice({ order, visible, onClose }: OrderInvoicePr
                                 <span className="text-lg font-black text-gray-900 leading-none">INVOICE</span>
                                 <p className="text-xs font-bold text-gray-800 mt-0.5">#{invoiceNo}</p>
                                 <p className="text-[11px] text-gray-500">
-                                    {new Date((order as any).createdAt || (order as any).orderTime || Date.now()).toLocaleDateString("en-GB", {
+                                    {new Date(order.createdAt || order.orderTime || Date.now()).toLocaleDateString("en-GB", {
                                         day: "2-digit",
                                         month: "short",
                                         year: "numeric",
@@ -317,7 +312,7 @@ export default function OrderInvoice({ order, visible, onClose }: OrderInvoicePr
                                 <div className="flex justify-end gap-2 items-center">
                                     <span className="text-gray-500">Order Status:</span>
                                     <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200 uppercase">
-                                        {formatText(order.status as any)}
+                                        {formatText(order.status)}
                                     </span>
                                 </div>
                                 <div className="flex justify-end gap-2 items-center">
@@ -347,11 +342,11 @@ export default function OrderInvoice({ order, visible, onClose }: OrderInvoicePr
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {lines.map((item: any, idx: number) => (
+                                    {lines.map((item, idx: number) => (
                                         <tr key={item.id} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
                                             <td className="py-1.5 px-3">
                                                 <div className="flex items-center gap-2">
-                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                    {/* eslint-disable-next-line @next/next/no-img-element -- the PDF capture (html2canvas) needs the picture loaded now; <Image> loads lazily */}
                                                     <img
                                                         src={item.image}
                                                         alt={item.name}

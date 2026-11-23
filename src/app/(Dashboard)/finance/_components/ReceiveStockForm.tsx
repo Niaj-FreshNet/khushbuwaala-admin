@@ -1,6 +1,7 @@
 import { CostLine, useGetLiveWACQuery, useReceiveStockPurchaseMutation } from '@/redux/store/api/finance/financeApi';
 import React, { useState } from 'react';
 import { toast } from 'sonner';
+import { apiErrorMessage } from "@/lib/apiError";
 
 interface Props {
     productId: string;
@@ -50,11 +51,11 @@ export default function ReceiveStockForm({ productId, productName, unit, onSucce
                 }
             }).unwrap();
             
-            toast.success('Stock received and WAC updated!');
+            toast.success(`Stock received for ${productName}; average cost updated`);
             setQuantity(''); setSupplier(''); setBillNo(''); setNote('');
             if (onSuccess) onSuccess();
-        } catch (error: any) {
-            toast.error(error?.data?.message || 'Failed to receive stock');
+        } catch (error) {
+            toast.error(apiErrorMessage(error, 'Failed to receive stock'));
         }
     };
 

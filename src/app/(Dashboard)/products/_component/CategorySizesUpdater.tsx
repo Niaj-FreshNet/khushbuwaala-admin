@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -39,7 +38,7 @@ export default function CategorySizesUpdater({ categories, setSelectedSizes }: P
 
     const category = categories.find((c) => c.id === selectedCategoryId);
 
-    const sizes = (category?.sizes || []).map((s: any) => String(s).trim());
+    const sizes = (category?.sizes || []).map((s) => String(s).trim());
     const unit = category?.unit ? String(category.unit).trim() : 'ML';
 
     const key = `${sizes.join('|')}__${unit}`;

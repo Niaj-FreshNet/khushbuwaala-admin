@@ -1,18 +1,16 @@
 import baseApi from '../../api/baseApi'
+import type {
+  AddressInfo,
+  Order,
+  OrderLine,
+  OrderListQuery,
+  OrderListResponse,
+  OrderSource,
+  OrderStatus,
+  SaleType,
+} from '@/types/order.types'
 
-// Types
-export interface IOrderPayload {
-  cartItemIds: string[]
-  amount: number
-  isPaid?: boolean
-  orderSource?: 'WEBSITE' | 'ADMIN_PANEL'
-  customerInfo?: {
-    name?: string
-    phone?: string
-    email?: string
-    address?: string
-  }
-}
+export type { AddressInfo } from '@/types/order.types'
 
 export type ApiResponse<T> = {
   success: boolean;
@@ -20,98 +18,18 @@ export type ApiResponse<T> = {
   data: T;
 };
 
-export type AddressInfo = {
-  name?: string | null;
-  phone?: string | null;
-  email?: string | null;
-  address?: string | null;
-  district?: string | null;
-  thana?: string | null;
-  fbp?: string | null;
-  fbc?: string | null;
-};
-
-export type OrderItemInfo = {
-  id: string;
-  userId?: string;
-  productId: string;
-  variantId: string;
-  size: number;
-  unit: string;
-  quantity: number;
-  price: number;
-  originalPrice?: number;
-  discount?: number;
-  status?: string;
-  orderId?: string;
-  product?: {
-    id: string;
-    name: string;
-    primaryImage?: string;
-  };
-  variant?: {
-    id: string;
-    productId: string;
-    sku: string;
-    unit: string;
-    size: number;
-    price: number;
-  };
-};
-
-export type IOrderData = {
-  id: string;
-  invoice: string;
-  orderTime: string;
-  payToken?: string;
-  amount: number;
-  isPaid: boolean;
-  method?: string | null;
-  cartItems?: any[];
-  status: string;
-  orderSource: string;
-  productIds?: string[];
-  coupon?: string | null;
-  discountAmount?: number;
-  customerId?: string | null;
-  shippingCost?: number;
-  additionalNotes?: string | null;
-  shipping?: AddressInfo;
-  billing?: AddressInfo;
-  salesmanId?: string | null;
-  saleType?: string | null;
-  name?: string | null;
-  phone?: string | null;
-  email?: string | null;
-  address?: string | null;
-  createdAt: string;
-  updatedAt: string;
-  customer?: {
-    id: string;
-    name: string;
-    imageUrl?: string;
-  };
-  orderItems?: OrderItemInfo[];
-};
-
-export type IOrderResponse = ApiResponse<IOrderData>;
-
-export interface IPaginatedResponse<T> {
-  meta: {
-    page: number
-    limit: number
-    total: number
-  }
-  data: T[]
-}
+/** Kept for the pages that already use these names */
+export type OrderItemInfo = OrderLine;
+export type IOrderData = Order;
+export type IOrderResponse = ApiResponse<Order>;
 
 export type IUpdateOrderPayload = {
   id: string;
-  status?: "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "COMPLETED" | "CANCELED" | "RETURNED";
+  status?: OrderStatus;
   isPaid?: boolean;
   method?: string | null;
-  orderSource?: "WEBSITE" | "SHOWROOM" | "WHOLESALE" | "MANUAL";
-  saleType?: "SINGLE" | "BULK" | null;
+  orderSource?: OrderSource;
+  saleType?: SaleType | null;
   shippingCost?: number;
   additionalNotes?: string | null;
   coupon?: string | null;
@@ -125,41 +43,34 @@ export type IUpdateOrderPayload = {
   address?: string | null;
   amount?: number;
   customerId?: string | null;
-  // ✅ Support updating quantities, removing items, and adding new ones
-  orderItems?: { id?: string; productId?: string; variantId?: string; quantity: number }[];
+  // Update quantities, remove lines (leave them out) and add new ones (no id)
+  orderItems?: { id?: string; productId?: string; variantId?: string | null; size?: number; unit?: string; quantity: number; price?: number }[];
 };
 
+export type DashboardType = "all" | "website" | "manual";
+type PeriodTotals = { orders: number; sales: number };
+
+/** GET /order/dashboard/metrics */
 export type DashboardMetrics = {
-  todayOrders: number;
-  monthOrders: number;
-  monthSales: number;
-  totalSales: number;
+  type: DashboardType;
+  today: PeriodTotals;
+  thisWeek: PeriodTotals;
+  thisMonth: PeriodTotals;
+  last3Months: PeriodTotals;
 };
 
-export type WeeklySalesRow = {
-  day: string;
-  sales: number;
-  orders: number;
-};
-
-export type MonthlySalesRow = {
+/** One day of GET /order/dashboard/weekly-sales and /monthly-sales (date is dd-MM-yy, Dhaka) */
+export type DailySalesRow = {
   date: string;
-  sales: number;
-  orders: number;
+  totalSales: number;
+  totalNetReceivable: number;
+  totalOrders: number;
+  orders: Order[];
 };
 
 export const orderApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    createOrder: builder.mutation<IOrderResponse, IOrderPayload>({
-      query: (body) => ({
-        url: '/order/create-order',
-        method: 'POST',
-        body,
-      }),
-      invalidatesTags: ['Order'],
-    }),
-
-    getAllOrders: builder.query<IPaginatedResponse<IOrderResponse>, Record<string, any> | void>({
+    getAllOrders: builder.query<OrderListResponse, OrderListQuery | void>({
       query: (params) => ({
         url: '/order/get-all-orders',
         params: params ?? undefined,
@@ -200,30 +111,7 @@ export const orderApi = baseApi.injectEndpoints({
       invalidatesTags: ["Order"],
     }),
 
-    getAllCustomers: builder.query<IPaginatedResponse<any>, Record<string, any> | void>({
-      query: (params) => ({
-        url: '/order/get-all-customers',
-        params: params ?? undefined,
-      }),
-      providesTags: ['User'],
-    }),
-
-    getUserOrders: builder.query<IOrderResponse[], string>({
-      query: (userId) => `/order/get-user-order/${userId}`,
-      providesTags: ['Order'],
-    }),
-
-    getMyOrders: builder.query<IOrderResponse[], void>({
-      query: () => '/order/my-orders',
-      providesTags: ['Order'],
-    }),
-
-    getMyOrderById: builder.query<IOrderResponse, string>({
-      query: (id) => `/order/my-order/${id}`,
-      providesTags: (result, error, id) => [{ type: 'Order' as const, id }],
-    }),
-
-    getDashboardMetrics: builder.query<ApiResponse<DashboardMetrics & { type: string }>, { type?: "all" | "website" | "manual" } | void>({
+    getDashboardMetrics: builder.query<ApiResponse<DashboardMetrics>, { type?: DashboardType } | void>({
       query: (arg) => ({
         url: "/order/dashboard/metrics",
         params: arg?.type ? { type: arg.type } : undefined,
@@ -231,10 +119,7 @@ export const orderApi = baseApi.injectEndpoints({
       providesTags: ["Order"],
     }),
 
-    getWeeklySalesOverview: builder.query<
-      ApiResponse<WeeklySalesRow[]>,
-      { type?: "all" | "website" | "manual" } | void
-    >({
+    getWeeklySalesOverview: builder.query<ApiResponse<DailySalesRow[]>, { type?: DashboardType } | void>({
       query: (arg) => ({
         url: "/order/dashboard/weekly-sales",
         params: arg?.type ? { type: arg.type } : undefined,
@@ -243,8 +128,8 @@ export const orderApi = baseApi.injectEndpoints({
     }),
 
     getMonthlySalesOverview: builder.query<
-      ApiResponse<{ date: string; sales: number; orders: number }[]>,
-      { type?: "all" | "website" | "manual"; year?: number; month?: number } | void
+      ApiResponse<DailySalesRow[]>,
+      { type?: DashboardType; year?: number; month?: number } | void
     >({
       query: (arg) => ({
         url: "/order/dashboard/monthly-sales",
@@ -257,7 +142,7 @@ export const orderApi = baseApi.injectEndpoints({
       providesTags: ["Order"],
     }),
 
-    deleteOrder: builder.mutation<ApiResponse<any>, string>({
+    deleteOrder: builder.mutation<ApiResponse<Order>, string>({
       query: (id) => ({
         url: `/order/delete-order/${id}`,
         method: 'DELETE',
@@ -269,20 +154,14 @@ export const orderApi = baseApi.injectEndpoints({
 });
 
 export const {
-  useCreateOrderMutation,
   useGetAllOrdersQuery,
   useGetOrderByIdQuery,
   useLazyGetOrderByIdQuery,
   useUpdateOrderStatusMutation,
   useUpdatePaymentStatusMutation,
   useUpdateOrderMutation,
-  useGetAllCustomersQuery,
-  useGetUserOrdersQuery,
-  useGetMyOrdersQuery,
-  useGetMyOrderByIdQuery,
   useGetDashboardMetricsQuery,
   useGetWeeklySalesOverviewQuery,
   useGetMonthlySalesOverviewQuery,
-  // useLazyTrackOrdersQuery,
   useDeleteOrderMutation,
 } = orderApi

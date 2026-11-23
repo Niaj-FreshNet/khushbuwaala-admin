@@ -32,6 +32,8 @@ import { Button } from '@/components/ui/button';
 
 import { useGetOrderByIdQuery } from '@/redux/store/api/order/ordersApi';
 import OrderInvoice from './OrderInvoice';
+import { paymentMethodLabel } from '@/lib/paymentMethods';
+import type { AddressInfo, Order } from '@/types/order.types';
 
 interface OrderDetailsModalProps {
   orderId: string;
@@ -39,82 +41,8 @@ interface OrderDetailsModalProps {
   onClose: () => void;
 }
 
-type Nullable<T> = T | null | undefined;
-
-type AddressInfo = {
-  name?: string;
-  phone?: string;
-  email?: string;
-  address?: string;
-  district?: string;
-  thana?: Nullable<string>;
-};
-
-type OrderApi = {
-  id: string;
-  consignmentId?: number | null;
-  courierStatus?: string | null;
-  deliveryCharge?: number | null;
-  returnChargeCollected?: number | null;
-  courierPayoutId?: string | null;
-  courierPaidAt?: string | null;
-  courierCodCollected?: number | null;
-  courierReview?: string | null;
-  trackingCode?: string | null;
-  invoice?: string;
-  orderTime?: string;
-  createdAt?: string;
-
-  amount: number;
-  shippingCost?: number;
-  additionalNotes?: string | null;
-  discountAmount?: number;
-  coupon?: string;
-
-  isPaid: boolean;
-  method: string;
-  status: string;
-
-  orderSource?: string;
-  saleType?: string;
-  salesmanId?: Nullable<string>;
-
-  shipping?: Nullable<AddressInfo>;
-  billing?: Nullable<AddressInfo>;
-
-  customer?: Nullable<{
-    id: string;
-    name?: string;
-    imageUrl?: Nullable<string>;
-  }>;
-
-  orderItems?: Array<{
-    id: string;
-    productId: string;
-    variantId?: string;
-    size?: number;
-    unit?: string;
-    quantity: number;
-    price: number;
-    originalPrice?: number;
-    discount?: number;
-    status?: string;
-
-    product?: Nullable<{
-      id: string;
-      name?: string;
-      primaryImage?: string;
-    }>;
-
-    variant?: Nullable<{
-      id: string;
-      sku?: string;
-      unit?: string;
-      size?: number;
-      price?: number;
-    }>;
-  }>;
-};
+// One order type for the whole admin (types/order.types.ts)
+type OrderApi = Order;
 
 const formatBDT = (amount: number) =>
   new Intl.NumberFormat('en-BD', {
@@ -135,28 +63,7 @@ const getStatusStyle = (status: string) => {
   return styles[status?.toUpperCase()] || 'bg-gray-100 text-gray-700 border-gray-200';
 };
 
-const methodLabel = (method?: string) => {
-  if (!method) return 'N/A';
-
-  const methods: Record<string, string> = {
-    cashOnDelivery: 'Cash on Delivery',
-    cash: 'Cash',
-    onlinePayment: 'Online Payment',
-    bkashPayment: 'bKash Payment',
-    bkash: 'bKash',
-    bkashPersonal: 'bKash Personal',
-    nagadPayment: 'Nagad Payment',
-    nagad: 'Nagad',
-    nagadPersonal: 'Nagad Personal',
-    rocketPayment: 'Rocket Payment',
-    rocket: 'Rocket',
-    rocketPersonal: 'Rocket Personal',
-    bankTransfer: 'Bank Transfer',
-    cardPayment: 'Card Payment',
-  };
-
-  return methods[method] || method;
-};
+const methodLabel = (method?: string | null) => paymentMethodLabel(method);
 
 const SectionTitle = ({
   icon: Icon,
@@ -253,7 +160,7 @@ const OrderDetailsModal = ({
     skip: !orderId || !visible,
   });
 
-  const order = data?.data as unknown as OrderApi | undefined;
+  const order: OrderApi | undefined = data?.data;
   const [showInvoice, setShowInvoice] = useState(false);
 
   const orderDate = useMemo(() => {
@@ -820,7 +727,7 @@ const OrderDetailsModal = ({
 
       {order && (
         <OrderInvoice
-          order={order as any}
+          order={order}
           visible={showInvoice}
           onClose={() => setShowInvoice(false)}
         />

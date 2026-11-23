@@ -29,6 +29,8 @@ import { Button } from '@/components/ui/button';
 import { useGetSaleByIdQuery } from '@/redux/store/api/sales/salesApi';
 import { useLazyGetProductQuery } from '@/redux/store/api/product/productApi';
 import SalesInvoice from './SalesInvoice';
+import { paymentMethodLabel } from '@/lib/paymentMethods';
+import type { Order } from '@/types/order.types';
 
 interface SaleDetailsModalProps {
   saleId: string;
@@ -36,37 +38,20 @@ interface SaleDetailsModalProps {
   onClose: () => void;
 }
 
-interface CartOrOrderItem {
-  productId: string;
-  product?: { name: string; primaryImage?: string };
-  size?: number;
-  unit?: string;
+// A line from orderItems (real lines) or cartItems (the JSON copy older sales kept)
+type CartOrOrderItem = {
+  productId?: string;
+  product?: { name?: string; primaryImage?: string } | null;
+  size?: number | string | null;
+  unit?: string | null;
   price?: number;
   sellingUnitPrice?: number;
-  quantity: number;
-  originalPrice?: number;
-  variant?: { sku?: string; size?: number; unit?: string };
-}
+  quantity?: number;
+  originalPrice?: number | null;
+  variant?: { sku?: string; size?: number; unit?: string } | null;
+};
 
-interface Sale {
-  id: string;
-  invoice: string;
-  orderTime?: string;
-  createdAt?: string;
-  status: string;
-  salesman?: { name: string; email: string } | null;
-  email?: string | null;
-  phone?: string | null;
-  address?: string | null;
-  name?: string | null;
-  orderSource?: string;
-  saleType?: string;
-  isPaid: boolean;
-  method: string;
-  amount: number;
-  cartItems?: CartOrOrderItem[];
-  orderItems?: CartOrOrderItem[];
-}
+type Sale = Order;
 
 const formatBDT = (amount: number) =>
   new Intl.NumberFormat('en-BD', {
@@ -88,28 +73,7 @@ const getStatusStyle = (status: string) => {
   return styles[status?.toUpperCase()] || 'bg-gray-100 text-gray-700 border-gray-200';
 };
 
-const methodLabel = (method?: string) => {
-  if (!method) return 'N/A';
-
-  const methods: Record<string, string> = {
-    cashOnDelivery: 'Cash on Delivery',
-    cash: 'Cash',
-    onlinePayment: 'Online Payment',
-    bkashPayment: 'bKash Payment',
-    bkash: 'bKash',
-    bkashPersonal: 'bKash Personal',
-    nagadPayment: 'Nagad Payment',
-    nagad: 'Nagad',
-    nagadPersonal: 'Nagad Personal',
-    rocketPayment: 'Rocket Payment',
-    rocket: 'Rocket',
-    rocketPersonal: 'Rocket Personal',
-    bankTransfer: 'Bank Transfer',
-    cardPayment: 'Card Payment',
-  };
-
-  return methods[method] || method;
-};
+const methodLabel = (method?: string | null) => paymentMethodLabel(method);
 
 const SectionTitle = ({
   icon: Icon,
@@ -150,14 +114,14 @@ const SaleDetailsModal = ({ saleId, visible, onClose }: SaleDetailsModalProps) =
   const { data, isLoading } = useGetSaleByIdQuery(saleId, {
     skip: !saleId || !visible,
   });
-  const sale: Sale | undefined = data?.data;
+  const sale: Sale | undefined = data?.data ?? undefined;
 
   const [fetchProduct] = useLazyGetProductQuery();
   const [productMap, setProductMap] = useState<Record<string, { name: string; primaryImage?: string }>>({});
   const [showInvoice, setShowInvoice] = useState(false);
 
   // Extract items from either orderItems or cartItems
-  const rawItems = useMemo(() => {
+  const rawItems = useMemo<CartOrOrderItem[]>(() => {
     if (!sale) return [];
     return sale.orderItems || sale.cartItems || [];
   }, [sale]);
@@ -190,11 +154,11 @@ const SaleDetailsModal = ({ saleId, visible, onClose }: SaleDetailsModalProps) =
       ...sale,
       cartItems: rawItems.map((item) => ({
         ...item,
-        product: productMap[item.productId] || item.product,
+        product: (item.productId ? productMap[item.productId] : undefined) || item.product,
       })),
       orderItems: rawItems.map((item) => ({
         ...item,
-        product: productMap[item.productId] || item.product,
+        product: (item.productId ? productMap[item.productId] : undefined) || item.product,
       })),
     };
   }, [sale, rawItems, productMap]);
@@ -469,7 +433,7 @@ const SaleDetailsModal = ({ saleId, visible, onClose }: SaleDetailsModalProps) =
                       </thead>
                       <tbody className="divide-y divide-gray-100 bg-white">
                         {normalizedItems.map((item, idx) => {
-                          const productInfo = productMap[item.productId] || item.product;
+                          const productInfo = (item.productId ? productMap[item.productId] : undefined) || item.product;
                           const imageSrc = productInfo?.primaryImage || '/placeholder.svg';
                           const productName = productInfo?.name || 'Product Name...';
                           const size = item.variant?.size ?? item.size;
@@ -602,7 +566,7 @@ const SaleDetailsModal = ({ saleId, visible, onClose }: SaleDetailsModalProps) =
       {/* Invoice Modal */}
       {updatedSale && (
         <SalesInvoice
-          sale={updatedSale as any}
+          sale={updatedSale}
           visible={showInvoice}
           onClose={() => setShowInvoice(false)}
         />

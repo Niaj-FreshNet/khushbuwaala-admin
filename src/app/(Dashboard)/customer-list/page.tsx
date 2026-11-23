@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -86,7 +85,7 @@ export default function CustomerListPage() {
                     isEmpty={!isLoading && users.length === 0}
                     emptyText="No customers found."
                 >
-                    {users.map((user: any) => (
+                    {users.map((user) => (
                         <MobileCard
                             key={user.id}
                             onOpen={() => router.push(`/customer-list/${user.id}`)}
@@ -152,7 +151,7 @@ export default function CustomerListPage() {
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    users.map((user: any) => {
+                                    users.map((user) => {
                                         const initials = user.name
                                             ? user.name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
                                             : 'U';

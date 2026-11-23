@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -20,6 +19,7 @@ import { Search, Plus, Edit, Trash2, Sparkles, Layers } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useConfirm } from '@/components/admin/ConfirmProvider';
+import type { Material } from '@/types/material.types';
 
 const materialSchema = z.object({
     materialName: z.string().min(1, 'Material name is required'),
@@ -39,13 +39,13 @@ export default function MaterialList() {
     // Modal Controls
     const [addModalOpen, setAddModalOpen] = useState(false);
     const [editModalOpen, setEditModalOpen] = useState(false);
-    const [editingMaterial, setEditingMaterial] = useState<any>(null);
+    const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
 
     useEffect(() => {
         const materials = data?.data?.data || [];
         if (searchTerm.trim()) {
             setFilteredMaterials(
-                materials.filter((mat: any) =>
+                materials.filter((mat) =>
                     mat.materialName.toLowerCase().includes(searchTerm.toLowerCase().trim())
                 )
             );
@@ -80,12 +80,13 @@ export default function MaterialList() {
         }
     };
 
-    const handleEdit = (material: any) => {
+    const handleEdit = (material: Material) => {
         setEditingMaterial(material);
         setEditModalOpen(true);
     };
 
     const handleUpdate = async (formData: z.infer<typeof materialSchema>) => {
+        if (!editingMaterial) return;
         try {
             await updateMaterial({
                 id: editingMaterial.id,
@@ -152,7 +153,7 @@ export default function MaterialList() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                        {filteredMaterials.map((material: any) => (
+                        {filteredMaterials.map((material) => (
                             <div
                                 key={material.id}
                                 className="flex items-center justify-between p-2.5 rounded-lg border border-gray-100 bg-gray-50/40 hover:bg-green-50/30 hover:border-green-200 transition-all group"
@@ -198,7 +199,6 @@ export default function MaterialList() {
                         resolver={zodResolver(materialSchema)}
                         defaultValues={{ materialName: '' }}
                         onSubmit={handleCreate}
-                        successMessage="Material added successfully!"
                         errorMessage="Failed to add material"
                         submitButtonText="Save Material"
                         submitButtonClassName="bg-green-600 hover:bg-green-700 active:bg-green-800 text-xs font-bold h-7 px-3 shadow-2xs transition-colors"
@@ -227,7 +227,6 @@ export default function MaterialList() {
                         resolver={zodResolver(materialSchema)}
                         defaultValues={{ materialName: editingMaterial?.materialName || '' }}
                         onSubmit={handleUpdate}
-                        successMessage="Material updated successfully!"
                         errorMessage="Failed to update material"
                         submitButtonText="Update Material"
                         submitButtonClassName="bg-green-600 hover:bg-green-700 active:bg-green-800 text-xs font-bold h-7 px-3 shadow-2xs transition-colors"
