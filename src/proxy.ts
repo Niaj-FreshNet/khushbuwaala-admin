@@ -64,6 +64,7 @@ export function proxy(request: NextRequest) {
     currentPath.startsWith("/fragrance-families") ||
     currentPath.startsWith("/courier-payouts") ||
     currentPath.startsWith("/storefront") ||
+    currentPath.startsWith("/fragrance-data") ||
     currentPath.startsWith("/ledger");
 
   if (isProtectedRoute) {
@@ -90,7 +91,7 @@ export function proxy(request: NextRequest) {
 
       // Price sheet: Super Admin and Admin only
       // admin-only screens (the API refuses other roles too; this just sends them home instead of to an error)
-      const adminOnly = currentPath.startsWith("/price-list") || currentPath.startsWith("/storefront");
+      const adminOnly = currentPath.startsWith("/price-list") || currentPath.startsWith("/storefront") || currentPath.startsWith("/fragrance-data");
       if (adminOnly && role !== "SUPER_ADMIN" && role !== "ADMIN") {
         const home = role === "SALESMAN" ? "/sales/add-sales" : role === "INVESTOR" ? "/investor" : "/login";
         return NextResponse.redirect(new URL(home, request.url));
@@ -132,6 +133,7 @@ export const config = {
     "/fragrance-families/:path*",
     "/courier-payouts/:path*",
     "/storefront/:path*",
+    "/fragrance-data/:path*",
     "/ledger/:path*",
   ],
 };

@@ -127,6 +127,12 @@ export const navLinks: NavLink[] = [
         icon: Boxes,
         roles: ["ADMIN", "SUPER_ADMIN"],
       },
+      {
+        name: "Fragrance data check",
+        href: "/fragrance-data",
+        icon: ClipboardList,
+        roles: ["ADMIN", "SUPER_ADMIN"],
+      },
     ],
   },
 

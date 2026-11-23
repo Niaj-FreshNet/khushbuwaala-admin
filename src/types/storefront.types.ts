@@ -34,6 +34,15 @@ export type StorefrontLimits = {
   query: number;
 };
 
+/** Fragrance data check (backend: GET /discover/data-check) */
+export type FragranceDataCheck = {
+  totalProducts: number;
+  productsToReview: number;
+  missingCounts: Record<string, number>;
+  unrecognisedValues: { field: string; value: string; count: number }[];
+  products: { id: string; name: string; slug: string; missing: string[]; unrecognised: { field: string; value: string }[] }[];
+};
+
 export type StorefrontSettingsAdmin = {
   settings: StorefrontSettings;
   updatedAt: string | null;

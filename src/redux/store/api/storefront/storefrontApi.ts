@@ -1,6 +1,6 @@
 import { baseApi } from '../baseApi';
 import type { ApiEnvelope } from '@/types/api.types';
-import type { StorefrontSettings, StorefrontSettingsAdmin } from '@/types/storefront.types';
+import type { FragranceDataCheck, StorefrontSettings, StorefrontSettingsAdmin } from '@/types/storefront.types';
 
 export const storefrontApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -14,8 +14,15 @@ export const storefrontApi = baseApi.injectEndpoints({
       transformResponse: (res: ApiEnvelope<Omit<StorefrontSettingsAdmin, 'defaults' | 'limits'>>) => res.data,
       invalidatesTags: ['Storefront'],
     }),
+    // Products change on other screens, so this is fetched fresh each time the page opens.
+    getFragranceDataCheck: builder.query<FragranceDataCheck, void>({
+      query: () => '/discover/data-check',
+      transformResponse: (res: ApiEnvelope<FragranceDataCheck>) => res.data,
+      keepUnusedDataFor: 0,
+      providesTags: ['Product'],
+    }),
   }),
   overrideExisting: false,
 });
 
-export const { useGetStorefrontSettingsQuery, useSaveStorefrontSettingsMutation } = storefrontApi;
+export const { useGetStorefrontSettingsQuery, useSaveStorefrontSettingsMutation, useGetFragranceDataCheckQuery } = storefrontApi;
