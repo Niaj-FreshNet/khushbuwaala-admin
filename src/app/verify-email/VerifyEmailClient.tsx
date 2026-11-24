@@ -135,7 +135,7 @@ export default function VerifyEmailClient() {
                         <button
                             type="submit"
                             disabled={isVerifying}
-                            className="w-full mt-4 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold text-stone-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 active:scale-[0.99] transition-all shadow-md shadow-amber-500/20 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
+                            className="w-full mt-4 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold text-stone-950 bg-linear-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 active:scale-[0.99] transition-all shadow-md shadow-amber-500/20 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
                         >
                             {isVerifying ? (
                                 <>

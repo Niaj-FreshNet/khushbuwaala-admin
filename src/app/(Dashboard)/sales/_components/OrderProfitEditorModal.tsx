@@ -143,7 +143,7 @@ export default function OrderProfitEditorModal({
 
                 <div className="space-y-4 my-2">
                     {/* Summary Banner */}
-                    <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-3 sm:p-3.5 flex items-center justify-between shadow-2xs">
+                    <div className="bg-linear-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-3 sm:p-3.5 flex items-center justify-between shadow-2xs">
                         <div>
                             <p className="text-[10px] sm:text-[11px] font-semibold text-emerald-800 uppercase tracking-wider">Calculated Net Profit</p>
                             <h3 className="text-lg sm:text-xl font-black text-emerald-700 mt-0.5">

@@ -216,7 +216,7 @@ function InvestorHub() {
                 </div>
 
                 {/* 2. Primary Action Area: Balance & Withdrawal */}
-                <Card className="overflow-hidden rounded-2xl border-none bg-gradient-to-br from-emerald-900 to-emerald-800 text-white shadow-xl shadow-emerald-900/10">
+                <Card className="overflow-hidden rounded-2xl border-none bg-linear-to-br from-emerald-900 to-emerald-800 text-white shadow-xl shadow-emerald-900/10">
                     <CardContent className="p-6 sm:p-8">
                         <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
                             <div>
