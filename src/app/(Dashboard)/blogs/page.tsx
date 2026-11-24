@@ -570,7 +570,7 @@ const BlogList = () => {
 
               <div>
                 <Label htmlFor="tags" className="text-[11px] font-semibold text-gray-700 flex items-center gap-1">
-                  <Tags className="w-3 h-3 text-emerald-600" /> Tags[cite: 3]
+                  <Tags className="w-3 h-3 text-emerald-600" /> Tags
                 </Label>
                 <Input
                   id="tags"
@@ -655,7 +655,7 @@ const BlogList = () => {
             <div className="pt-2 border-t border-gray-100 space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-[11px] font-bold text-gray-900 flex items-center gap-1">
-                  <HelpCircle className="w-3.5 h-3.5 text-emerald-600" /> Quick Questions / FAQs Section[cite: 3]
+                  <HelpCircle className="w-3.5 h-3.5 text-emerald-600" /> Quick Questions / FAQs Section
                 </Label>
                 <Button type="button" size="sm" variant="ghost" onClick={handleAddFaq} className="h-6 text-[11px] text-emerald-700 hover:bg-emerald-50">
                   <Plus className="w-3 h-3 mr-1" /> Add Question

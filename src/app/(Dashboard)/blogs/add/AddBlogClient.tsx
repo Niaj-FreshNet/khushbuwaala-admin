@@ -237,7 +237,7 @@ const AddBlogClient = () => {
           </div>
           <div>
             <h1 className="text-xs sm:text-sm font-bold text-gray-900 leading-tight">Create Expert Fragrance Guide</h1>
-            <p className="text-[10px] text-gray-500">Publish deep botanical breakdowns, ingredient origins, and attar guides[cite: 2, 3]</p>
+            <p className="text-[10px] text-gray-500">Publish deep botanical breakdowns, ingredient origins, and attar guides</p>
           </div>
         </div>
 
@@ -296,7 +296,7 @@ const AddBlogClient = () => {
             <div className="pt-2 border-t border-gray-100 space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-[11px] font-bold text-gray-900 flex items-center gap-1">
-                  <HelpCircle className="w-3.5 h-3.5 text-emerald-600" /> Quick Questions / FAQs Section[cite: 3]
+                  <HelpCircle className="w-3.5 h-3.5 text-emerald-600" /> Quick Questions / FAQs Section
                 </Label>
                 <Button type="button" size="sm" variant="ghost" onClick={handleAddFaq} className="h-6 text-[11px] text-emerald-700 hover:bg-emerald-50">
                   <Plus className="w-3 h-3 mr-1" /> Add Question
@@ -380,7 +380,7 @@ const AddBlogClient = () => {
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="tags" className="text-[11px] font-semibold text-gray-700 flex items-center gap-1">
-                    <Tags className="w-3 h-3 text-emerald-600" /> Tags[cite: 3]
+                    <Tags className="w-3 h-3 text-emerald-600" /> Tags
                   </Label>
                   <Input
                     id="tags"
@@ -405,7 +405,7 @@ const AddBlogClient = () => {
                   <Input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleImageChange} className="hidden" id="image-upload" />
                   <Label htmlFor="image-upload" className="cursor-pointer flex items-center justify-center gap-2 text-gray-600">
                     <Upload className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span className="text-[11px]">Upload Image (JPEG/PNG/WebP)</span>
+                    <span className="text-[11px]">Upload picture: 1200 × 630 (JPEG/PNG/WebP)</span>
                   </Label>
                 </div>
 
