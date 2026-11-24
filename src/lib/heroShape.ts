@@ -4,12 +4,14 @@
 import type { HeroSlide } from '@/types/storefront.types';
 
 export const HERO_SHAPE = {
-  desktop: { min: 2, max: 3.2, fallback: 2.2 },
+  // Wide and short on purpose: on a computer the banner must leave the first product row on
+  // the first screen (a 2.2:1 banner at full page width was about 660px tall on a 1920 screen).
+  desktop: { min: 2.8, max: 3.4, fallback: 2.9 },
   phone: { min: 0.8, max: 2.4, fallback: 1 },
 } as const;
 
 /** Sizes to give a designer: they fill the box exactly. */
-export const HERO_ADVISED = { desktop: '1760 × 800', phone: '1080 × 1080' } as const;
+export const HERO_ADVISED = { desktop: '1920 × 680', phone: '1080 × 1080' } as const;
 
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
 export const ratio = (w?: number, h?: number) => (w && h && w > 0 && h > 0 ? w / h : null);

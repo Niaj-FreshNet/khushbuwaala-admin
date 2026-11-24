@@ -28,10 +28,10 @@ import { cn } from '@/lib/utils';
 
 // ───────────────────────── Business details (edit once) ─────────────────────────
 export const BUSINESS = {
-    name: 'Your Business Name',
-    address: 'Shop address, City, Bangladesh',
-    phone: '+880 1XXX-XXXXXX',
-    email: '',
+    name: 'KHUSHBUWAALA',
+    address: 'Shop G/138, Eastern Banabithi Shopping Complex, South Banasree',
+    phone: '+880 1566-395807',
+    email: 'khushbuwaala@gmail.com',
     footerNote: 'Thank you for your purchase!',
     terms: 'Goods once sold are not returnable without this invoice.',
 };

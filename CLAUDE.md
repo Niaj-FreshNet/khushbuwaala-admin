@@ -37,4 +37,4 @@ USER, SALESMAN, ADMIN, SUPER_ADMIN, INVESTOR.
 
 ## Storefront content (2026-11-23)
 - `/storefront` ("Home page content", ADMIN + SUPER_ADMIN): announcement bar, hero banners and home page product rows. API: `src/redux/store/api/storefront/storefrontApi.ts` → backend `/api/storefront/settings`. The backend checks every save and names what is wrong; show its message.
-- Banners (2026-11-24): each picture is previewed in the shop's real banner box. `src/lib/heroShape.ts` is a copy of the storefront rule (`khushbuwaala-frontend/src/lib/storefrontSettings.ts` → `heroBoxShape`): change both together. Advised sizes 1760 × 800 (computers), 1080 × 1080 (phones).
+- Banners (2026-11-24): each picture is previewed in the shop's real banner box. `src/lib/heroShape.ts` is a copy of the storefront rule (`khushbuwaala-frontend/src/lib/storefrontSettings.ts` → `heroBoxShape`): change both together. Advised sizes 1920 × 680 (computers; the box is kept between 2.8:1 and 3.4:1 so the first product row stays on the first screen), 1080 × 1080 (phones).
