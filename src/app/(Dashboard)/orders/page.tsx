@@ -102,7 +102,15 @@ function getOrderRowMoney(order: Order) {
   const orderItems = orderDisplayLines(order);
   const shipping = Number(order.shippingCost || 0);
   const itemsSubtotal = orderItems.reduce((acc, it) => acc + (Number(it.price || 0) * Number(it.quantity || it.qty || 1)), 0);
-  const productBill = itemsSubtotal > 0 ? itemsSubtotal : Math.max(0, Number(order.amount || 0) - shipping);
+  // A coupon on the whole order is not in the line prices. Take it off the bill only when that
+  // is what makes the lines add up to the order total (so a discount already inside the line
+  // prices is never taken off twice).
+  const orderDiscount = Math.max(0, Number(order.discountAmount || 0));
+  const discountIsOutsideLines =
+    orderDiscount > 0 && Math.abs(itemsSubtotal - orderDiscount + shipping - Number(order.amount || 0)) <= 1;
+  const productBill = itemsSubtotal > 0
+    ? Math.max(0, itemsSubtotal - (discountIsOutsideLines ? orderDiscount : 0))
+    : Math.max(0, Number(order.amount || 0) - shipping);
 
   const districtLower = String(order.shipping?.district || "").toLowerCase();
   const isDhaka = districtLower.includes("dhaka");
@@ -1054,7 +1062,7 @@ const OrderList = () => {
           {sortedOrders.map((order) => {
             const m = getOrderRowMoney(order);
             const isSelected = selectedOrderIds.includes(order.id);
-            const phone = order.customer?.phone || order.shipping?.phone;
+            const phone = order.shipping?.phone || order.customer?.phone;
             const items = m.orderItems;
             const when = order.orderTime ? new Date(order.orderTime) : null;
             const itemsText = items.length === 0
@@ -1075,7 +1083,7 @@ const OrderList = () => {
                     {isSelected ? <CheckSquare className="h-5 w-5 text-[#FB923C]" /> : <Square className="h-5 w-5" />}
                   </button>
                 }
-                title={<span>#{order.invoice} · {order.customer?.name || order.shipping?.name || "Guest"}</span>}
+                title={<span>#{order.invoice} · {order.shipping?.name || order.customer?.name || "Guest"}</span>}
                 subtitle={when ? `${when.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}, ${when.toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit", hour12: true })} · ${order.shipping?.district || "No district"}` : "No date"}
                 badge={
                   <Badge className={`${statusBadgeClass(order.status)} text-[10px] px-2 py-0.5`}>
@@ -1293,17 +1301,17 @@ const OrderList = () => {
                       </TableCell>
 
                       <TableCell className="text-gray-900 align-top py-3 max-w-[170px]">
-                        <div className="font-bold text-[13px] truncate text-gray-900" title={order.customer?.name || order.shipping?.name || "Guest"}>
-                          {order.customer?.name || order.shipping?.name || "Guest"}
+                        <div className="font-bold text-[13px] truncate text-gray-900" title={order.shipping?.name || order.customer?.name || "Guest"}>
+                          {order.shipping?.name || order.customer?.name || "Guest"}
                         </div>
 
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <span className="text-xs text-gray-700 font-semibold truncate">
-                            {order.customer?.phone || order.shipping?.phone || "No phone"}
+                            {order.shipping?.phone || order.customer?.phone || "No phone"}
                           </span>
-                          {(order.customer?.phone || order.shipping?.phone) && (
+                          {(order.shipping?.phone || order.customer?.phone) && (
                             <a
-                              href={`tel:${order.customer?.phone || order.shipping?.phone}`}
+                              href={`tel:${order.shipping?.phone || order.customer?.phone}`}
                               className="inline-flex items-center justify-center p-1 rounded-md bg-green-50 text-green-700 hover:bg-green-100 transition-colors flex-shrink-0"
                               title="Call Customer"
                             >
