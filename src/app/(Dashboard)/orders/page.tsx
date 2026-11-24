@@ -136,8 +136,10 @@ function getOrderRowMoney(order: Order) {
   const orderItemCosts = order.orderItemCosts || [];
   // Profit rows are per item at the listed price; a whole-order coupon comes off here (the
   // Finance report already subtracts order discounts in its own totals).
+  // (a cancelled or returned order has no profit left to take the coupon from)
+  const profitFromLines = orderItemCosts.reduce((sum, ic) => sum + Number(ic.profit || 0), 0);
   const totalOrderProfit =
-    orderItemCosts.reduce((sum, ic) => sum + Number(ic.profit || 0), 0) - (discountIsOutsideLines ? orderDiscount : 0);
+    profitFromLines - (discountIsOutsideLines && !isCanceledOrReturned && orderItemCosts.length ? orderDiscount : 0);
 
   return {
     orderItems, shipping, productBill, courierDeliveryCharge, isShippingIncludedInCod, isCod, codCharge,

@@ -56,8 +56,17 @@ export default function OrderInvoice({ order, visible, onClose }: OrderInvoicePr
             const productId = it.productId || it.product?.id || "";
             const variantId = it.variantId || it.variant?.id || "";
 
-            const unitOriginal = Number(it.originalPrice ?? it.variant?.price ?? it.price ?? 0);
-            let unitSold = Number(it.price ?? unitOriginal);
+            let unitSold = Number(it.price ?? it.originalPrice ?? it.variant?.price ?? 0);
+            // After an order is edited, the stored "price before discount" (or the linked size)
+            // can belong to the size the line used to be. Then it says nothing about this line.
+            const lineSize = Number(it.size ?? 0);
+            const linkedSize = Number(it.variant?.size ?? 0);
+            const sameSize = !lineSize || !linkedSize || lineSize === linkedSize;
+            const sizePrice = sameSize && linkedSize ? Number(it.variant?.price ?? 0) : 0;
+            const saved = Number(it.originalPrice ?? sizePrice ?? unitSold) || unitSold;
+            // never more than this size's own list price (a leftover from a bigger size would be)
+            const listed = sizePrice > 0 ? Math.min(saved, Math.max(sizePrice, unitSold)) : saved;
+            const unitOriginal = sameSize && listed > unitSold ? listed : unitSold;
 
             const hasExplicitSavedPrices = it.originalPrice !== undefined && it.originalPrice !== null;
             if (!hasExplicitSavedPrices && totalOrderDiscount > 0) {
