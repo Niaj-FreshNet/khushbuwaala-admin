@@ -134,7 +134,10 @@ function getOrderRowMoney(order: Order) {
   const rcvColorClass = rcvColorByStatus[orderStatus] ?? "text-orange-500";
 
   const orderItemCosts = order.orderItemCosts || [];
-  const totalOrderProfit = orderItemCosts.reduce((sum, ic) => sum + Number(ic.profit || 0), 0);
+  // Profit rows are per item at the listed price; a whole-order coupon comes off here (the
+  // Finance report already subtracts order discounts in its own totals).
+  const totalOrderProfit =
+    orderItemCosts.reduce((sum, ic) => sum + Number(ic.profit || 0), 0) - (discountIsOutsideLines ? orderDiscount : 0);
 
   return {
     orderItems, shipping, productBill, courierDeliveryCharge, isShippingIncludedInCod, isCod, codCharge,

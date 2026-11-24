@@ -230,7 +230,7 @@ export const navLinks: NavLink[] = [
 
   // ================= CONTENT =================
   {
-    name: "Homepage content",
+    name: "Homepage",
     href: "/storefront",
     icon: Store,
     roles: ["ADMIN", "SUPER_ADMIN"],
