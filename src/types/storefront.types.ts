@@ -3,7 +3,13 @@
 export type HeroSlide = {
   image: string;
   mobileImage?: string;
+  /** Pixel size of the pictures as uploaded; the shop shapes the banner box from the first banner's. */
+  imageWidth?: number;
+  imageHeight?: number;
+  mobileWidth?: number;
+  mobileHeight?: number;
   alt: string;
+  /** Empty = no button; the whole banner is the link. */
   buttonText: string;
   link: string;
 };

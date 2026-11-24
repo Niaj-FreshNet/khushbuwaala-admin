@@ -1,4 +1,7 @@
-export const uploadToCloudinary = async (file: File, folder: string): Promise<string> => {
+export type UploadedImage = { url: string; width: number; height: number };
+
+/** Upload a picture and get back its address and its size in pixels as stored. */
+export const uploadImageToCloudinary = async (file: File, folder: string): Promise<UploadedImage> => {
   const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
   const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
@@ -21,5 +24,8 @@ export const uploadToCloudinary = async (file: File, folder: string): Promise<st
   }
 
   const data = await response.json();
-  return data.secure_url; // ✅ Return final image URL
+  return { url: data.secure_url, width: Number(data.width) || 0, height: Number(data.height) || 0 };
 };
+
+export const uploadToCloudinary = async (file: File, folder: string): Promise<string> =>
+  (await uploadImageToCloudinary(file, folder)).url;

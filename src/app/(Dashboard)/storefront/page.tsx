@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { ArrowDown, ArrowUp, ExternalLink, ImagePlus, Loader2, Megaphone, Plus, RotateCcw, Rows3, Save, Store, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ExternalLink, ImagePlus, Loader2, Megaphone, Monitor, Smartphone, X, Plus, RotateCcw, Rows3, Save, Store, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,7 +11,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Thumb from '@/components/admin/Thumb';
 import { useConfirm } from '@/components/admin/ConfirmProvider';
 import { apiErrorMessage } from '@/lib/apiError';
-import { uploadToCloudinary } from '@/lib/helper/uploadToCloudinary';
+import { uploadImageToCloudinary } from '@/lib/helper/uploadToCloudinary';
+import { HERO_ADVISED, fitNote, heroBoxShape, ratio } from '@/lib/heroShape';
 import { useGetAllCategoriesAdminQuery } from '@/redux/store/api/category/categoryApi';
 import { useGetStorefrontSettingsQuery, useSaveStorefrontSettingsMutation } from '@/redux/store/api/storefront/storefrontApi';
 import type { HeroSlide, HomeRow, StorefrontSettings } from '@/types/storefront.types';
@@ -95,17 +96,35 @@ function OrderButtons({ index, count, onMove, onRemove, label }: { index: number
   );
 }
 
-function ImageField({ label, value, onChange, hint }: { label: string; value?: string; onChange: (url: string | undefined) => void; hint: string }) {
+type Picked = { url: string; width: number; height: number };
+
+/**
+ * One banner picture, drawn in the same shape as the shop's banner box, so what is seen here is
+ * what visitors get. The line under it says whether the picture is shown whole or how much is cut.
+ */
+function BannerPicture({
+  device, value, width, height, boxRatio, advised, optional, onPick, onClear,
+}: {
+  device: 'phone' | 'computer';
+  value?: string;
+  width?: number;
+  height?: number;
+  boxRatio: number;
+  advised: string;
+  optional?: boolean;
+  onPick: (picture: Picked) => void;
+  onClear?: () => void;
+}) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
 
   const pick = async (file: File | undefined) => {
     if (!file) return;
-    if (!file.type.startsWith('image/')) return void toast.error('Please choose a picture file.');
+    if (!file.type.startsWith('image/')) return void toast.error('Please choose a picture file (JPG, PNG or WebP).');
     if (file.size > 5 * 1024 * 1024) return void toast.error('That picture is over 5 MB. Please use a smaller one.');
     setBusy(true);
     try {
-      onChange(await uploadToCloudinary(file, 'khushbuwaala_images/banners'));
+      onPick(await uploadImageToCloudinary(file, 'khushbuwaala_images/banners'));
     } catch {
       toast.error('The picture could not be uploaded. Please try again.');
     } finally {
@@ -114,22 +133,48 @@ function ImageField({ label, value, onChange, hint }: { label: string; value?: s
     }
   };
 
+  const fit = value ? fitNote(ratio(width, height), boxRatio) : null;
+  const Icon = device === 'phone' ? Smartphone : Monitor;
+
   return (
-    <div>
-      <Label className="text-xs font-semibold text-gray-700">{label}</Label>
-      <div className="mt-1 flex items-center gap-2">
-        <div className="h-14 w-24 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden flex items-center justify-center shrink-0">
-          {value ? <Thumb src={preview(value)} alt="" size={96} className="h-full w-full object-cover" /> : <ImagePlus className="w-5 h-5 text-gray-300" />}
-        </div>
-        <div className="flex flex-col gap-1">
-          <input ref={input} type="file" accept="image/*" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
-          <Button type="button" variant="outline" className="h-9 text-xs" disabled={busy} onClick={() => input.current?.click()}>
-            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
-            {value ? 'Change picture' : 'Upload picture'}
-          </Button>
-          <span className="text-[11px] text-gray-500">{hint}</span>
+    <div className="min-w-0">
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-700">
+        <Icon className="w-3.5 h-3.5" /> {device === 'phone' ? 'On phones' : 'On computers'}
+        {optional && <span className="font-normal text-gray-500">(optional)</span>}
+      </div>
+      <div className={device === 'phone' ? 'mt-1.5 w-full max-w-[220px]' : 'mt-1.5 w-full max-w-[480px]'}>
+        <div className="relative w-full overflow-hidden rounded-lg border border-gray-200 bg-gray-50" style={{ aspectRatio: String(boxRatio) }}>
+          {value ? (
+            <Thumb src={preview(value)} alt="" size={480} className="absolute inset-0 h-full w-full object-cover" />
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-2 text-center text-gray-400">
+              <ImagePlus className="w-5 h-5" />
+              <span className="text-[11px]">{optional ? 'Uses the computer picture' : 'No picture yet'}</span>
+            </div>
+          )}
+          {busy && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/70">
+              <Loader2 className="w-5 h-5 animate-spin text-green-700" />
+            </div>
+          )}
         </div>
       </div>
+      <input ref={input} type="file" accept="image/jpeg,image/png,image/webp,image/avif" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <Button type="button" variant="outline" className="h-9 text-xs" disabled={busy} onClick={() => input.current?.click()}>
+          <ImagePlus className="w-4 h-4" /> {value ? 'Change picture' : 'Choose a picture'}
+        </Button>
+        {value && onClear && (
+          <Button type="button" variant="ghost" className="h-9 text-xs text-gray-600" disabled={busy} onClick={onClear}>
+            <X className="w-4 h-4" /> Remove
+          </Button>
+        )}
+      </div>
+      <p className="mt-1.5 text-[11px] text-gray-500">
+        Best size: <span className="font-semibold text-gray-700">{advised}</span> pixels
+        {value && width && height ? ` · yours: ${width} × ${height}` : ''}
+      </p>
+      {fit && <p className={`text-[11px] font-semibold ${fit.ok ? 'text-green-700' : 'text-amber-700'}`}>{fit.text}</p>}
     </div>
   );
 }
@@ -180,6 +225,8 @@ export default function StorefrontContentPage() {
 
   const setNotice = (i: number, value: string) => set({ notices: draft.notices.map((n, j) => (j === i ? value : n)) });
   const setSlide = (i: number, patch: Partial<HeroSlide>) => set({ hero: draft.hero.map((s, j) => (j === i ? { ...s, ...patch } : s)) });
+  // the shop's banner box, worked out exactly as the shop does it
+  const box = heroBoxShape(draft.hero);
   const setRow = (i: number, patch: Partial<HomeRow>) => set({ homeRows: draft.homeRows.map((r, j) => (j === i ? { ...r, ...patch } : r)) });
 
   const handleSave = async () => {
@@ -239,27 +286,50 @@ export default function StorefrontContentPage() {
       </SectionCard>
 
       {/* Hero banners */}
-      <SectionCard icon={<ImagePlus className="w-4 h-4" />} title="Banners" hint="The large sliding pictures at the top of the home page. The first one is what visitors see first.">
+      <SectionCard icon={<ImagePlus className="w-4 h-4" />} title="Banners" hint="The large sliding pictures at the top of the home page. Choose a picture from this device; it appears on the shop about a minute after you press Save.">
+        <div className="mb-3 rounded-lg border border-green-100 bg-green-50/60 px-3 py-2 text-xs text-gray-700 space-y-0.5">
+          <p><span className="font-semibold">Sizes to ask your designer for:</span> {HERO_ADVISED.desktop} pixels for computers and {HERO_ADVISED.phone} pixels for phones.</p>
+          <p>The banner area takes the shape of Banner 1, so make every banner the same size. The previews below show exactly what visitors will see.</p>
+        </div>
         <div className="space-y-3">
           {draft.hero.map((slide, i) => (
             <div key={i} className="rounded-xl border border-gray-200 p-3 space-y-3">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-bold text-gray-700">Banner {i + 1}</span>
+                <span className="text-xs font-bold text-gray-700">Banner {i + 1}{i === 0 ? ' (shown first)' : ''}</span>
                 <OrderButtons index={i} count={draft.hero.length} label={`banner ${i + 1}`} onMove={(to) => set({ hero: move(draft.hero, i, to) })} onRemove={() => set({ hero: draft.hero.filter((_, j) => j !== i) })} />
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <ImageField label="Picture for computers" value={slide.image} onChange={(url) => setSlide(i, { image: url ?? '' })} hint="Wide picture, about 1920 × 560" />
-                <ImageField label="Picture for phones (optional)" value={slide.mobileImage} onChange={(url) => setSlide(i, { mobileImage: url })} hint="About 900 × 400. Uses the wide one if empty" />
+              <div className="grid gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+                <BannerPicture
+                  device="computer"
+                  value={slide.image}
+                  width={slide.imageWidth}
+                  height={slide.imageHeight}
+                  boxRatio={box.desktop}
+                  advised={HERO_ADVISED.desktop}
+                  onPick={(pic) => setSlide(i, { image: pic.url, imageWidth: pic.width || undefined, imageHeight: pic.height || undefined })}
+                />
+                <BannerPicture
+                  device="phone"
+                  optional
+                  value={slide.mobileImage}
+                  width={slide.mobileWidth}
+                  height={slide.mobileHeight}
+                  boxRatio={box.phone}
+                  advised={HERO_ADVISED.phone}
+                  onPick={(pic) => setSlide(i, { mobileImage: pic.url, mobileWidth: pic.width || undefined, mobileHeight: pic.height || undefined })}
+                  onClear={() => setSlide(i, { mobileImage: undefined, mobileWidth: undefined, mobileHeight: undefined })}
+                />
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
                 <div>
-                  <Label className="text-xs font-semibold text-gray-700">Button text</Label>
-                  <Input value={slide.buttonText} maxLength={limits.label} onChange={(e) => setSlide(i, { buttonText: e.target.value })} className="h-10 text-sm mt-1" />
+                  <Label className="text-xs font-semibold text-gray-700">Tapping the banner opens</Label>
+                  <Input value={slide.link} list="shop-pages" onChange={(e) => setSlide(i, { link: e.target.value })} placeholder="/shop" className="h-10 text-sm mt-1" />
+                  <p className="text-[11px] text-gray-500 mt-1">A page of the shop, e.g. /shop or /oriental-attar</p>
                 </div>
                 <div>
-                  <Label className="text-xs font-semibold text-gray-700">Button opens</Label>
-                  <Input value={slide.link} onChange={(e) => setSlide(i, { link: e.target.value })} placeholder="/shop" className="h-10 text-sm mt-1" />
-                  <p className="text-[11px] text-gray-500 mt-1">A page of the shop, e.g. /shop or /oriental-attar</p>
+                  <Label className="text-xs font-semibold text-gray-700">Button text (optional)</Label>
+                  <Input value={slide.buttonText} maxLength={limits.label} onChange={(e) => setSlide(i, { buttonText: e.target.value })} placeholder="No button" className="h-10 text-sm mt-1" />
+                  <p className="text-[11px] text-gray-500 mt-1">Leave empty if the picture already has its own text</p>
                 </div>
                 <div>
                   <Label className="text-xs font-semibold text-gray-700">Picture description</Label>
@@ -269,7 +339,12 @@ export default function StorefrontContentPage() {
               </div>
             </div>
           ))}
-          <Button type="button" variant="outline" className="h-9 text-xs" disabled={draft.hero.length >= limits.hero} onClick={() => set({ hero: [...draft.hero, { image: '', alt: '', buttonText: 'Shop Now', link: '/shop' }] })}>
+          <datalist id="shop-pages">
+            {['/shop', '/new-arrivals', '/shop?onSale=1', '/shop?sort=popular', ...Object.values(COLLECTION_PAGES), '/womens-perfume'].map((href) => (
+              <option key={href} value={href} />
+            ))}
+          </datalist>
+          <Button type="button" variant="outline" className="h-9 text-xs" disabled={draft.hero.length >= limits.hero} onClick={() => set({ hero: [...draft.hero, { image: '', alt: '', buttonText: '', link: '/shop' }] })}>
             <Plus className="w-4 h-4" /> Add a banner
           </Button>
         </div>
