@@ -2,6 +2,17 @@ import { IReview } from "@/types/product.types";
 import baseApi from "../baseApi";
 import type { ApiEnvelope, PageMeta } from "@/types/api.types";
 
+// Reviews on the shop's home page: published 5-star reviews show by themselves; a review can
+// also be pinned (shown first) or hidden from the home page, and the whole section switched off.
+export type HomeReviewChoice = "auto" | "pinned" | "hidden";
+export type HomeReviewSettings = {
+  enabled: boolean;
+  pinned: string[];
+  hidden: string[];
+  /** The reviews on the home page right now, in order. Empty when the section is not shown. */
+  shownIds: string[];
+};
+
 // Define the review API slice
 export const reviewApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -42,6 +53,21 @@ export const reviewApi = baseApi.injectEndpoints({
       invalidatesTags: ["Review"],
     }),
 
+    getHomeReviewSettings: builder.query<ApiEnvelope<HomeReviewSettings>, void>({
+      query: () => "/review/home/admin",
+      providesTags: ["Review"],
+    }),
+
+    setHomeReviewsEnabled: builder.mutation<ApiEnvelope<{ enabled: boolean }>, boolean>({
+      query: (enabled) => ({ url: "/review/home/section", method: "PATCH", body: { enabled } }),
+      invalidatesTags: ["Review"],
+    }),
+
+    setHomeReviewChoice: builder.mutation<ApiEnvelope<{ reviewId: string; choice: HomeReviewChoice }>, { id: string; choice: HomeReviewChoice }>({
+      query: ({ id, choice }) => ({ url: `/review/home/choice/${id}`, method: "PATCH", body: { choice } }),
+      invalidatesTags: ["Review"],
+    }),
+
 // ✅ Delete Review (Admin)
     deleteReview: builder.mutation<{ id: string }, string>({
       query: (id) => ({
@@ -62,6 +88,9 @@ export const {
   useGetProductReviewsQuery,
   usePublishReviewMutation,
   useDeleteReviewMutation,
+  useGetHomeReviewSettingsQuery,
+  useSetHomeReviewsEnabledMutation,
+  useSetHomeReviewChoiceMutation,
 } = reviewApi;
 
 export default reviewApi;

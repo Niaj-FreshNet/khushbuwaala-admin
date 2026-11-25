@@ -14,13 +14,18 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Trash, Star, MessageSquareText} from 'lucide-react';
+import { Search, Trash, Star, MessageSquareText, Home } from 'lucide-react';
 import { MobileCard, MobileCardList, MobileField } from '@/components/admin/MobileCards';
 import {
   useGetAllReviewsAdminQuery,
   usePublishReviewMutation,
   useDeleteReviewMutation,
+  useGetHomeReviewSettingsQuery,
+  useSetHomeReviewsEnabledMutation,
+  useSetHomeReviewChoiceMutation,
+  type HomeReviewChoice,
 } from '@/redux/store/api/review/reviewApi';
+import { apiErrorMessage } from '@/lib/apiError';
 import { toast } from 'sonner';
 import { useConfirm } from '@/components/admin/ConfirmProvider';
 import type { IReview } from "@/types/product.types";
@@ -33,6 +38,56 @@ const ReviewList = () => {
   const [publishReview, { isLoading: isPublishing }] = usePublishReviewMutation();
   const [deleteReview] = useDeleteReviewMutation();
   const router = useRouter();
+
+  // Reviews on the shop's home page
+  const { data: homeData } = useGetHomeReviewSettingsQuery();
+  const [setHomeEnabled, { isLoading: savingHomeSection }] = useSetHomeReviewsEnabledMutation();
+  const [setHomeChoice, { isLoading: savingHomeChoice }] = useSetHomeReviewChoiceMutation();
+  const home = homeData?.data;
+  const homeChoiceOf = (id: string): HomeReviewChoice =>
+    home?.hidden.includes(id) ? 'hidden' : home?.pinned.includes(id) ? 'pinned' : 'auto';
+  const isOnHome = (id: string) => Boolean(home?.shownIds.includes(id));
+
+  const handleHomeSection = async (enabled: boolean) => {
+    try {
+      await setHomeEnabled(enabled).unwrap();
+      toast.success(enabled ? 'Reviews are shown on the home page' : 'Reviews are hidden from the home page');
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Could not change the home page section'));
+    }
+  };
+
+  const handleHomeChoice = async (id: string, choice: HomeReviewChoice) => {
+    try {
+      await setHomeChoice({ id, choice }).unwrap();
+      toast.success(choice === 'pinned' ? 'Pinned to the home page' : choice === 'hidden' ? 'Hidden from the home page' : 'Back to automatic');
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Could not change this review'));
+    }
+  };
+
+  // One control for both layouts: where this review stands on the home page.
+  const homeControl = (review: ReviewData) => {
+    const eligible = review.isPublished && review.rating === 5;
+    return (
+      <div className="flex items-center gap-1.5">
+        <select
+          aria-label={`Home page: ${review.title}`}
+          value={homeChoiceOf(review.id)}
+          disabled={!home || savingHomeChoice}
+          onChange={(e) => handleHomeChoice(review.id, e.target.value as HomeReviewChoice)}
+          className="h-8 rounded-md border border-gray-300 bg-white px-1.5 text-xs text-gray-800 disabled:opacity-60"
+        >
+          <option value="auto">Automatic</option>
+          <option value="pinned" disabled={!eligible}>Pinned first</option>
+          <option value="hidden">Hidden</option>
+        </select>
+        {isOnHome(review.id) ? (
+          <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200 whitespace-nowrap">On home</span>
+        ) : null}
+      </div>
+    );
+  };
 
   const allReviews: ReviewData[] = useMemo(() => data?.data?.data ?? [], [data]);
   const meta = data?.data?.meta;
@@ -95,6 +150,34 @@ const ReviewList = () => {
         </div>
       </div>
 
+      {/* Reviews on the shop's home page */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white px-3.5 py-2.5 rounded-xl border border-gray-200/85 shadow-2xs shrink-0 mb-3">
+        <div className="flex items-start gap-2">
+          <div className="p-1.5 bg-emerald-50 rounded-lg text-emerald-700 border border-emerald-100">
+            <Home className="w-4 h-4" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-gray-900 leading-tight">Reviews on the home page</p>
+            <p className="text-[11px] text-gray-500 leading-snug max-w-2xl">
+              Published 5-star reviews show there by themselves, newest first (up to 12). Use the Home page column to pin a
+              review first or keep one off the home page. The section is left out when fewer than 3 reviews qualify.
+            </p>
+            <p className="mt-0.5 text-[11px] font-semibold text-gray-700">
+              {!home ? 'Loading…' : !home.enabled ? 'Switched off.' : home.shownIds.length ? `Showing ${home.shownIds.length} review${home.shownIds.length === 1 ? '' : 's'} now.` : 'Not showing: fewer than 3 reviews qualify.'}
+            </p>
+          </div>
+        </div>
+        <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 shrink-0">
+          Show section
+          <Switch
+            checked={home?.enabled ?? true}
+            onCheckedChange={handleHomeSection}
+            disabled={!home || savingHomeSection}
+            className="data-[state=checked]:bg-emerald-600"
+          />
+        </label>
+      </div>
+
       {/* Main Content Area */}
       <div className="space-y-3">
         {isLoading ? (
@@ -144,6 +227,9 @@ const ReviewList = () => {
                   <MobileField label="Comment" full>
                     <span className="whitespace-normal">{review.comment}</span>
                   </MobileField>
+                  <MobileField label="Home page" full>
+                    {homeControl(review)}
+                  </MobileField>
                   <MobileField label="Date">
                     {new Date(review.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </MobileField>
@@ -163,6 +249,7 @@ const ReviewList = () => {
                     <TableHead className="w-24 text-[11px] font-bold text-gray-700">Rating</TableHead>
                     <TableHead className="w-24 text-[11px] font-bold text-gray-700">Date</TableHead>
                     <TableHead className="w-24 text-center text-[11px] font-bold text-gray-700">Published</TableHead>
+                    <TableHead className="w-44 text-[11px] font-bold text-gray-700">Home page</TableHead>
                     <TableHead className="w-16 text-right text-[11px] font-bold text-gray-700">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -170,7 +257,7 @@ const ReviewList = () => {
                 <TableBody>
                   {filteredReviews.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="h-32 text-center text-gray-500 text-xs">
+                      <TableCell colSpan={9} className="h-32 text-center text-gray-500 text-xs">
                         No customer reviews found.
                       </TableCell>
                     </TableRow>
@@ -222,6 +309,7 @@ const ReviewList = () => {
                             className="data-[state=checked]:bg-emerald-600 scale-90"
                           />
                         </TableCell>
+                        <TableCell className="py-2.5">{homeControl(review)}</TableCell>
                         <TableCell className="text-right py-2.5">
                           <Button
                             variant="ghost"
