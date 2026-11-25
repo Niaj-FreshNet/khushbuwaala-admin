@@ -159,7 +159,7 @@ const ReviewList = () => {
           <div>
             <p className="text-xs font-bold text-gray-900 leading-tight">Reviews on the home page</p>
             <p className="text-[11px] text-gray-500 leading-snug max-w-2xl">
-              Published 5-star reviews show there by themselves, newest first (up to 12). Use the Home page column to pin a
+              Published 5-star reviews show there by themselves (up to 12): ones with a photo first, then the fuller ones. Use the Home page column to pin a
               review first or keep one off the home page. The section is left out when fewer than 3 reviews qualify.
             </p>
             <p className="mt-0.5 text-[11px] font-semibold text-gray-700">
