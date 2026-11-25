@@ -27,6 +27,9 @@ import { ImagePlus, X, Sparkles, Layers, Info, Sliders, ShieldCheck, Video, Load
 import { useFormContext } from 'react-hook-form';
 import Thumb from "@/components/admin/Thumb";
 
+// A picture chosen from the device and not uploaded yet, with its on-screen preview.
+type PickedImage = { file: File; preview: string };
+
 interface FormValues {
   name: string;
   description: string;
@@ -156,7 +159,6 @@ const EditProductPage = () => {
   const { id } = useParams<{ id: string }>();
 
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [videoPreviews, setVideoPreviews] = useState<string[]>([]);
   const [updateProduct] = useUpdateProductMutation();
 
@@ -172,19 +174,22 @@ const EditProductPage = () => {
   const fragrances: Fragrance[] = fragrancesData?.data?.data || [];
 
   const [defaultValues, setDefaultValues] = useState<FormValues | null>(null);
-  const [imagesToKeep, setImagesToKeep] = useState<string[]>([]);
-  const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
+  // Pictures: the saved main picture and gallery, plus files picked in this visit (uploaded on save).
+  const [savedPrimary, setSavedPrimary] = useState('');
+  const [savedGallery, setSavedGallery] = useState<string[]>([]);
+  const [newPrimary, setNewPrimary] = useState<PickedImage | null>(null);
+  const [newGallery, setNewGallery] = useState<PickedImage[]>([]);
   const [videosToKeep, setVideosToKeep] = useState<string[]>([]);
   const [newVideoFiles, setNewVideoFiles] = useState<File[]>([]);
 
   useEffect(() => {
     if (product) {
-      const currentImages = [product.primaryImage, ...(product.otherImages || [])].filter(Boolean);
       const currentVideos = product.videos || [];
 
-      setImagePreviews(currentImages);
-      setImagesToKeep(currentImages);
-      setNewImageFiles([]);
+      setSavedPrimary(product.primaryImage || '');
+      setSavedGallery((product.otherImages || []).filter(Boolean));
+      setNewPrimary(null);
+      setNewGallery([]);
 
       setVideoPreviews(currentVideos);
       setVideosToKeep(currentVideos);
@@ -239,19 +244,19 @@ const EditProductPage = () => {
     }
   }, [product]);
 
+  const primaryPreview = newPrimary?.preview || savedPrimary;
+  const galleryPreviews = [...savedGallery, ...newGallery.map((picked) => picked.preview)];
+
   const handleSubmit = async (values: FormValues) => {
     try {
-      let primaryImageUrl = imagesToKeep[0] || "";
-      const primaryInput = values.primaryImage?.[0];
-      if (primaryInput instanceof File) {
-        primaryImageUrl = await uploadToCloudinary(primaryInput, 'khushbuwaala_images/products');
-      }
+      const primaryImageUrl = newPrimary
+        ? await uploadToCloudinary(newPrimary.file, 'khushbuwaala_images/products')
+        : savedPrimary;
 
-      const existingGalleryKeep = imagesToKeep.slice(1);
       const newlyUploadedGallery = await Promise.all(
-        newImageFiles.map(file => uploadToCloudinary(file, 'khushbuwaala_images/products'))
+        newGallery.map((picked) => uploadToCloudinary(picked.file, 'khushbuwaala_images/products'))
       );
-      const finalOtherImages = [...existingGalleryKeep, ...newlyUploadedGallery];
+      const finalOtherImages = [...savedGallery, ...newlyUploadedGallery];
 
       const newlyUploadedVideos = await Promise.all(
         newVideoFiles.map(file => uploadToCloudinary(file, 'khushbuwaala_images/videos'))
@@ -622,21 +627,15 @@ const EditProductPage = () => {
                       onChange={(e) => {
                         const file = (e.target as HTMLInputElement).files?.[0];
                         if (!file) return;
-                        const previewUrl = URL.createObjectURL(file);
-                        setImagePreviews((prev) => [previewUrl, ...prev.slice(1)]);
-                        setImagesToKeep((prevKeep) => {
-                          const currentPrimary = prevKeep[0];
-                          const rest = prevKeep.slice(1);
-                          return currentPrimary?.startsWith("http") ? rest : prevKeep;
-                        });
-                        setNewImageFiles((prev) => [file, ...prev]);
+                        setNewPrimary({ file, preview: URL.createObjectURL(file) });
                       }}
                     />
-                    {imagePreviews[0] && (
+                    {primaryPreview && (
                       <div className="relative w-12 h-12 border-2 border-[#FB923C] rounded-lg overflow-hidden shadow-2xs bg-gray-100 mt-1">
-                        <Thumb src={imagePreviews[0]} alt="Primary Preview" size={48} className="w-full h-full object-cover" />
+                        <Thumb src={primaryPreview} alt="Primary Preview" size={48} className="w-full h-full object-cover" />
                       </div>
                     )}
+                    {newPrimary && <p className="text-[11px] text-amber-700">New picture: saved when you press Update.</p>}
                   </div>
 
                   {/* Gallery Images */}
@@ -650,25 +649,24 @@ const EditProductPage = () => {
                       onChange={(e) => {
                         const files = Array.from((e.target as HTMLInputElement).files || []);
                         if (!files.length) return;
-                        const previews = files.map((f) => URL.createObjectURL(f));
-                        setImagePreviews((prev) => [prev[0], ...prev.slice(1), ...previews]);
-                        setNewImageFiles((prev) => [...prev, ...files]);
+                        setNewGallery((prev) => [
+                          ...prev,
+                          ...files.map((f) => ({ file: f, preview: URL.createObjectURL(f) })),
+                        ]);
                       }}
                     />
-                    {imagePreviews.slice(1).length > 0 && (
+                    {galleryPreviews.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 pt-1">
-                        {imagePreviews.slice(1).map((preview, index) => (
-                          <div key={index} className="relative w-11 h-11 rounded-lg border border-gray-300 overflow-hidden shadow-2xs bg-gray-100">
+                        {galleryPreviews.map((preview, index) => (
+                          <div key={preview} className="relative w-11 h-11 rounded-lg border border-gray-300 overflow-hidden shadow-2xs bg-gray-100">
                             <Thumb src={preview} alt={`Gallery item ${index + 1}`} size={44} className="w-full h-full object-cover" />
                             <button
                               type="button"
                               className="absolute top-0.5 right-0.5 bg-red-600 text-white rounded-full p-0.5 w-3.5 h-3.5 flex items-center justify-center text-[9px] leading-none"
+                              aria-label={`Remove gallery picture ${index + 1}`}
                               onClick={() => {
-                                const img = imagePreviews[index + 1];
-                                setImagePreviews((prev) => prev.filter((_, i) => i !== index + 1));
-                                if (img?.startsWith("http")) {
-                                  setImagesToKeep((prev) => prev.filter((u) => u !== img));
-                                }
+                                setSavedGallery((prev) => prev.filter((u) => u !== preview));
+                                setNewGallery((prev) => prev.filter((picked) => picked.preview !== preview));
                               }}
                             >
                               <X className="w-2.5 h-2.5" />
